@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ToolSync – UI Styleguide & Component Library</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body {
+      min-height: 100vh;
+      background-color: #c5cbd3;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 0% -20%, rgba(90, 157, 235, 0.25), transparent),
+        radial-gradient(ellipse 80% 50% at 100% 100%, rgba(37, 209, 177, 0.18), transparent);
+      background-attachment: fixed;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+    }
+
+    /* ===== PERFORMANCE-OPTIMIERTER GLASSMORPHISM ===== */
+    .app-sidebar,
+    .app-content-block,
+    .glass-card,
+    .glass-preview-card,
+    .stat-card {
+      isolation: isolate;
+      contain: layout style paint;
+      transform: translateZ(0);
+    }
+
+    .app-sidebar {
+      background: rgba(255, 255, 255, 0.38);
+      border-right: 1px solid rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .app-content-block {
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.40);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .glass-preview-card {
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 1rem;
+    }
+
+    /* Stat-Cards – stärkere Glass + Glow aus Dashboard */
+    .stat-card {
+      background: rgba(255, 255, 255, 0.50);
+      border: 1px solid rgba(255, 255, 255, 0.60);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Inputs: KEIN backdrop-filter → Performance */
+    .input-bordered, .select-bordered {
+      width: 100%;
+      border: 1px solid rgba(15, 118, 110, 0.25);
+      border-radius: 0.5rem;
+      padding: 0.45rem 0.75rem;
+      background-color: rgba(255, 255, 255, 0.55);
+      color: #0f172a;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      font-weight: 500;
+    }
+    .input-bordered:hover, .select-bordered:hover {
+      background-color: rgba(255, 255, 255, 0.72);
+      border-color: rgba(15, 118, 110, 0.45);
+    }
+    .input-bordered:focus, .select-bordered:focus {
+      background-color: rgba(255, 255, 255, 0.88);
+      border-color: #0f766e;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+    }
+    .input-error {
+      background-color: rgba(239, 68, 68, 0.12) !important;
+      border-color: #ef4444 !important;
+    }
+
+    .form-tooltip {
+      position: absolute;
+      top: -2.2rem;
+      left: 0;
+      background-color: #ef4444;
+      color: #ffffff;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 50;
+    }
+    .form-tooltip.visible { opacity: 1; pointer-events: auto; }
+
+    [x-cloak] { display: none !important; }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    @media (max-width: 1024px) {
+      .component-grid { grid-template-columns: 1fr; }
+    }
+
+    .code-panel {
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: .9rem;
+      overflow: auto;
+    }
+    .code-panel pre {
+      margin: 0;
+      padding: 1rem;
+      font: 500 11px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .demo-surface {
+      background: rgba(255,255,255,.28);
+      border: 1px solid rgba(255,255,255,.5);
+      border-radius: 1rem;
+      padding: 1rem;
+      min-height: 100%;
+    }
+
+    /* Buttons */
+    .ui-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      border-radius: .75rem; padding: .55rem .9rem; font-size: .75rem; font-weight: 700;
+      transition: all .18s ease; cursor: pointer;
+    }
+    .ui-btn-primary {
+      background: #0f766e; color: #fff;
+      box-shadow: 0 8px 20px rgba(15,118,110,.18);
+    }
+    .ui-btn-primary:hover { background: #115e59; transform: translateY(-1px); }
+    .ui-btn-primary:active { transform: scale(.97); }
+    .ui-btn-secondary {
+      background: rgba(255,255,255,.55); color: #0f172a;
+      border: 1px solid rgba(255,255,255,.7);
+    }
+    .ui-btn-secondary:hover { background: rgba(255,255,255,.75); }
+    .ui-btn-ghost { color: #0f766e; background: transparent; }
+    .ui-btn-ghost:hover { background: rgba(15,118,110,.08); }
+    .ui-btn-danger {
+      background: #e11d48; color: #fff;
+      box-shadow: 0 8px 20px rgba(225,29,72,.15);
+    }
+    .ui-btn-danger-soft {
+      background: rgba(225,29,72,.12); color: #9f1239;
+      border: 1px solid rgba(225,29,72,.25);
+    }
+    .ui-btn-danger-soft:hover { background: rgba(225,29,72,.2); }
+    .ui-btn-sm { padding: .35rem .65rem; font-size: .7rem; }
+    .ui-btn:disabled, .ui-btn[disabled] {
+      opacity: .45; cursor: not-allowed; transform: none !important;
+    }
+
+    /* Switch */
+    .ui-switch {
+      position: relative; width: 42px; height: 24px; border-radius: 999px;
+      background: #cbd5e1; transition: background .18s ease; cursor: pointer; border: 0; flex: 0 0 auto;
+    }
+    .ui-switch::after {
+      content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+      border-radius: 999px; background: white; box-shadow: 0 2px 6px rgba(15,23,42,.18);
+      transition: transform .18s ease;
+    }
+    .ui-switch.is-on { background: #0f766e; }
+    .ui-switch.is-on::after { transform: translateX(18px); }
+
+    .ui-avatar {
+      width: 32px; height: 32px; border-radius: 999px; display: inline-flex;
+      align-items: center; justify-content: center; background: #0f766e; color: #fff;
+      font-size: .7rem; font-weight: 800;
+    }
+
+    .ui-pagination a {
+      width: 30px; height: 30px; border-radius: .6rem; display: inline-flex;
+      align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: #475569;
+    }
+    .ui-pagination a:hover { background: rgba(255,255,255,.55); }
+    .ui-pagination .active { background: #0f766e; color: #fff; }
+
+    /* Progress */
+    .ui-progress {
+      height: 6px; border-radius: 999px; background: rgba(148,163,184,.28); overflow: hidden;
+    }
+    .ui-progress > span {
+      display: block; height: 100%; border-radius: inherit; background: #0f766e;
+    }
+
+    .ui-spinner {
+      width: 20px; height: 20px; border: 2px solid rgba(15,118,110,.18);
+      border-top-color: #0f766e; border-radius: 999px;
+      animation: ui-spin .8s linear infinite;
+    }
+    @keyframes ui-spin { to { transform: rotate(360deg); } }
+
+    .ui-skeleton {
+      height: 10px; border-radius: 999px;
+      background: linear-gradient(90deg, rgba(148,163,184,.15), rgba(255,255,255,.7), rgba(148,163,184,.15));
+      background-size: 200% 100%;
+      animation: ui-shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes ui-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .ui-alert {
+      display: flex; gap: .75rem; align-items: flex-start; padding: .75rem .9rem;
+      border-radius: .8rem; border: 1px solid; font-size: .72rem;
+    }
+    .ui-alert-info { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.2); color: #1e3a8a; }
+    .ui-alert-success { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.2); color: #065f46; }
+    .ui-alert-warning { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.25); color: #92400e; }
+    .ui-alert-error { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.22); color: #991b1b; }
+
+    /* Tabs */
+    .ui-tabs {
+      display: flex; gap: .4rem; padding: .25rem; border-radius: .8rem;
+      background: rgba(255,255,255,.35); border: 1px solid rgba(255,255,255,.55);
+    }
+    .ui-tabs button {
+      border: 0; border-radius: .65rem; padding: .45rem .7rem; background: transparent;
+      color: #64748b; font-size: .72rem; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+    .ui-tabs button.is-active {
+      background: #fff; color: #0f766e; box-shadow: 0 2px 8px rgba(15,23,42,.06);
+    }
+
+    .ui-menu {
+      width: 210px; padding: .35rem; border-radius: .8rem;
+      background: rgba(255,255,255,.9); border: 1px solid rgba(255,255,255,.8);
+      box-shadow: 0 18px 38px rgba(15,23,42,.12);
+    }
+    .ui-menu button {
+      width: 100%; text-align: left; border: 0; border-radius: .55rem;
+      padding: .55rem .65rem; background: transparent; color: #334155;
+      font-size: .72rem; cursor: pointer;
+    }
+    .ui-menu button:hover { background: rgba(15,118,110,.08); color: #0f766e; }
+
+    .ui-breadcrumbs {
+      display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
+      font-size: .72rem; color: #64748b;
+    }
+    .ui-breadcrumbs a { color: #0f766e; font-weight: 700; }
+
+    /* Badges (erweitert aus Dashboard) */
+    .ui-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .15rem .65rem; border-radius: 999px; font-size: .7rem; font-weight: 700;
+      border: 1px solid;
+    }
+    .ui-badge-success { background: rgba(15,118,110,.12); color: #0f766e; border-color: rgba(15,118,110,.25); }
+    .ui-badge-warning { background: rgba(245,158,11,.12); color: #92400e; border-color: rgba(245,158,11,.25); }
+    .ui-badge-danger  { background: rgba(225,29,72,.12); color: #9f1239; border-color: rgba(225,29,72,.25); }
+    .ui-badge-info    { background: rgba(59,130,246,.12); color: #1e40af; border-color: rgba(59,130,246,.25); }
+    .ui-badge-neutral { background: rgba(148,163,184,.18); color: #475569; border-color: rgba(148,163,184,.3); }
+
+    /* Modal-Overlay */
+    .modal-overlay {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .modal-panel {
+      isolation: isolate;
+      contain: layout style paint;
+      transform: translateZ(0);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* Reduced Transparency / Low-End Fallback */
+    @media (prefers-reduced-transparency: reduce),
+           (update: slow) {
+      .app-sidebar,
+      .app-content-block,
+      .glass-card,
+      .glass-preview-card,
+      .stat-card,
+      .modal-panel {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+      }
+    }
+
+    .no-backdrop .app-sidebar,
+    .no-backdrop .app-content-block,
+    .no-backdrop .glass-card,
+    .no-backdrop .glass-preview-card,
+    .no-backdrop .stat-card,
+    .no-backdrop .modal-panel {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background: rgba(255, 255, 255, 0.9) !important;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased" x-data="{ activeTab: 'guide-overview', modalOpen: false, toastVisible: false }">
+
+  <div class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar w-64 p-6 flex flex-col justify-between shrink-0 hidden md:flex sticky top-0 h-screen overflow-y-auto">
+      <div>
+        <div class="text-2xl font-black italic tracking-tighter text-slate-800">
+          hp <span class="text-xs font-normal not-italic block text-slate-500">polytechnik</span>
+        </div>
+        <div class="mt-4 pb-4 border-b border-white/50">
+          <h1 class="text-base font-bold text-slate-900 leading-tight">UI Styleguide</h1>
+          <p class="text-[11px] text-slate-500 font-medium">Design System & Komponenten</p>
+        </div>
+
+        <nav class="mt-4 space-y-1">
+          <button @click="activeTab = 'guide-overview'" :class="activeTab === 'guide-overview' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Übersicht
+          </button>
+          <button @click="activeTab = 'guide-colors'" :class="activeTab === 'guide-colors' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Farben & Tokens
+          </button>
+          <button @click="activeTab = 'guide-buttons'" :class="activeTab === 'guide-buttons' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Buttons
+          </button>
+          <button @click="activeTab = 'guide-forms'" :class="activeTab === 'guide-forms' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Formulare & Inputs
+          </button>
+          <button @click="activeTab = 'guide-controls'" :class="activeTab === 'guide-controls' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Checkbox, Radio, Switch
+          </button>
+          <button @click="activeTab = 'guide-dropdowns'" :class="activeTab === 'guide-dropdowns' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Dropdowns
+          </button>
+          <button @click="activeTab = 'guide-tooltips'" :class="activeTab === 'guide-tooltips' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Tooltips & Alerts
+          </button>
+          <button @click="activeTab = 'guide-tables'" :class="activeTab === 'guide-tables' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Tabellen & Badges
+          </button>
+          <button @click="activeTab = 'guide-navigation'" :class="activeTab === 'guide-navigation' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Navigation & Menüs
+          </button>
+          <button @click="activeTab = 'guide-feedback'" :class="activeTab === 'guide-feedback' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Feedback & Status
+          </button>
+          <button @click="activeTab = 'guide-data'" :class="activeTab === 'guide-data' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Loading & Pagination
+          </button>
+          <button @click="activeTab = 'guide-modals'" :class="activeTab === 'guide-modals' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Modals
+          </button>
+        </nav>
+      </div>
+
+      <div class="border-t border-white/40 pt-4 text-xs font-medium text-slate-600">
+        <div class="flex items-center gap-2 px-2 py-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Styleguide v2.1 · Perf Glass
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 p-4 md:p-8 space-y-6 max-w-[1400px]">
+
+      <!-- HEADER -->
+      <div class="app-content-block rounded-2xl p-6 shadow-xs flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">UI Component Showcase</h1>
+          <p class="text-xs text-slate-600 mt-1">Heller Glassmorphism · Primary = <strong>Deep Teal (bg-teal-700 / #0f766e)</strong> · Referenz für das gesamte ToolSync-Frontend</p>
+        </div>
+        <button @click="modalOpen = true" class="ui-btn ui-btn-primary">
+          Modal Vorschau öffnen
+        </button>
+      </div>
+
+      <!-- ========== OVERVIEW ========== -->
+      <section x-show="activeTab === 'guide-overview'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Component Library – Übersicht</h2>
+              <p class="text-xs text-slate-600 mt-1">Zentrale Website-Bausteine im gleichen visuellen System. Primary Actions nutzen konsequent <strong>Deep Teal · bg-teal-700</strong>.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">Design System v2.0</span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 mt-5">
+            <template x-for="item in [
+              ['Farben','guide-colors'],['Buttons','guide-buttons'],['Inputs','guide-forms'],
+              ['Checkbox/Switch','guide-controls'],['Dropdowns','guide-dropdowns'],['Tooltips','guide-tooltips'],
+              ['Tabellen','guide-tables'],['Navigation','guide-navigation'],['Feedback','guide-feedback'],
+              ['Loading','guide-data'],['Modals','guide-modals']
+            ]">
+              <button @click="activeTab = item[1]" class="text-left p-3 rounded-xl bg-white/25 hover:bg-white/45 border border-white/50 transition-all">
+                <div class="text-[11px] font-bold text-slate-800" x-text="item[0]"></div>
+                <div class="text-[9px] text-slate-500 mt-1">Beispiel + Code</div>
+              </button>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== COLORS ========== -->
+      <section x-show="activeTab === 'guide-colors'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Design Tokens & Farbpalette</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 bg-teal-700 text-white rounded-xl">
+              <p class="text-xs font-bold">Primary (Deep Teal)</p>
+              <p class="text-[10px] opacity-80">bg-teal-700 · #0f766e</p>
+            </div>
+            <div class="p-4 bg-slate-800 text-white rounded-xl">
+              <p class="text-xs font-bold">Dark Neutral</p>
+              <p class="text-[10px] opacity-80">bg-slate-800 · #1e293b</p>
+            </div>
+            <div class="p-4 glass-preview-card text-slate-800">
+              <p class="text-xs font-bold">Glass Card</p>
+              <p class="text-[10px] opacity-80">rgba(255,255,255,0.2)</p>
+            </div>
+            <div class="p-4 bg-rose-600 text-white rounded-xl">
+              <p class="text-xs font-bold">Danger</p>
+              <p class="text-[10px] opacity-80">bg-rose-600 · #e11d48</p>
+            </div>
+            <div class="p-4 bg-emerald-600 text-white rounded-xl">
+              <p class="text-xs font-bold">Success</p>
+              <p class="text-[10px] opacity-80">bg-emerald-600</p>
+            </div>
+            <div class="p-4 bg-amber-500 text-white rounded-xl">
+              <p class="text-xs font-bold">Warning</p>
+              <p class="text-[10px] opacity-80">bg-amber-500</p>
+            </div>
+            <div class="p-4 bg-sky-600 text-white rounded-xl">
+              <p class="text-xs font-bold">Info</p>
+              <p class="text-[10px] opacity-80">bg-sky-600</p>
+            </div>
+            <div class="p-4 bg-white/40 border border-white/60 text-slate-800 rounded-xl">
+              <p class="text-xs font-bold">Secondary Glass</p>
+              <p class="text-[10px] opacity-80">bg-white/40</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== BUTTONS ========== -->
+      <section x-show="activeTab === 'guide-buttons'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Buttons & Aktionen</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+              <div class="flex flex-wrap gap-3 items-center">
+                <button class="ui-btn ui-btn-primary">Primary</button>
+                <button class="ui-btn ui-btn-secondary">Secondary Glass</button>
+                <button class="ui-btn ui-btn-ghost">Ghost</button>
+                <button class="ui-btn ui-btn-danger">Danger</button>
+                <button class="ui-btn ui-btn-danger-soft">Löschen soft</button>
+                <button class="ui-btn ui-btn-primary ui-btn-sm">Small Btn</button>
+                <button class="ui-btn ui-btn-primary" disabled>Disabled</button>
+                <button class="ui-btn ui-btn-primary p-2 !px-2">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                </button>
+                <button class="ui-btn ui-btn-primary">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                  Speichern
+                </button>
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Primary (Deep Teal) --&gt;
+&lt;button class="ui-btn ui-btn-primary"&gt;Primary&lt;/button&gt;
+
+&lt;!-- Secondary Glass --&gt;
+&lt;button class="ui-btn ui-btn-secondary"&gt;Secondary&lt;/button&gt;
+
+&lt;!-- Ghost & Small Button --&gt;
+&lt;button class="ui-btn ui-btn-ghost"&gt;Ghost&lt;/button&gt;
+&lt;button class="ui-btn ui-btn-primary ui-btn-sm"&gt;Small&lt;/button&gt;
+
+&lt;!-- Danger Variants --&gt;
+&lt;button class="ui-btn ui-btn-danger"&gt;Danger&lt;/button&gt;
+&lt;button class="ui-btn ui-btn-danger-soft"&gt;Löschen soft&lt;/button&gt;
+
+/* CSS */
+.ui-btn-primary { background: #0f766e; color: #fff; }
+.ui-btn-secondary { background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.7); }
+.ui-btn-sm { padding: .35rem .65rem; font-size: .7rem; }</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FORMS ========== -->
+      <section x-show="activeTab === 'guide-forms'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Formulare & Inputs</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Standard Textfeld</label>
+                <input type="text" placeholder="Eingabe..." class="input-bordered text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Mit Wert</label>
+                <input type="text" value="TS-1042" class="input-bordered text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Passwort</label>
+                <input type="password" placeholder="••••••••" class="input-bordered text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Textarea</label>
+                <textarea rows="3" placeholder="Beschreibung..." class="input-bordered text-xs resize-none"></textarea>
+              </div>
+              <div class="relative pt-2">
+                <span class="form-tooltip visible">Fehler: ID existiert bereits!</span>
+                <input type="text" value="TS-1001" class="input-bordered input-error text-xs" />
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Light Glass Input --&gt;
+&lt;input type="text" class="input-bordered text-xs" /&gt;
+
+&lt;!-- Error State --&gt;
+&lt;input class="input-bordered input-error text-xs" /&gt;
+
+/* CSS - Keine Backdrop Filter für maximale Performance */
+.input-bordered {
+  border: 1px solid rgba(15,118,110,.25);
+  background: rgba(255,255,255,.55);
+  border-radius: .5rem;
+}
+.input-bordered:focus {
+  background: rgba(255,255,255,.88);
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15,118,110,.15);
+}
+.input-error {
+  background: rgba(239,68,68,.12) !important;
+  border-color: #ef4444 !important;
+}</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== CONTROLS ========== -->
+      <section x-show="activeTab === 'guide-controls'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Checkbox, Radio & Toggle Switch</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-5">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+              <div class="flex flex-wrap gap-5">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-800">
+                  <input type="checkbox" checked class="rounded accent-teal-700 h-4 w-4" /> Checkbox Aktiv
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-800">
+                  <input type="checkbox" class="rounded accent-teal-700 h-4 w-4" /> Checkbox Inaktiv
+                </label>
+              </div>
+              <div class="flex flex-wrap gap-5">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-800">
+                  <input type="radio" name="demo-radio" checked class="accent-teal-700 h-4 w-4" /> Radio A
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-800">
+                  <input type="radio" name="demo-radio" class="accent-teal-700 h-4 w-4" /> Radio B
+                </label>
+              </div>
+              <div x-data="{ on: true }" class="flex items-center justify-between rounded-xl bg-white/30 px-3 py-2 border border-white/50 max-w-xs">
+                <span class="text-xs font-semibold text-slate-700">Benachrichtigungen</span>
+                <button type="button" @click="on = !on" :class="on ? 'ui-switch is-on' : 'ui-switch'" :aria-pressed="on" aria-label="Umschalten"></button>
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Checkbox --&gt;
+&lt;input type="checkbox" class="rounded accent-teal-700 h-4 w-4" /&gt;
+
+&lt;!-- Radio --&gt;
+&lt;input type="radio" name="group" class="accent-teal-700 h-4 w-4" /&gt;
+
+&lt;!-- Switch (Alpine) --&gt;
+&lt;button type="button"
+  @click="on = !on"
+  :class="on ? 'ui-switch is-on' : 'ui-switch'"
+  aria-label="Umschalten"&gt;&lt;/button&gt;
+
+/* CSS */
+.ui-switch { width:42px; height:24px; background:#cbd5e1; border-radius:999px; }
+.ui-switch.is-on { background:#0f766e; }
+.ui-switch.is-on::after { transform: translateX(18px); }</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== DROPDOWNS ========== -->
+      <section x-show="activeTab === 'guide-dropdowns'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Dropdowns & Selects</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-5">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Native Select</label>
+                <select class="select-bordered text-xs">
+                  <option>Option 1 auswählen</option>
+                  <option>Option 2 auswählen</option>
+                  <option>Option 3 auswählen</option>
+                </select>
+              </div>
+              <div x-data="{ open: false, selected: 'Werkzeug wählen…' }">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Custom Dropdown (Alpine)</label>
+                <div class="relative">
+                  <button type="button" @click="open = !open" class="w-full flex items-center justify-between input-bordered text-xs text-left">
+                    <span x-text="selected"></span>
+                    <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                  <div x-show="open" @click.away="open = false" x-transition class="absolute z-20 mt-1 w-full bg-white/90 backdrop-blur-md border border-white/60 rounded-xl shadow-lg overflow-hidden">
+                    <button type="button" @click="selected = 'Stanzwerkzeug A2'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-teal-700/10">Stanzwerkzeug A2</button>
+                    <button type="button" @click="selected = 'Messmittel B1'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-teal-700/10">Messmittel B1</button>
+                    <button type="button" @click="selected = 'Prüflehre C3'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-teal-700/10">Prüflehre C3</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Native Select --&gt;
+&lt;select class="select-bordered text-xs"&gt;…&lt;/select&gt;
+
+&lt;!-- Custom Dropdown (Alpine) --&gt;
+&lt;div x-data="{ open: false, selected: '…' }"&gt;
+  &lt;button @click="open = !open" class="input-bordered …"&gt;
+    &lt;span x-text="selected"&gt;&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;div x-show="open" @click.away="open = false"&gt;
+    &lt;button @click="selected = 'Wert'; open = false"&gt;Wert&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== TOOLTIPS & ALERTS ========== -->
+      <section x-show="activeTab === 'guide-tooltips'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Tooltips, Alerts & Toasts</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-5">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+              <div class="relative inline-block" x-data="{ show: false }">
+                <button @mouseenter="show = true" @mouseleave="show = false" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs">
+                  Hover für Tooltip
+                </button>
+                <div x-show="show" x-transition class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg z-10">
+                  Dies ist ein Info-Tooltip
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="ui-alert ui-alert-info"><span>ℹ</span><div><strong>Info</strong><div class="mt-0.5 opacity-80">Neue Werkzeuge synchronisiert.</div></div></div>
+                <div class="ui-alert ui-alert-success"><span>✓</span><div><strong>Erfolg</strong><div class="mt-0.5 opacity-80">Datensatz gespeichert.</div></div></div>
+                <div class="ui-alert ui-alert-warning"><span>!</span><div><strong>Hinweis</strong><div class="mt-0.5 opacity-80">Sitzung läuft bald ab.</div></div></div>
+                <div class="ui-alert ui-alert-error"><span>×</span><div><strong>Fehler</strong><div class="mt-0.5 opacity-80">Verbindung fehlgeschlagen.</div></div></div>
+              </div>
+              <button @click="toastVisible = true; setTimeout(() => toastVisible = false, 3000)" class="ui-btn ui-btn-primary">
+                Toast anzeigen
+              </button>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Tooltip (Alpine) --&gt;
+&lt;div class="relative" x-data="{ open: false }"&gt;
+  &lt;button @mouseenter="open = true" @mouseleave="open = false"&gt;Hover&lt;/button&gt;
+  &lt;div x-show="open" class="absolute bottom-full … bg-slate-900 text-white …"&gt;
+    Tooltip Inhalt
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Alerts --&gt;
+&lt;div class="ui-alert ui-alert-success"&gt;…&lt;/div&gt;
+&lt;div class="ui-alert ui-alert-error"&gt;…&lt;/div&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== TABLES & BADGES ========== -->
+      <section x-show="activeTab === 'guide-tables'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Tabellen & Status Badges</h2>
+          
+          <div class="mb-4">
+            <p class="text-xs font-bold text-slate-700 mb-2">Standard Status Badges</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="ui-badge ui-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-teal-600"></span> Verfügbar</span>
+              <span class="ui-badge ui-badge-info"><span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span> Ausgeliehen</span>
+              <span class="ui-badge ui-badge-warning"><span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span> Wartung fällig</span>
+              <span class="ui-badge ui-badge-danger"><span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span> Überfällig</span>
+              <span class="ui-badge ui-badge-neutral">Inaktiv</span>
+            </div>
+          </div>
+
+          <div class="glass-preview-card p-5 overflow-x-auto mb-4">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                  <th class="pb-3 px-2">Werkzeug-ID / Typ</th>
+                  <th class="pb-3 px-2">Bezeichnung & Specs</th>
+                  <th class="pb-3 px-2">Standort / Platz</th>
+                  <th class="pb-3 px-2">Status / Entleiher</th>
+                  <th class="pb-3 px-2 text-right">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                <tr class="hover:bg-white/40 transition-colors">
+                  <td class="py-3.5 px-2">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-teal-700 font-bold text-[10px]">M</span>
+                      <div>
+                        <code class="font-mono font-bold text-slate-900">TS-1001-A</code>
+                        <p class="text-[10px] text-slate-500">Messmittel</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <p class="font-semibold text-slate-900">Drehmomentschlüssel V2</p>
+                    <p class="text-[11px] text-slate-500">20-100 Nm · Kalibriert</p>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <span class="font-medium text-slate-800">Halle 1</span>
+                    <p class="text-[11px] text-slate-500">Schrank A → Fach 03</p>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <span class="ui-badge ui-badge-success">
+                      <span class="h-1.5 w-1.5 rounded-full bg-teal-600"></span>
+                      Verfügbar
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-2 text-right">
+                    <div class="flex justify-end gap-1">
+                      <button class="ui-btn ui-btn-primary ui-btn-sm">Ausleihen</button>
+                      <button class="ui-btn ui-btn-secondary ui-btn-sm">…</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-white/40 transition-colors">
+                  <td class="py-3.5 px-2">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-700 font-bold text-[10px]">S</span>
+                      <div>
+                        <code class="font-mono font-bold text-slate-900">TS-1002-C</code>
+                        <p class="text-[10px] text-slate-500">Stanzwerkzeug</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <p class="font-semibold text-slate-900">Rundstempel Ø 12mm</p>
+                    <p class="text-[11px] text-slate-500">HSS-Co · Form B</p>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <span class="font-medium text-slate-800">Linie 4 (Aktiv)</span>
+                    <p class="text-[11px] text-slate-500">Maschine ST-02</p>
+                  </td>
+                  <td class="py-3.5 px-2">
+                    <span class="ui-badge ui-badge-info">
+                      <span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                      Ausgeliehen
+                    </span>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Entleiher: K. Weber</p>
+                  </td>
+                  <td class="py-3.5 px-2 text-right">
+                    <div class="flex justify-end gap-1">
+                      <button class="ui-btn ui-btn-secondary ui-btn-sm">Rückgabe</button>
+                      <button class="ui-btn ui-btn-secondary ui-btn-sm">…</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="code-panel"><pre><code>&lt;!-- Badges --&gt;
+&lt;span class="ui-badge ui-badge-success"&gt;
+  &lt;span class="h-1.5 w-1.5 rounded-full bg-teal-600"&gt;&lt;/span&gt; Verfügbar
+&lt;/span&gt;
+&lt;span class="ui-badge ui-badge-info"&gt;Ausgeliehen&lt;/span&gt;
+
+&lt;!-- Table cell structure --&gt;
+&lt;td class="py-3.5 px-2"&gt;
+  &lt;code class="font-mono font-bold text-slate-900"&gt;TS-1001-A&lt;/code&gt;
+&lt;/td&gt;</code></pre></div>
+        </div>
+      </section>
+
+      <!-- ========== NAVIGATION ========== -->
+      <section x-show="activeTab === 'guide-navigation'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Navigation, Tabs, Breadcrumbs & Menüs</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-5">
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Dashboard Navigation Tabs</div>
+                <nav class="ui-tabs overflow-x-auto">
+                  <button class="is-active">Übersicht</button>
+                  <button>Werkzeuge</button>
+                  <button>Serienartikel</button>
+                  <button>Lager/Ersatz</button>
+                  <button>Administration</button>
+                </nav>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Breadcrumbs</div>
+                <nav class="ui-breadcrumbs">
+                  <a href="#">Dashboard</a><span>/</span>
+                  <a href="#">Tools</a><span>/</span>
+                  <span>TS-2001</span>
+                </nav>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Dropdown-Menü</div>
+                <div class="ui-menu">
+                  <button type="button">Bearbeiten</button>
+                  <button type="button">Duplizieren</button>
+                  <button type="button" class="text-rose-700">Löschen</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Search Bar</div>
+                <div class="relative">
+                  <svg class="absolute left-3 top-2.5 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                  <input type="search" placeholder="Werkzeug-ID, Name, Barcode suchen..." class="input-bordered text-xs pl-10 pr-4 py-2">
+                </div>
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Navigation Tabs --&gt;
+&lt;nav class="ui-tabs"&gt;
+  &lt;button class="is-active"&gt;Übersicht&lt;/button&gt;
+  &lt;button&gt;Werkzeuge&lt;/button&gt;
+&lt;/nav&gt;
+
+&lt;!-- Breadcrumbs --&gt;
+&lt;nav class="ui-breadcrumbs"&gt;
+  &lt;a href="#"&gt;Dashboard&lt;/a&gt; &lt;span&gt;/&lt;/span&gt; …
+&lt;/nav&gt;
+
+&lt;!-- Menü --&gt;
+&lt;div class="ui-menu"&gt;
+  &lt;button&gt;Bearbeiten&lt;/button&gt;
+  &lt;button class="text-rose-700"&gt;Löschen&lt;/button&gt;
+&lt;/div&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== FEEDBACK & CARDS ========== -->
+      <section x-show="activeTab === 'guide-feedback'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Stat-Cards, Quick-Cards & Progress</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Stat Card Glow (aus Dashboard)</p>
+              
+              <!-- Stat Card Demo -->
+              <div class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg">
+                <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-teal-400/25 blur-3xl"></div>
+
+                <div class="relative flex items-start justify-between">
+                  <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700 ring-1 ring-teal-500/20">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                  </div>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">
+                    +12%
+                  </span>
+                </div>
+
+                <div class="relative mt-4">
+                  <p class="text-3xl font-bold tracking-tight text-slate-800">24</p>
+                  <p class="mt-1 text-sm font-medium text-slate-500">Aktive Ausleihen</p>
+                </div>
+
+                <div class="relative mt-4 border-t border-white/50 pt-3">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="font-medium text-slate-500">Auslastung</span>
+                    <span class="font-semibold text-slate-700">80%</span>
+                  </div>
+                  <div class="ui-progress">
+                    <span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Card Sidebar Demo -->
+              <div class="glass-card group relative overflow-hidden rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/15 text-rose-600 ring-1 ring-rose-500/20">
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-xs font-medium text-slate-500">Überfällige Ausleihen</p>
+                      <p class="text-2xl font-extrabold tracking-tight text-slate-900">5</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Stat Card mit Blur Glow --&gt;
+&lt;div class="stat-card relative overflow-hidden rounded-2xl p-5 shadow-lg"&gt;
+  &lt;div class="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-teal-400/25 blur-3xl"&gt;&lt;/div&gt;
+  &lt;div class="relative"&gt;
+    &lt;p class="text-3xl font-bold"&gt;24&lt;/p&gt;
+    &lt;p class="text-sm text-slate-500"&gt;Aktive Ausleihen&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class="ui-progress mt-4"&gt;
+    &lt;span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+/* Stat Card CSS */
+.stat-card {
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(12px);
+}</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== DATA / LOADING ========== -->
+      <section x-show="activeTab === 'guide-data'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Loading, Skeleton & Pagination</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-5">
+              <div class="flex items-center gap-3">
+                <div class="ui-spinner"></div>
+                <div>
+                  <div class="text-xs font-bold text-slate-800">Daten werden geladen…</div>
+                  <div class="text-[10px] text-slate-500">Bitte einen Moment warten.</div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Skeleton</div>
+                <div class="ui-skeleton w-3/4"></div>
+                <div class="ui-skeleton w-full"></div>
+                <div class="ui-skeleton w-5/6"></div>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Pagination</div>
+                <div class="ui-pagination flex items-center gap-1">
+                  <a href="#">‹</a>
+                  <a href="#" class="active">1</a>
+                  <a href="#">2</a>
+                  <a href="#">3</a>
+                  <a href="#">›</a>
+                </div>
+              </div>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Spinner --&gt;
+&lt;div class="ui-spinner"&gt;&lt;/div&gt;
+
+&lt;!-- Skeleton --&gt;
+&lt;div class="ui-skeleton w-full"&gt;&lt;/div&gt;
+
+&lt;!-- Pagination --&gt;
+&lt;nav class="ui-pagination flex gap-1"&gt;
+  &lt;a href="#"&gt;‹&lt;/a&gt;
+  &lt;a href="#" class="active"&gt;1&lt;/a&gt;
+  &lt;a href="#"&gt;2&lt;/a&gt;
+  &lt;a href="#"&gt;›&lt;/a&gt;
+&lt;/nav&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== MODALS ========== -->
+      <section x-show="activeTab === 'guide-modals'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <h2 class="text-base font-bold text-slate-900 mb-4">Modals & Dialoge</h2>
+          <div class="component-grid">
+            <div class="demo-surface space-y-4">
+              <p class="text-xs text-slate-600">Performance-optimierte Modals ohne Fullscreen-Blur Overlay.</p>
+              <button @click="modalOpen = true" class="ui-btn ui-btn-primary">
+                Modal öffnen
+              </button>
+            </div>
+            <div class="code-panel"><pre><code>&lt;!-- Modal Markup --&gt;
+&lt;div x-show="modalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"&gt;
+  &lt;div class="modal-panel bg-white/80 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white"&gt;
+    &lt;h3 class="text-lg font-bold"&gt;Modal Titel&lt;/h3&gt;
+    &lt;div class="mt-6 flex justify-end gap-2"&gt;
+      &lt;button @click="modalOpen = false" class="ui-btn ui-btn-secondary"&gt;Abbrechen&lt;/button&gt;
+      &lt;button class="ui-btn ui-btn-primary"&gt;Bestätigen&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL VORSCHAU -->
+  <div x-show="modalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay" x-transition.opacity>
+    <div class="modal-panel bg-white/80 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white space-y-4" @click.away="modalOpen = false">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-900">Neues Werkzeug anlegen</h3>
+        <button @click="modalOpen = false" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Werkzeug-ID</label>
+          <input type="text" placeholder="z. B. TS-1004" class="input-bordered text-xs" />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Kategorie</label>
+          <select class="select-bordered text-xs">
+            <option>Messmittel</option>
+            <option>Stanzwerkzeug</option>
+            <option>Biegewerkzeug</option>
+          </select>
+        </div>
+      </div>
+      <div class="pt-3 flex justify-end gap-2 border-t border-slate-200">
+        <button @click="modalOpen = false" class="ui-btn ui-btn-secondary">Abbrechen</button>
+        <button @click="modalOpen = false" class="ui-btn ui-btn-primary">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION DEMO -->
+  <div x-show="toastVisible" x-cloak x-transition class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-3">
+    <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
+    Aktion erfolgreich ausgeführt!
+  </div>
+
+  <script>
+    // Low-end / no backdrop-filter support fallback
+    (function () {
+      try {
+        var supports = CSS.supports && CSS.supports('backdrop-filter', 'blur(1px)');
+        var lowEnd = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+        if (!supports || lowEnd) {
+          document.documentElement.classList.add('no-backdrop');
+        }
+      } catch (e) {
+        document.documentElement.classList.add('no-backdrop');
+      }
+    })();
+  </script>
+
+</body>
+</html>

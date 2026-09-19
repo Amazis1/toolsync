@@ -1,0 +1,97 @@
+- generic [ref=e117]:
+  - complementary [ref=e118]:
+    - generic [ref=e119]:
+      - generic [ref=e120]: ToolSync
+      - generic [ref=e121]: Admin Panel
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic "Admin User" [ref=e124]: AU
+        - generic [ref=e125]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=e126] [cursor=pointer]
+      - button "Abmelden" [ref=e127] [cursor=pointer]
+    - navigation [ref=e128]:
+      - button "Übersicht" [ref=e129] [cursor=pointer]
+      - button "Stammdaten" [ref=e131] [cursor=pointer]
+      - button "Lagerplätze" [ref=e133] [cursor=pointer]
+    - generic [ref=e135]: Admin Panel
+  - generic [ref=e138]:
+    - banner [ref=e139]:
+      - generic [ref=e140]:
+        - generic [ref=e141]: Admin Panel
+        - generic [ref=e142]: Übersicht
+      - generic [ref=e143]:
+        - generic "Admin User" [ref=e144]: AU
+        - generic [ref=e145]: Admin User
+    - generic [ref=e147]:
+      - generic [ref=e148]:
+        - generic [ref=e149]:
+          - generic [ref=e150]: Gesamt
+          - generic [ref=e151]: "2"
+        - generic [ref=e152]:
+          - generic [ref=e153]: Frei
+          - generic [ref=e154]: "0"
+        - generic [ref=e155]:
+          - generic [ref=e156]: Ausgeliehen
+          - generic [ref=e157]: "0"
+        - generic [ref=e158]:
+          - generic [ref=e159]: Wartung
+          - generic [ref=e160]: "0"
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - heading "Benutzer" [level=3] [ref=e163]
+          - button "Neu" [ref=e164] [cursor=pointer]
+        - table [ref=e168]:
+          - rowgroup [ref=e169]:
+            - row [ref=e170]:
+              - columnheader "Name" [ref=e171]
+              - columnheader "Status" [ref=e172]
+              - columnheader "Aktionen" [ref=e173]
+          - rowgroup [ref=e174]:
+            - row [ref=e175]:
+              - cell "Admin User Admin" [ref=e176]:
+                - text: Admin User
+                - generic [ref=e177]: Admin
+              - cell "Aktiv" [ref=e178]
+              - cell [ref=e180]:
+                - generic [ref=e181]:
+                  - button "Bearbeiten" [ref=e182] [cursor=pointer]
+                  - button "Löschen" [ref=e183] [cursor=pointer]
+            - row [ref=e184]:
+              - cell "A A Admin" [ref=e185]:
+                - text: A A
+                - generic [ref=e186]: Admin
+              - cell "Aktiv" [ref=e187]
+              - cell [ref=e189]:
+                - generic [ref=e190]:
+                  - button "Bearbeiten" [ref=e191] [cursor=pointer]
+                  - button "Löschen" [ref=e192] [cursor=pointer]
+            - row [ref=e193]:
+              - cell "Er RE" [ref=e194]
+              - cell "Aktiv" [ref=e195]
+              - cell [ref=e197]:
+                - generic [ref=e198]:
+                  - button "Bearbeiten" [ref=e199] [cursor=pointer]
+                  - button "Löschen" [ref=e200] [cursor=pointer]
+      - searchbox "Werkzeug, ID oder Typ filtern…" [ref=e206]
+      - generic [ref=e207]:
+        - generic [ref=e208]:
+          - generic [ref=e209]: Werkzeugbestand
+          - generic [ref=e210]: 2 Einträge
+        - table [ref=e212]:
+          - rowgroup [ref=e213]:
+            - row [ref=e214]:
+              - columnheader "ID" [ref=e215]
+              - columnheader "Bezeichnung" [ref=e216]
+              - columnheader "Typ" [ref=e217]
+              - columnheader "Status" [ref=e218]
+          - rowgroup [ref=e219]:
+            - row [ref=e220]:
+              - cell "01025000" [ref=e221]
+              - cell "Rund 2.5 ALU" [ref=e222]
+              - cell "01 Rund" [ref=e223]
+              - cell "—" [ref=e224]
+            - row [ref=e226]:
+              - cell "01060000" [ref=e227]
+              - cell "Rund 6,0" [ref=e228]
+              - cell "01 Rund" [ref=e229]
+              - cell "—" [ref=e230]

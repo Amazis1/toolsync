@@ -1,0 +1,28 @@
+﻿=== D:\Web\bewegung\models.py ===
+from django.db import models
+from django.conf import settings
+from werkzeug.models import Tool
+
+class ToolMovement(models.Model):
+    """Speichert Bewegungen von Werkzeugen zwischen Werk 1 & Werk 2"""
+    tool = models.ForeignKey(Tool, on_delete=models.CASCADE)
+    from_location = models.CharField(max_length=10, choices=[('Werk 1', 'Werk 1'), ('Werk 2', 'Werk 2')])
+    to_location = models.CharField(max_length=10, choices=[('Werk 1', 'Werk 1'), ('Werk 2', 'Werk 2')])
+    status = models.CharField(max_length=20, choices=[('verschickt', 'Verschickt'), ('angekommen', 'Angekommen')])
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    note = models.TextField(blank=True, null=True)  # Optional: Notizfeld
+
+    class Meta:
+        verbose_name = "Werkzeugbewegung"
+        verbose_name_plural = "Werkzeugbewegungen"
+
+    def __str__(self):
+        return f"{self.tool.tool_id} von {self.from_location} nach {self.to_location} - {self.status}"
+
+
+location = models.CharField(
+    max_length=10,
+    choices=[('Werk 1', 'Werk 1'), ('Werk 2', 'Werk 2')],
+    default='Werk 1'
+)

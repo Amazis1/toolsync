@@ -1,0 +1,46 @@
+# Python / ToolSync
+__pycache__/
+*.py[cod]
+.venv/
+.venv-1/
+*.log
+backend/toolsync.db
+backend/test.db
+
+# Umgebungsvariablen mit Zugangsdaten (JWT-Secret, DB-URL, API-Keys).
+# .env.example bleibt versioniert, .env selbst NICHT.
+.env
+.env.*
+!.env.example
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Continue: MCP-Server-Konfigurationen enthalten Zugangsdaten.
+# Die Regeln (.continue/rules/) und Prompts (.continue/prompts/) bleiben
+# bewusst versioniert - das ist die Agenten-Steuerung des Projekts.
+.continue/mcpServers/*
+!.continue/mcpServers/README.md
+
+# Lokale Sicherung der Null-Byte-Reparatur (nur zur Nachvollziehbarkeit)
+.archive-nulbytes-backup/
+
+# Playwright-MCP generiert bei jedem Lauf Snapshot-Dateien.
+.playwright-mcp/
+
+# Lokale Sicherung der alten Git-Historie vor dem Rewrite.
+# Enthaelt die alte Historie inkl. kompromittiertem Key -> NICHT versionieren.
+# Nach erfolgreicher Verifikation loeschbar.
+.backup-history/
+
+# Temporaere Screenshot-Pruefartefakte (nicht versionieren)
+/aktion-panel-open.png
+/stammdaten-*.png

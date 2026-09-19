@@ -1,0 +1,97 @@
+- generic [ref=f3e65]:
+  - complementary [ref=f3e66]:
+    - generic [ref=f3e67]:
+      - generic [ref=f3e68]: ToolSync
+      - generic [ref=f3e69]: Admin Panel
+    - generic [ref=f3e70]:
+      - generic [ref=f3e71]:
+        - generic "Admin User" [ref=f3e72]: AU
+        - generic [ref=f3e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f3e74] [cursor=pointer]
+      - button "Abmelden" [ref=f3e75] [cursor=pointer]
+    - navigation [ref=f3e76]:
+      - button "Übersicht" [ref=f3e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f3e79] [cursor=pointer]
+      - button "Lagerplätze" [ref=f3e81] [cursor=pointer]
+    - generic [ref=f3e83]: Admin Panel
+  - generic [ref=f3e86]:
+    - banner [ref=f3e87]:
+      - generic [ref=f3e88]:
+        - generic [ref=f3e89]: Admin Panel
+        - generic [ref=f3e90]: Übersicht
+      - generic [ref=f3e91]:
+        - generic "Admin User" [ref=f3e92]: AU
+        - generic [ref=f3e93]: Admin User
+    - generic [ref=f3e95]:
+      - generic [ref=f3e96]:
+        - generic [ref=f3e97]:
+          - generic [ref=f3e98]: Gesamt
+          - generic [ref=f3e99]: "2"
+        - generic [ref=f3e100]:
+          - generic [ref=f3e101]: Frei
+          - generic [ref=f3e102]: "0"
+        - generic [ref=f3e103]:
+          - generic [ref=f3e104]: Ausgeliehen
+          - generic [ref=f3e105]: "0"
+        - generic [ref=f3e106]:
+          - generic [ref=f3e107]: Wartung
+          - generic [ref=f3e108]: "0"
+      - generic [ref=f3e109]:
+        - generic [ref=f3e110]:
+          - heading "Benutzer" [level=3] [ref=f3e111]
+          - button "Neu" [ref=f3e112] [cursor=pointer]
+        - table [ref=f3e116]:
+          - rowgroup [ref=f3e117]:
+            - row [ref=f3e118]:
+              - columnheader "Name" [ref=f3e119]
+              - columnheader "Status" [ref=f3e120]
+              - columnheader "Aktionen" [ref=f3e121]
+          - rowgroup [ref=f3e122]:
+            - row [ref=f3e123]:
+              - cell "Admin User Admin" [ref=f3e124]:
+                - text: Admin User
+                - generic [ref=f3e125]: Admin
+              - cell "Aktiv" [ref=f3e126]
+              - cell [ref=f3e128]:
+                - generic [ref=f3e129]:
+                  - button "Bearbeiten" [ref=f3e130] [cursor=pointer]
+                  - button "Löschen" [ref=f3e131] [cursor=pointer]
+            - row [ref=f3e132]:
+              - cell "A A Admin" [ref=f3e133]:
+                - text: A A
+                - generic [ref=f3e134]: Admin
+              - cell "Aktiv" [ref=f3e135]
+              - cell [ref=f3e137]:
+                - generic [ref=f3e138]:
+                  - button "Bearbeiten" [ref=f3e139] [cursor=pointer]
+                  - button "Löschen" [ref=f3e140] [cursor=pointer]
+            - row [ref=f3e141]:
+              - cell "Er RE" [ref=f3e142]
+              - cell "Aktiv" [ref=f3e143]
+              - cell [ref=f3e145]:
+                - generic [ref=f3e146]:
+                  - button "Bearbeiten" [ref=f3e147] [cursor=pointer]
+                  - button "Löschen" [ref=f3e148] [cursor=pointer]
+      - searchbox "Werkzeug, ID oder Typ filtern…" [ref=f3e154]
+      - generic [ref=f3e155]:
+        - generic [ref=f3e156]:
+          - generic [ref=f3e157]: Werkzeugbestand
+          - generic [ref=f3e158]: 2 Einträge
+        - table [ref=f3e160]:
+          - rowgroup [ref=f3e161]:
+            - row [ref=f3e162]:
+              - columnheader "ID" [ref=f3e163]
+              - columnheader "Bezeichnung" [ref=f3e164]
+              - columnheader "Typ" [ref=f3e165]
+              - columnheader "Status" [ref=f3e166]
+          - rowgroup [ref=f3e167]:
+            - row [ref=f3e168]:
+              - cell "01025000" [ref=f3e169]
+              - cell "Rund 2.5 ALU" [ref=f3e170]
+              - cell "01 Rund" [ref=f3e171]
+              - cell "—" [ref=f3e172]
+            - row [ref=f3e174]:
+              - cell "01060000" [ref=f3e175]
+              - cell "Rund 6,0" [ref=f3e176]
+              - cell "01 Rund" [ref=f3e177]
+              - cell "—" [ref=f3e178]

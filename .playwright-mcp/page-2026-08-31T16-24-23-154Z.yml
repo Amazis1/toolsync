@@ -1,0 +1,122 @@
+- generic [ref=f8e65]:
+  - complementary [ref=f8e66]:
+    - generic [ref=f8e67]:
+      - generic [ref=f8e68]: ToolSync
+      - generic [ref=f8e69]: Admin Panel
+    - generic [ref=f8e70]:
+      - generic [ref=f8e71]:
+        - generic "Admin User" [ref=f8e72]: AU
+        - generic [ref=f8e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f8e74] [cursor=pointer]
+      - button "Abmelden" [ref=f8e75] [cursor=pointer]
+    - navigation [ref=f8e76]:
+      - button "Übersicht" [ref=f8e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f8e79] [cursor=pointer]
+      - button "Lagerplätze" [ref=f8e81] [cursor=pointer]
+    - generic [ref=f8e83]: Admin Panel
+  - generic [ref=f8e86]:
+    - banner [ref=f8e87]:
+      - generic [ref=f8e88]:
+        - generic [ref=f8e89]: Admin Panel
+        - generic [ref=f8e90]: Übersicht
+      - generic [ref=f8e91]:
+        - generic "Admin User" [ref=f8e92]: AU
+        - generic [ref=f8e93]: Admin User
+    - generic [ref=f8e95]:
+      - generic [ref=f8e96]:
+        - generic [ref=f8e97]:
+          - generic [ref=f8e98]: Gesamt
+          - generic [ref=f8e99]: "7"
+        - generic [ref=f8e100]:
+          - generic [ref=f8e101]: Frei
+          - generic [ref=f8e102]: "0"
+        - generic [ref=f8e103]:
+          - generic [ref=f8e104]: Ausgeliehen
+          - generic [ref=f8e105]: "0"
+        - generic [ref=f8e106]:
+          - generic [ref=f8e107]: Wartung
+          - generic [ref=f8e108]: "0"
+      - generic [ref=f8e109]:
+        - generic [ref=f8e110]:
+          - heading "Benutzer" [level=3] [ref=f8e111]
+          - button "Neu" [ref=f8e112] [cursor=pointer]
+        - table [ref=f8e116]:
+          - rowgroup [ref=f8e117]:
+            - row [ref=f8e118]:
+              - columnheader "Name" [ref=f8e119]
+              - columnheader "Status" [ref=f8e120]
+              - columnheader "Aktionen" [ref=f8e121]
+          - rowgroup [ref=f8e122]:
+            - row [ref=f8e123]:
+              - cell "Admin User Admin" [ref=f8e124]:
+                - text: Admin User
+                - generic [ref=f8e125]: Admin
+              - cell "Aktiv" [ref=f8e126]
+              - cell [ref=f8e128]:
+                - generic [ref=f8e129]:
+                  - button "Bearbeiten" [ref=f8e130] [cursor=pointer]
+                  - button "Löschen" [ref=f8e131] [cursor=pointer]
+            - row [ref=f8e132]:
+              - cell "A A Admin" [ref=f8e133]:
+                - text: A A
+                - generic [ref=f8e134]: Admin
+              - cell "Aktiv" [ref=f8e135]
+              - cell [ref=f8e137]:
+                - generic [ref=f8e138]:
+                  - button "Bearbeiten" [ref=f8e139] [cursor=pointer]
+                  - button "Löschen" [ref=f8e140] [cursor=pointer]
+            - row [ref=f8e141]:
+              - cell "Er RE" [ref=f8e142]
+              - cell "Aktiv" [ref=f8e143]
+              - cell [ref=f8e145]:
+                - generic [ref=f8e146]:
+                  - button "Bearbeiten" [ref=f8e147] [cursor=pointer]
+                  - button "Löschen" [ref=f8e148] [cursor=pointer]
+      - searchbox "Werkzeug, ID oder Typ filtern…" [ref=f8e154]
+      - generic [ref=f8e155]:
+        - generic [ref=f8e156]:
+          - generic [ref=f8e157]: Werkzeugbestand
+          - generic [ref=f8e158]: 7 Einträge
+        - table [ref=f8e160]:
+          - rowgroup [ref=f8e161]:
+            - row [ref=f8e162]:
+              - columnheader "ID" [ref=f8e163]
+              - columnheader "Bezeichnung" [ref=f8e164]
+              - columnheader "Typ" [ref=f8e165]
+              - columnheader "Status" [ref=f8e166]
+          - rowgroup [ref=f8e167]:
+            - row [ref=f8e168]:
+              - cell "01025000" [ref=f8e169]
+              - cell "Rund 2.5 ALU" [ref=f8e170]
+              - cell "01 Rund" [ref=f8e171]
+              - cell "—" [ref=f8e172]
+            - row [ref=f8e174]:
+              - cell "01060000" [ref=f8e175]
+              - cell "Rund 6,0" [ref=f8e176]
+              - cell "01 Rund" [ref=f8e177]
+              - cell "—" [ref=f8e178]
+            - row [ref=f8e180]:
+              - cell "01030000" [ref=f8e181]
+              - cell "—" [ref=f8e182]
+              - cell "01 Rund" [ref=f8e183]
+              - cell "—" [ref=f8e184]
+            - row [ref=f8e186]:
+              - cell "01045000" [ref=f8e187]
+              - cell "—" [ref=f8e188]
+              - cell "01 Rund" [ref=f8e189]
+              - cell "—" [ref=f8e190]
+            - row [ref=f8e192]:
+              - cell "01037000" [ref=f8e193]
+              - cell "—" [ref=f8e194]
+              - cell "01 Rund" [ref=f8e195]
+              - cell "—" [ref=f8e196]
+            - row [ref=f8e198]:
+              - cell "01040000" [ref=f8e199]
+              - cell "—" [ref=f8e200]
+              - cell "01 Rund" [ref=f8e201]
+              - cell "—" [ref=f8e202]
+            - row [ref=f8e204]:
+              - cell "01028000" [ref=f8e205]
+              - cell "—" [ref=f8e206]
+              - cell "01 Rund" [ref=f8e207]
+              - cell "—" [ref=f8e208]

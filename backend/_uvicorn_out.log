@@ -1,0 +1,76 @@
+ToolSync API startet...
+2026-08-15 18:31:36,722 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:31:36,765 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:49696 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59911 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59911 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63532 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60500 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60500 - "POST /api/auth/login?personal_number=1001 HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:60500 - "POST /api/auth/admin/login?personal_number=admin1&password=123 HTTP/1.1" 422 Unprocessable Content
+2026-08-15 18:50:46,118 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:50:46,151 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 18:50:46,197 INFO sqlalchemy.engine.Engine [generated in 0.04604s] ('admin1',)
+2026-08-15 18:50:46,617 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55814 - "POST /api/auth/admin/login HTTP/1.1" 200 OK
+2026-08-15 18:50:46,661 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:50:46,661 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 18:50:46,661 INFO sqlalchemy.engine.Engine [cached since 0.5102s ago] ('1001',)
+2026-08-15 18:50:46,663 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55814 - "POST /api/auth/login HTTP/1.1" 200 OK
+2026-08-15 18:59:51,925 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:59:51,926 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 18:59:51,926 INFO sqlalchemy.engine.Engine [cached since 545.8s ago] ('admin1',)
+2026-08-15 18:59:52,152 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63839 - "POST /api/auth/admin/login HTTP/1.1" 200 OK
+2026-08-15 18:59:58,196 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:59:58,197 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 18:59:58,197 INFO sqlalchemy.engine.Engine [cached since 552s ago] ('admin1',)
+2026-08-15 18:59:58,202 INFO sqlalchemy.engine.Engine SELECT tools.id, tools.tool_id, tools.category, tools.status, tools.is_storage, tools.allow_duplicate_id, tools.measure_a, tools.measure_b, tools.description, tools.plant_id, tools.tool_type_id, tools.storage_location_id, tools.machine_id, tools.customer_id, tools.created_at, tools.updated_at, plants_1.id AS id_1, plants_1.name, plants_1.created_at AS created_at_1, plants_1.updated_at AS updated_at_1, tool_types_1.id AS id_2, tool_types_1.name AS name_1, tool_types_1.created_at AS created_at_2, tool_types_1.updated_at AS updated_at_2 
+FROM tools LEFT OUTER JOIN plants AS plants_1 ON plants_1.id = tools.plant_id LEFT OUTER JOIN tool_types AS tool_types_1 ON tool_types_1.id = tools.tool_type_id
+ LIMIT ? OFFSET ?
+2026-08-15 18:59:58,202 INFO sqlalchemy.engine.Engine [generated in 0.00042s] (500, 0)
+2026-08-15 18:59:58,204 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63841 - "GET /api/tools/?limit=500 HTTP/1.1" 200 OK
+2026-08-15 18:59:58,209 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 18:59:58,210 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 18:59:58,210 INFO sqlalchemy.engine.Engine [cached since 552.1s ago] ('admin1',)
+2026-08-15 18:59:58,211 INFO sqlalchemy.engine.Engine SELECT tools.id, tools.tool_id, tools.category, tools.status, tools.is_storage, tools.allow_duplicate_id, tools.measure_a, tools.measure_b, tools.description, tools.plant_id, tools.tool_type_id, tools.storage_location_id, tools.machine_id, tools.customer_id, tools.created_at, tools.updated_at, plants_1.id AS id_1, plants_1.name, plants_1.created_at AS created_at_1, plants_1.updated_at AS updated_at_1, tool_types_1.id AS id_2, tool_types_1.name AS name_1, tool_types_1.created_at AS created_at_2, tool_types_1.updated_at AS updated_at_2 
+FROM tools LEFT OUTER JOIN plants AS plants_1 ON plants_1.id = tools.plant_id LEFT OUTER JOIN tool_types AS tool_types_1 ON tool_types_1.id = tools.tool_type_id
+ LIMIT ? OFFSET ?
+2026-08-15 18:59:58,212 INFO sqlalchemy.engine.Engine [cached since 0.009663s ago] (500, 0)
+2026-08-15 18:59:58,213 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63843 - "GET /api/tools/?limit=500 HTTP/1.1" 200 OK
+2026-08-15 19:00:02,432 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 19:00:02,433 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 19:00:02,433 INFO sqlalchemy.engine.Engine [cached since 556.3s ago] ('admin1',)
+2026-08-15 19:00:02,435 INFO sqlalchemy.engine.Engine SELECT serial_articles.id, serial_articles.article_number, serial_articles.description, serial_articles.pdf_path, serial_articles.extra_metadata, serial_articles.created_at, serial_articles.updated_at 
+FROM serial_articles
+ LIMIT ? OFFSET ?
+2026-08-15 19:00:02,435 INFO sqlalchemy.engine.Engine [generated in 0.00030s] (100, 0)
+2026-08-15 19:00:02,436 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63854 - "GET /api/serial-articles/ HTTP/1.1" 200 OK
+2026-08-15 19:00:03,068 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-08-15 19:00:03,068 INFO sqlalchemy.engine.Engine SELECT users.id, users.personal_number, users.first_name, users.last_name, users.display_name, users.hashed_password, users.is_active, users.is_admin, users.role_id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.personal_number = ?
+2026-08-15 19:00:03,068 INFO sqlalchemy.engine.Engine [cached since 556.9s ago] ('admin1',)
+2026-08-15 19:00:03,098 INFO sqlalchemy.engine.Engine SELECT storage_items.id, storage_items.storage_id, storage_items.name, storage_items.type, storage_items.article_number, storage_items.machine_id, storage_items.location_id, storage_items.description, storage_items.allow_duplicate_id, storage_items.created_at, storage_items.updated_at 
+FROM storage_items ORDER BY storage_items.storage_id
+ LIMIT ? OFFSET ?
+2026-08-15 19:00:03,099 INFO sqlalchemy.engine.Engine [generated in 0.00033s] (500, 0)
+2026-08-15 19:00:03,123 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63856 - "GET /api/storage/?limit=500 HTTP/1.1" 500 Internal Server Error

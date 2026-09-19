@@ -1,0 +1,137 @@
+- generic [ref=f8e234]:
+  - complementary [ref=f8e235]:
+    - generic [ref=f8e236]:
+      - generic [ref=f8e237]:
+        - generic [ref=f8e238]: hp hp
+        - generic [ref=f8e239]: olytechnik
+      - generic [ref=f8e240]:
+        - generic [ref=f8e241]: ToolSync
+        - generic [ref=f8e242]: Werkzeug- & Lagerverwaltung
+    - generic [ref=f8e243]:
+      - generic [ref=f8e244]:
+        - generic "A A" [ref=f8e245]: AA
+        - generic [ref=f8e246]: A A (Admin)
+      - button "Admin-Panel" [ref=f8e247]
+      - button "Logout" [ref=f8e251]
+  - main [ref=f8e257]:
+    - generic [ref=f8e258]:
+      - generic [ref=f8e259]:
+        - navigation [ref=f8e260]:
+          - generic [ref=f8e261]:
+            - button "Werkzeuge" [ref=f8e262]
+            - button "Serienartikel" [ref=f8e263]
+            - button "Lager/Ersatz" [ref=f8e264]
+            - button "Historie" [ref=f8e265]
+          - button "Anlegen" [ref=f8e266]
+        - generic [ref=f8e322]:
+          - generic [ref=f8e323]:
+            - heading "Anlegen" [level=2] [ref=f8e324]
+            - button "Zurück" [ref=f8e327]
+          - generic [ref=f8e330]:
+            - generic [ref=f8e331]:
+              - button "Werkzeug" [ref=f8e332]
+              - button "Serienartikel" [ref=f8e334]
+              - button "Info / Hilfe" [ref=f8e336]
+              - button "Lager / Ersatz" [ref=f8e338]
+            - generic [ref=f8e341]:
+              - generic [ref=f8e342]:
+                - generic [ref=f8e343]:
+                  - generic [ref=f8e344] [cursor=pointer]:
+                    - radio "Stempel" [checked] [ref=f8e345]
+                    - text: Stempel
+                  - generic [ref=f8e346] [cursor=pointer]:
+                    - radio "Abstreifer" [ref=f8e347]
+                    - text: Abstreifer
+                  - generic [ref=f8e348] [cursor=pointer]:
+                    - radio "Matrize" [ref=f8e349]
+                    - text: Matrize
+                - generic [ref=f8e350]:
+                  - generic [ref=f8e351]:
+                    - checkbox [ref=f8e352]
+                    - generic [ref=f8e353] [cursor=pointer]: Lager/Ersatz
+                  - spinbutton [disabled] [ref=f8e354]: "1"
+              - generic [ref=f8e355]:
+                - generic [ref=f8e356]:
+                  - generic [ref=f8e357]: Werkzeug-ID
+                  - textbox "z.B. TS-1004" [ref=f8e358]: "01030000"
+                - generic [ref=f8e359]:
+                  - generic [ref=f8e360]: Werkzeug-Typ
+                  - combobox [ref=f8e361]:
+                    - option "Bitte wählen..."
+                    - option "01 Rund" [selected]
+              - generic [ref=f8e362]:
+                - generic [ref=f8e363]:
+                  - generic [ref=f8e364]: Maß A (Pflicht)
+                  - generic [ref=f8e365]:
+                    - textbox "z.B. 12,5" [ref=f8e366]: 3,0
+                    - generic [ref=f8e367]: mm
+                - generic [ref=f8e368]:
+                  - generic [ref=f8e369]: Maß B (Optional)
+                  - generic [ref=f8e370]:
+                    - textbox "z.B. 8,0" [ref=f8e371]
+                    - generic [ref=f8e372]: mm
+              - generic [ref=f8e373]:
+                - generic [ref=f8e374]: Lagerplatz (Pflicht)
+                - generic [ref=f8e375]:
+                  - generic [ref=f8e376]:
+                    - generic [ref=f8e377]: Schrank
+                    - combobox [ref=f8e378]:
+                      - option "Schrank wählen"
+                      - option "Schrank 01" [selected]
+                  - generic [ref=f8e379]:
+                    - generic [ref=f8e380]: Schublade
+                    - combobox [ref=f8e381]:
+                      - option "Schublade wählen"
+                      - option "Schublade A" [selected]
+                  - generic [ref=f8e382]:
+                    - generic [ref=f8e383]: Platz
+                    - combobox [ref=f8e384]:
+                      - option "Platz wählen"
+                      - option "01-A-01" [selected]
+                      - option "01-A-02"
+                      - option "01-A-03"
+                      - option "01-A-04"
+                      - option "01-A-05"
+                      - option "01-A-06"
+                      - option "01-A-07"
+                      - option "01-A-08"
+                      - option "01-A-09"
+                      - option "01-A-10"
+                - paragraph [ref=f8e385]: Es werden nur freie Plätze angezeigt. Werkzeuge müssen einem Lagerplatz zugeordnet werden.
+              - generic [ref=f8e386]:
+                - generic [ref=f8e387]:
+                  - generic [ref=f8e388]: Werk
+                  - combobox [ref=f8e389]:
+                    - option "Werk wählen"
+                    - option "Werk 1" [selected]
+                    - option "Werk 2"
+                - generic [ref=f8e390]:
+                  - generic [ref=f8e391]: Status
+                  - combobox [ref=f8e392]:
+                    - option "— ohne Status —" [selected]
+                    - option "Verfügbar"
+                    - option "Ausgeliehen"
+                    - option "In Transit"
+                    - option "Defekt"
+                    - option "In Wartung"
+              - generic [ref=f8e393]:
+                - generic [ref=f8e394]: Beschreibung
+                - textbox "Zusätzliche Informationen..." [ref=f8e395]
+              - generic [ref=f8e399]: Ungültiger Token
+              - generic [ref=f8e396]:
+                - button "Abbrechen" [ref=f8e397]
+                - button "Anlegen" [ref=f8e398]
+      - complementary [ref=f8e307]:
+        - generic [ref=f8e308]:
+          - generic [ref=f8e309]:
+            - paragraph [ref=f8e310]: Aktive Ausleihen
+            - paragraph [ref=f8e311]: —
+          - generic [ref=f8e312]:
+            - paragraph [ref=f8e313]: Verfügbare Werkzeuge
+            - paragraph [ref=f8e314]: —
+          - generic [ref=f8e315]:
+            - paragraph [ref=f8e316]: Lagerbestand
+            - paragraph [ref=f8e317]: —
+          - generic [ref=f8e318]:
+            - paragraph [ref=f8e319]: Serienartikel
+            - paragraph [ref=f8e320]: —

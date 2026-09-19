@@ -1,0 +1,5 @@
+[    1094ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=12966894:14335
+[   20927ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/:0
+[  437469ms] [ERROR] Access to fetch at 'http://localhost:8000/api/locations/drawers?cabinet_id=999' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/admin:0
+[  437470ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8000/api/locations/drawers?cabinet_id=999:0
+[  537391ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/api/master-data:0

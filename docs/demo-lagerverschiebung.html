@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToolSync – Lagerverschiebung Demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #ccfbf1 0%, #e0f2fe 55%, #f1f5f9 100%);
+    min-height: 100vh; color: #0f172a;
+  }
+  .container { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 .25rem; }
+  .subtitle { color: #475569; font-size: .85rem; margin-bottom: 1.25rem; }
+
+  .glass-card {
+    background: rgba(255,255,255,0.40);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.65);
+    border-radius: .85rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .glass-card h2 { font-size: .95rem; margin: 0 0 .75rem; }
+  .glass-card h2 .muted { font-weight: 600; color: #64748b; font-size: .75rem; }
+
+  .rule-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; font-size: .8rem; }
+  .rule-list li { display: flex; gap: .55rem; align-items: flex-start; line-height: 1.4; }
+
+  .ui-badge { display: inline-flex; align-items: center; padding: .15rem .65rem; border-radius: 999px;
+    font-size: .7rem; font-weight: 700; border: 1px solid; white-space: nowrap; }
+  .ui-badge-info    { background: rgba(59,130,246,.12);  color: #1e40af; border-color: rgba(59,130,246,.25); }
+  .ui-badge-success { background: rgba(15,118,110,.12);  color: #0f766e; border-color: rgba(15,118,110,.25); }
+  .ui-badge-neutral { background: rgba(148,163,184,.18); color: #475569; border-color: rgba(148,163,184,.3); }
+  .ui-badge-warning { background: rgba(245,158,11,.12);  color: #92400e; border-color: rgba(245,158,11,.25); }
+  .ui-badge-danger  { background: rgba(225,29,72,.12);   color: #9f1239; border-color: rgba(225,29,72,.25); }
+
+  .ui-alert { display: flex; gap: .75rem; padding: .75rem .9rem; border-radius: .8rem;
+    border: 1px solid; font-size: .8rem; margin-bottom: .75rem; line-height: 1.45; }
+  .ui-alert-info    { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.2);  color: #1e3a8a; }
+  .ui-alert-success { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.2);  color: #065f46; }
+  .ui-alert-warning { background: rgba(245,158,11,.1);  border-color: rgba(245,158,11,.25); color: #92400e; }
+  .ui-alert-error   { background: rgba(239,68,68,.08);  border-color: rgba(239,68,68,.22); color: #991b1b; }
+
+  .ui-btn { display: inline-flex; align-items: center; gap: .4rem; border-radius: .75rem;
+    padding: .55rem .9rem; font-size: .75rem; font-weight: 700; border: 1px solid transparent;
+    cursor: pointer; background: transparent; }
+  .ui-btn-secondary { background: rgba(255,255,255,.55); border-color: rgba(255,255,255,.7); color: #0f172a; }
+  .ui-btn-ghost { color: #0f766e; }
+  .ui-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+
+  .tray-zone { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+    padding: .75rem; border: 2px dashed rgba(15,118,110,.25); border-radius: .75rem; }
+  .tray-zone.drop-over-zone { border-color: #10b981; background: rgba(16,185,129,.10); }
+  .tray-label { font-size: .8rem; font-weight: 700; color: #475569; }
+  .tray-chip { width: 48px; height: 48px; border-radius: .75rem; background: #0f766e; color: #fff;
+    font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+    cursor: grab; user-select: none; box-shadow: 0 8px 20px rgba(15,118,110,.18); }
+  .tray-chip.used { opacity: .35; cursor: not-allowed; box-shadow: none; }
+  .tray-chip.selected { outline: 3px solid #f59e0b; outline-offset: 2px; }
+
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 92px); gap: .6rem; }
+  .slot { position: relative; border-radius: .65rem; border: 2px solid rgba(15,118,110,.25);
+    background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; cursor: pointer; user-select: none;
+    transition: border-color .12s, background .12s, opacity .12s; }
+  .slot:hover { background: rgba(255,255,255,.80); }
+  .slot .name { position: absolute; top: .3rem; left: .5rem; font-size: .65rem; font-weight: 700; color: #94a3b8; }
+  .slot .tool { font-size: 1.35rem; font-weight: 800; color: #0f766e; cursor: grab; }
+  .slot .free { font-size: .7rem; font-weight: 600; color: #cbd5e1; }
+  .slot.selected { border-color: #f59e0b; background: rgba(245,158,11,.15); }
+  .slot.drop-over { border-color: #10b981; background: rgba(16,185,129,.15); }
+  .slot.dragging { opacity: .45; }
+
+  .log { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; font-size: .78rem; }
+  .log li { display: flex; gap: .55rem; align-items: center; }
+  .log .when { color: #94a3b8; font-size: .7rem; margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div>
+      <h1>Lagerverschiebung – Interaktions-Demo</h1>
+      <div class="subtitle">Reine Test-Datei (offline). Die echte App wird später genau so funktionieren, wenn du es hier gut findest.</div>
+    </div>
+    <div style="display:flex; gap:.5rem;">
+      <button id="btn-cancel" class="ui-btn ui-btn-ghost" style="display:none;">Abbrechen (Esc)</button>
+      <button id="btn-reset" class="ui-btn ui-btn-secondary">Zurücksetzen</button>
+    </div>
+  </div>
+
+  <div id="alerts"></div>
+
+  <div class="glass-card">
+    <h2>Regeln in dieser Demo</h2>
+    <ul class="rule-list">
+      <li><span class="ui-badge ui-badge-info">Einreihen</span>
+        <span><strong>Neues Werkzeug aus der Ablage</strong> auf einen <em>belegten</em> Platz legen → alle Werkzeuge ab diesem Platz rücken um einen Platz weiter. Ist der <em>letzte</em> Platz belegt, wird die Aktion blockiert (es würde sonst ein Werkzeug verloren gehen).</span></li>
+      <li><span class="ui-badge ui-badge-success">Tausch</span>
+        <span><strong>Belegter Platz</strong> auf einen <em>anderen belegten</em> Platz ziehen → die beiden Werkzeuge tauschen sich. <strong>Nichts anderes rückt.</strong></span></li>
+      <li><span class="ui-badge ui-badge-neutral">Verschieben</span>
+        <span><strong>Belegter Platz</strong> auf einen <em>leeren</em> Platz ziehen → Werkzeug wandert einfach hin.</span></li>
+      <li><span class="ui-badge ui-badge-warning">Entfernen</span>
+        <span>Werkzeug <strong>zurück in die Ablage</strong> ziehen → Platz wird frei (hilft beim Testen).</span></li>
+    </ul>
+  </div>
+
+  <div class="glass-card">
+    <h2>Werkzeug-Ablage <span class="muted">– neue Werkzeuge, per Drag &amp; Drop oder Klick auf einen Platz einreihen</span></h2>
+    <div id="tray-zone" class="tray-zone">
+      <span class="tray-label">Neu:</span>
+      <span id="tray-chips" style="display:flex; gap:.75rem;"></span>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <h2>Schublade 1 <span class="muted">– Anzeige-Reihenfolge: 01–05 (unten), 06–10 (oben)</span></h2>
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <div class="glass-card">
+    <h2>Verlauf</h2>
+    <ul id="log" class="log"></ul>
+  </div>
+</div>
+
+<script>
+const COLS = 5, N = 10;
+const ALL_TRAY = ['E', 'F'];
+
+let state, logEntries = [];
+
+function initialState() {
+  const positions = [];
+  for (let i = 0; i < N; i++) {
+    positions.push({ id: i + 1, name: String(i + 1).padStart(2, '0'), tool: null });
+  }
+  ['A', 'B', 'C', 'D'].forEach((t, i) => (positions[i].tool = t));
+  return { positions, tray: [...ALL_TRAY], selection: null };
+}
+
+const idx = (slotId) => state.positions.findIndex((p) => p.id === slotId);
+const $ = (sel) => document.querySelector(sel);
+
+function showAlert(type, msg) {
+  $('#alerts').innerHTML = `<div class="ui-alert ui-alert-${type}"><span>${msg}</span></div>`;
+}
+
+function addLog(label, type, text) {
+  const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  logEntries.unshift({ label, type, text, time });
+  if (logEntries.length > 6) logEntries.pop();
+}
+
+function render() {
+  // Ablage-Chips
+  const chipsEl = $('#tray-chips');
+  chipsEl.innerHTML = '';
+  ALL_TRAY.forEach((letter) => {
+    const available = state.tray.includes(letter);
+    const chip = document.createElement('div');
+    chip.className = 'tray-chip' + (available ? '' : ' used');
+    if (state.selection && state.selection.kind === 'tray' && state.selection.letter === letter) {
+      chip.classList.add('selected');
+    }
+    chip.textContent = letter;
+    chip.title = available
+      ? `Neues Werkzeug ${letter} – auf einen Platz ziehen oder Platz nach Klick wählen`
+      : 'Bereits verwendet (Zurücksetzen, um neu zu testen)';
+    if (available) {
+      chip.draggable = true;
+      chip.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'tray', letter }));
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      chip.addEventListener('click', () => {
+        const same = state.selection && state.selection.kind === 'tray' && state.selection.letter === letter;
+        state.selection = same ? null : { kind: 'tray', letter };
+        render();
+      });
+    }
+    chipsEl.appendChild(chip);
+  });
+
+  // Plätze
+  const gridEl = $('#grid');
+  gridEl.innerHTML = '';
+  state.positions.forEach((p, i) => {
+    const rowFromBottom = Math.floor(i / COLS);
+    const col = i % COLS;
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.style.gridRow = String(2 - rowFromBottom);
+    el.style.gridColumn = String(col + 1);
+    if (state.selection && state.selection.kind === 'slot' && state.selection.slotId === p.id) {
+      el.classList.add('selected');
+    }
+    el.innerHTML =
+      `<span class="name">${p.name}</span>` +
+      (p.tool ? `<span class="tool">${p.tool}</span>` : `<span class="free">frei</span>`);
+    if (p.tool) {
+      el.draggable = true;
+      el.title = `${p.tool} auf Platz ${p.name} – ziehen: belegt=Tausch, leer=Verschieben, Ablage=Entfernen`;
+    }
+    el.addEventListener('dragstart', (e) => {
+      if (!p.tool) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'slot', slotId: p.id }));
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drop-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drop-over'));
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.classList.remove('drop-over');
+      let data;
+      try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+      onTarget(p.id, data);
+    });
+    el.addEventListener('click', () => onClickSlot(p.id));
+    gridEl.appendChild(el);
+  });
+
+  $('#btn-cancel').style.display = state.selection ? 'inline-flex' : 'none';
+
+  const logEl = $('#log');
+  logEl.innerHTML = logEntries.length
+    ? logEntries.map((e) =>
+        `<li><span class="ui-badge ui-badge-${e.type}">${e.label}</span><span>${e.text}</span><span class="when">${e.time}</span></li>`
+      ).join('')
+    : '<li style="color:#94a3b8;">Noch keine Aktionen – zieh oder klick los!</li>';
+}
+
+function onTarget(slotId, source) {
+  const t = idx(slotId);
+  const tgtName = state.positions[t].name;
+
+  if (source.kind === 'tray') {
+    const letter = source.letter;
+    if (!state.tray.includes(letter)) return;
+
+    if (state.positions[t].tool) {
+      // Einreihen: alles ab dem Ziel rückt um einen Platz weiter
+      if (state.positions[N - 1].tool) {
+        showAlert('error', `Einreihen auf ${tgtName} nicht möglich: Der letzte Platz (${state.positions[N - 1].name}) ist belegt – es würde ein Werkzeug „herausfallen".`);
+        addLog('Fehler', 'danger', `Einreihen ${letter} → ${tgtName} abgelehnt (letzter Platz belegt).`);
+        render();
+        return;
+      }
+      const shifted = [];
+      for (let i = N - 1; i > t; i--) {
+        const src = state.positions[i - 1];
+        if (src.tool) shifted.push(`${src.tool} (${src.name}→${state.positions[i].name})`);
+        state.positions[i].tool = src.tool;
+      }
+      shifted.reverse();
+      state.positions[t].tool = letter;
+      state.tray = state.tray.filter((l) => l !== letter);
+      state.selection = null;
+      showAlert('info', `Einreihen: ${letter} auf Platz ${tgtName} gelegt – ${shifted.length} Werkzeug(e) rücken um einen Platz weiter: ${shifted.join(', ')}.`);
+      addLog('Einreihen', 'info', `${letter} auf ${tgtName} (${shifted.length} rückt auf).`);
+    } else {
+      // Ziel war leer: einfach hinstellen, nichts rückt
+      state.positions[t].tool = letter;
+      state.tray = state.tray.filter((l) => l !== letter);
+      state.selection = null;
+      showAlert('success', `Werkzeug ${letter} auf Platz ${tgtName} gelegt (Platz war frei – nichts rückt).`);
+      addLog('Einreihen', 'info', `${letter} auf ${tgtName} (Platz war frei).`);
+    }
+    render();
+    return;
+  }
+
+  // Quelle = belegter Platz
+  const s = idx(source.slotId);
+  if (s === t) { state.selection = null; render(); return; }
+  const tool = state.positions[s].tool;
+  if (!tool) return;
+  const srcName = state.positions[s].name;
+
+  if (state.positions[t].tool) {
+    const other = state.positions[t].tool;
+    state.positions[s].tool = other;
+    state.positions[t].tool = tool;
+    showAlert('success', `Tausch: ${tool} (${srcName}) ↔ ${other} (${tgtName}). Alle anderen Plätze bleiben unverändert.`);
+    addLog('Tausch', 'success', `${srcName} (${tool}) ↔ ${tgtName} (${other}).`);
+  } else {
+    state.positions[t].tool = tool;
+    state.positions[s].tool = null;
+    showAlert('success', `Verschieben: ${tool} von Platz ${srcName} auf ${tgtName} (leerer Platz).`);
+    addLog('Verschieben', 'neutral', `${tool}: ${srcName} → ${tgtName}.`);
+  }
+  state.selection = null;
+  render();
+}
+
+function onClickSlot(slotId) {
+  const p = state.positions[idx(slotId)];
+
+  if (!state.selection) {
+    if (p.tool) {
+      state.selection = { kind: 'slot', slotId };
+      showAlert('info', `Quelle: ${p.tool} auf Platz ${p.name} gewählt (gelb). Jetzt Ziel anklicken – belegt = Tausch, leer = Verschieben.`);
+    } else {
+      showAlert('warning', `Platz ${p.name} ist leer. Tippe auf ein Werkzeug, um es zu verschieben oder zu tauschen.`);
+    }
+    render();
+    return;
+  }
+
+  if (state.selection.kind === 'tray') {
+    onTarget(slotId, state.selection);
+    return;
+  }
+
+  if (state.selection.slotId === slotId) {
+    state.selection = null;
+    showAlert('info', 'Auswahl abgebrochen.');
+    render();
+    return;
+  }
+  onTarget(slotId, state.selection);
+}
+
+// Ablage als Drop-Zone = Werkzeug entfernen
+const trayZone = $('#tray-zone');
+trayZone.addEventListener('dragover', (e) => { e.preventDefault(); trayZone.classList.add('drop-over-zone'); });
+trayZone.addEventListener('dragleave', () => trayZone.classList.remove('drop-over-zone'));
+trayZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  trayZone.classList.remove('drop-over-zone');
+  let data;
+  try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+  if (data.kind !== 'slot') return;
+  const s = idx(data.slotId);
+  const tool = state.positions[s].tool;
+  if (!tool) return;
+  state.positions[s].tool = null;
+  if (!state.tray.includes(tool)) state.tray.push(tool);
+  state.selection = null;
+  showAlert('info', `Werkzeug ${tool} wird entfernt und liegt wieder in der Ablage.`);
+  addLog('Entfernt', 'warning', `${tool} zurück in die Ablage.`);
+  render();
+});
+
+$('#btn-reset').addEventListener('click', () => {
+  state = initialState();
+  logEntries = [];
+  showAlert('info', 'Demo zurückgesetzt: A–D auf Platz 01–04, Ablage mit E und F.');
+  render();
+});
+$('#btn-cancel').addEventListener('click', () => { state.selection = null; render(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { state.selection = null; render(); } });
+
+state = initialState();
+showAlert('info', 'So testest du: (1) Ziehe <strong>E aus der Ablage auf Platz 02</strong> → B, C, D rücken auf. (2) Ziehe <strong>A auf Platz 04</strong> → reiner Tausch. (3) Fülle die Schublade voll und probier es noch mal → Fehlermeldung.');
+render();
+</script>
+</body>
+</html>

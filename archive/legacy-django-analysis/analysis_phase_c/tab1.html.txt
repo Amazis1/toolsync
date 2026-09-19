@@ -1,0 +1,378 @@
+﻿=== D:\Web\werkzeug\templates\tabs\tab1.html ===
+<h2 class="text-lg font-bold mb-6">Werkzeug anlegen</h2>
+<form
+  id="werkzeug-form"
+  hx-post="{% url 'add_tool' %}"
+  hx-target="#form-errors"
+  hx-swap="innerHTML"
+  class="space-y-6"
+  autocomplete="off"
+  x-data="toolForm()"
+>
+  {% csrf_token %}
+  <input type="hidden" name="category" id="category-input" value="stamp" />
+  <input type="hidden" name="location" id="location-input" value="Werk 1" />
+
+  <!-- Fehleranzeige -->
+  <div id="form-errors" class="space-y-2"></div>
+
+  <!-- Kategorie + Lager/Ersatz in einer Zeile -->
+  <div class="flex gap-8 flex-wrap items-center mb-4">
+    <!-- Kategorie-Auswahl als Radio-Buttons -->
+    <div class="flex gap-6 flex-wrap">
+      <label class="flex items-center gap-2 cursor-pointer font-sans text-sm">
+        <input
+          type="radio"
+          name="category"
+          value="stamp"
+          checked
+          class="peer sr-only"
+        />
+        <span
+          class="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-100 transition-all relative"
+        >
+          <span
+            class="absolute left-1 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 peer-checked:opacity-100 transition-all"
+          ></span>
+        </span>
+        Stempel
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer font-sans text-sm">
+        <input
+          type="radio"
+          name="category"
+          value="stripper"
+          class="peer sr-only"
+        />
+        <span
+          class="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-100 transition-all relative"
+        >
+          <span
+            class="absolute left-1 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 peer-checked:opacity-100 transition-all"
+          ></span>
+        </span>
+        Abstreifer
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer font-sans text-sm">
+        <input type="radio" name="category" value="die" class="peer sr-only" />
+        <span
+          class="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 bg-gray-100 transition-all relative"
+        >
+          <span
+            class="absolute left-1 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 peer-checked:opacity-100 transition-all"
+          ></span>
+        </span>
+        Matrieze
+      </label>
+    </div>
+    <!-- Lager/Ersatz Checkbox + Anzahl -->
+    <div class="flex flex-col items-start ml-4">
+      <span class="text-xs text-gray-500 mb-1">Optional</span>
+      <div class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="is_storage"
+          id="is-storage-input"
+          class="peer"
+          x-model="isStorage"
+          @change="validateToolId"
+        />
+        <label for="is-storage-input" class="font-sans text-sm cursor-pointer">
+          Lager/Ersatz
+        </label>
+        <input
+          type="number"
+          name="storage_count"
+          id="storage_count"
+          class="input-bordered w-20 ml-2 peer-checked:opacity-100 opacity-50 transition-opacity"
+          min="1"
+          placeholder="Anzahl"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Werkzeug-ID & Typ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="input-container">
+      <label for="tool_id" class="font-semibold text-sm mb-1 block"
+        >Werkzeug-ID</label
+      >
+      <div class="relative">
+        <span
+          id="tool-id-tooltip"
+          class="form-tooltip"
+          x-text="tooltipMessage"
+          :class="inputState === 'error' && tooltipVisible ? 'visible' : ''"
+          style="top: -2.5rem; left: 0; right: 0"
+        ></span>
+        <input
+          type="text"
+          name="tool_id"
+          id="tool_id"
+          class="input-bordered w-full"
+          required
+          data-label="Werkzeug-ID"
+          x-model="toolId"
+          @input="validateToolId"
+          @blur="validateToolId"
+          :class="inputState === 'error' ? 'input-error' : (inputState === 'success' ? 'input-success' : '')"
+        />
+        <button
+          class="clear-button icon-x-circle absolute right-8 top-1/2 -translate-y-1/2"
+          type="button"
+          @click="toolId = ''; tooltipMessage = ''; tooltipVisible = false; inputState = ''"
+        ></button>
+      </div>
+    </div>
+    <div class="input-container">
+      <label for="tool_type" class="font-semibold text-sm mb-1 block"
+        >Werkzeug-Typ</label
+      >
+      <div class="relative">
+        <select
+          name="tool_type"
+          id="tool_type"
+          class="select-bordered w-full appearance-none"
+          required
+          data-label="Werkzeug-Typ"
+        >
+          <option value="" selected>Bitte wählen...</option>
+          {% for type in tool_types %}
+          <option value="{{ type.id }}">{{ type.name }}</option>
+          {% endfor %}
+        </select>
+        <button
+          class="clear-button icon-x-circle absolute right-8 top-1/2 -translate-y-1/2"
+        ></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Maße -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div class="input-container">
+      <label for="size_a" class="font-semibold text-sm mb-1 block">
+        Maß A <span class="text-xs text-gray-500">(Pflicht)</span>
+      </label>
+      <div class="relative">
+        <input
+          type="text"
+          name="size_a"
+          id="size_a"
+          class="input-bordered w-full pr-10"
+          placeholder="z.B. 12,5"
+          pattern="^\d{1,4}([.,]\d{0,2})?$"
+          required
+          data-label="Maß A"
+        />
+        <button
+          class="clear-button icon-x-circle absolute right-8 top-1/2 -translate-y-1/2"
+        ></button>
+        <span
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+          >mm</span
+        >
+      </div>
+    </div>
+    <div class="input-container">
+      <label for="size_b" class="font-semibold text-sm mb-1 block">
+        Maß B <span class="text-xs text-gray-500">(Optional)</span>
+      </label>
+      <div class="relative">
+        <input
+          type="text"
+          name="size_b"
+          id="size_b"
+          class="input-bordered w-full pr-10"
+          placeholder="z.B. 8,0"
+          pattern="^\d{1,4}([.,]\d{0,2})?$"
+          data-label="Maß B"
+        />
+        <button
+          class="clear-button icon-x-circle absolute right-8 top-1/2 -translate-y-1/2"
+        ></button>
+        <span
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+          >mm</span
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Lagerort -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+    <div class="input-container">
+      <label for="cabinet" class="font-semibold text-sm mb-1 block"
+        >Schrank</label
+      >
+      <select
+        name="cabinet"
+        id="cabinet"
+        class="select-bordered w-full appearance-none"
+        required
+        data-label="Schrank"
+        hx-get="/get_drawers/"
+        hx-trigger="change"
+        hx-target="#drawer"
+        hx-swap="innerHTML"
+        hx-vals="js:{cabinet: document.getElementById('cabinet').value}"
+      >
+        <option value="">Schrank wählen</option>
+        {% for cabinet in cabinets %}
+        <option value="{{ cabinet.id }}">Schrank {{ cabinet.number }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="input-container">
+      <label for="drawer" class="font-semibold text-sm mb-1 block"
+        >Schublade</label
+      >
+      <select
+        name="drawer"
+        id="drawer"
+        class="select-bordered w-full appearance-none"
+        required
+        data-label="Schublade"
+        hx-get="/get_positions/"
+        hx-trigger="change"
+        hx-target="#position"
+        hx-swap="innerHTML"
+        hx-vals="js:{drawer: document.getElementById('drawer').value}"
+      >
+        <option value="">Schublade wählen</option>
+      </select>
+    </div>
+    <div class="input-container">
+      <label for="position" class="font-semibold text-sm mb-1 block"
+        >Position</label
+      >
+      <select
+        name="position"
+        id="position"
+        class="select-bordered w-full appearance-none"
+        required
+        data-label="Position"
+      >
+        <option value="">Position wählen</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Kunde & Maschine -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div class="input-container">
+      <label for="customer" class="font-semibold text-sm mb-1 block"
+        >Kunde</label
+      >
+      <select
+        name="customer"
+        id="customer"
+        class="select-bordered w-full appearance-none"
+      >
+        <option value="">Kein Kunde</option>
+        {% for customer in customers %}
+        <option value="{{ customer.id }}">{{ customer.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="input-container">
+      <label for="machine" class="font-semibold text-sm mb-1 block"
+        >Maschine</label
+      >
+      <select
+        name="machine"
+        id="machine"
+        class="select-bordered w-full appearance-none"
+      >
+        <option value="">Keine Maschine</option>
+        {% for machine in machines %}
+        <option value="{{ machine.id }}">{{ machine.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Beschreibung -->
+  <div>
+    <label for="description" class="font-semibold text-sm mb-1 block"
+      >Beschreibung</label
+    >
+    <textarea
+      name="description"
+      id="description"
+      rows="3"
+      class="textarea-bordered w-full resize-none"
+      placeholder="Zusätzliche Informationen..."
+    ></textarea>
+  </div>
+
+  <!-- Datei hochladen -->
+  <div>
+    <label class="font-semibold text-sm mb-1 block">Datei hochladen</label>
+    <!-- Hier wird django-dropzone später integriert -->
+  </div>
+</form>
+
+<script>
+  function toolForm() {
+    return {
+      toolId: "",
+      isStorage: false,
+      tooltipMessage: "",
+      tooltipVisible: false,
+      inputState: "",
+      validateToolId() {
+        const toolId = this.toolId.trim();
+        const category =
+          document.querySelector('[name="category"]:checked')?.value || "stamp";
+        const location =
+          document.querySelector('[name="location"]')?.value || "Werk 1";
+        const csrf = document.querySelector(
+          '[name="csrfmiddlewaretoken"]'
+        ).value;
+        if (!toolId) {
+          this.inputState = "";
+          this.tooltipVisible = false;
+          this.tooltipMessage = "";
+          return;
+        }
+        const formData = new FormData();
+        formData.append("tool_id", toolId);
+        formData.append("category", category);
+        formData.append("location", location);
+        formData.append("is_storage", this.isStorage ? "true" : "");
+        fetch("/validate-tool-id/", {
+          method: "POST",
+          headers: { "X-CSRFToken": csrf },
+          body: formData,
+        })
+          .then((response) =>
+            response.json().then((data) => ({ data, status: response.status }))
+          )
+          .then(({ data, status }) => {
+            if (this.isStorage) {
+              this.inputState = "success";
+              this.tooltipVisible = false;
+              this.tooltipMessage = "";
+              return;
+            }
+            if (status === 200 && data.valid) {
+              this.inputState = "success";
+              this.tooltipVisible = false;
+              this.tooltipMessage = "";
+            } else {
+              this.inputState = "error";
+              this.tooltipMessage = data.tooltip || "ID nicht verfügbar";
+              this.tooltipVisible = true;
+            }
+          })
+          .catch(() => {
+            this.inputState = "error";
+            this.tooltipMessage = "Fehler bei der Validierung";
+            this.tooltipVisible = true;
+          });
+      },
+    };
+  }
+</script>

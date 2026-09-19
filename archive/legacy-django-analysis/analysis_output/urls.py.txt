@@ -1,0 +1,32 @@
+﻿=== D:\Web\werkzeug\urls.py ===
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # 🔹 Hauptseite (Lädt alle Werkzeuge)
+    path('', views.index, name='index'),
+
+    # 🔹 Validierungen (HTMX Live-Checks)
+    path('validate-tool-id/', views.validate_tool_id, name='validate_tool_id'),
+    path('validate-storage-location/', views.validate_storage_location, name='validate_storage_location'),
+
+    # 🔹 Dynamische Auswahl für Lagerorte (HTMX)
+    path('get_drawers/', views.get_drawers, name='get_drawers'),
+    path('get_positions/', views.get_positions, name='get_positions'),
+
+    # 🔹 HTMX: Laden von Formular & Werkzeugliste
+    path('load-form/', views.werkzeug_form_partial, name='werkzeug_form_partial'),
+    path('load-tool-list/', views.load_tool_list, name='tool_list_partial'),
+    
+    # 🔹 HTMX: Tabs 
+    path('tabs/tab1/', views.tab1_content, name='tab1'),
+    path('tabs/tab2/', views.tab2_content, name='tab2'),
+    path('tabs/tab3/', views.tab3_content, name='tab3'),
+    path('tabs/tab4/', views.tab4_content, name='tab4'),
+
+    # 🔹 HTMX: Datei-Upload und Werkzeug anlegen
+    path('upload-file/', views.upload_file, name='upload_file'),
+    path('add-tool/', views.add_tool, name='add_tool'),
+
+    path('filter-tools/', views.filter_tools_by_location, name='filter_tools_by_location'),
+]

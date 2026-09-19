@@ -1,0 +1,619 @@
+﻿=== D:\Web\theme\static\js\main.js ===
+let isTabLoading = false;
+
+// Wartet, bis der DOM vollständig geladen ist
+document.addEventListener("DOMContentLoaded", () => {
+    // Datei-Upload-Bereich initialisieren (falls vorhanden)
+    initFileUpload();
+    // Ersten Tab standardmäßig aktivieren (ohne doppelte HTMX-Requests)
+    const initialTab = document.querySelector('[data-tab].is-active') || document.querySelector('[data-tab]');
+    if (initialTab) {
+        const contentWrapper = document.getElementById('custom-tab-content-wrapper');
+        const contentEmpty = contentWrapper && contentWrapper.innerHTML.trim() === "";
+        if (!initialTab.classList.contains('is-active') || contentEmpty) {
+            handleTabClick(initialTab);
+        }
+    }
+    // Event-Listener für Tabs einrichten
+    attachTabHandlers();
+    // HTMX initial verarbeiten (sofern erforderlich)
+    if (typeof htmx !== 'undefined') {
+        htmx.process(document.body);
+    }
+
+    // HTMX Logging
+    if (typeof htmx !== "undefined") {
+        htmx.logAll();
+        htmx.on("htmx:error", function (event) {
+            console.error("HTMX Fehler:", event.detail.error);
+        });
+    }
+
+    // Tooltips
+    const tooltips = document.querySelectorAll("[data-tooltip]");
+    tooltips.forEach((element) => {
+        tippy(element, {
+            content: element.getAttribute("data-tooltip"),
+            placement: "top",
+            theme: "custom",
+        });
+    });
+
+    // Formularvalidierung
+    const form = document.getElementById("werkzeug-form");
+    if (form) {
+        const validationMessages = document.getElementById("validation-messages");
+        const messagesList = validationMessages?.querySelector("ul");
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const errors = validateForm(form);
+
+            if (errors.length > 0 && messagesList) {
+                messagesList.innerHTML = errors
+                    .map((error) => `<li>${error}</li>`)
+                    .join("");
+                validationMessages.classList.remove("hidden");
+                validationMessages.scrollIntoView({ behavior: "smooth" });
+            } else {
+                if (validationMessages) {
+                    validationMessages.classList.add("hidden");
+                }
+                form.submit();
+            }
+        });
+    }
+
+    // Kategorie-Buttons
+    const categoryButtons = document.querySelectorAll(".category-btn");
+    categoryButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            categoryButtons.forEach((btn) => btn.classList.remove("active"));
+            button.classList.add("active");
+            const categoryInput = document.querySelector('[name="category"]');
+            if (categoryInput) {
+                categoryInput.value = button.dataset.category;
+            }
+        });
+    });
+
+    // Lager/Ersatz: Feld leeren, wenn Checkbox deaktiviert wird
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkbox = document.getElementById('is-storage-input');
+            const input = document.getElementById('storage_count');
+            if (checkbox && input) {
+                checkbox.addEventListener('change', function() {
+                    if (!checkbox.checked) input.value = '';
+                });
+            }
+        });
+    })();
+
+    // Werkzeug-ID Tooltip-Validierung und Checkbox-Trigger (eigene Tooltip-Logik)
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const toolIdInput = document.getElementById('tool_id');
+            const storageCheckbox = document.getElementById('is-storage-input');
+            const tooltipSpan = document.getElementById('tool-id-tooltip');
+
+            function showTooltip(message) {
+                if (tooltipSpan) {
+                    tooltipSpan.textContent = message;
+                    tooltipSpan.classList.add('opacity-100');
+                    tooltipSpan.classList.remove('opacity-0');
+                    tooltipSpan.classList.add('pointer-events-auto');
+                    tooltipSpan.classList.remove('pointer-events-none');
+                }
+            }
+            function hideTooltip() {
+                if (tooltipSpan) {
+                    tooltipSpan.textContent = '';
+                    tooltipSpan.classList.remove('opacity-100');
+                    tooltipSpan.classList.add('opacity-0');
+                    tooltipSpan.classList.remove('pointer-events-auto');
+                    tooltipSpan.classList.add('pointer-events-none');
+                }
+            }
+            function setInputState(state) {
+                toolIdInput.classList.remove('input-error', 'input-success');
+                if (state === 'error') toolIdInput.classList.add('input-error');
+                if (state === 'success') toolIdInput.classList.add('input-success');
+            }
+
+            async function validateToolId() {
+                if (!toolIdInput) return;
+                const toolId = toolIdInput.value.trim();
+                const category = document.querySelector('[name="category"]:checked')?.value || 'stamp';
+                const location = document.querySelector('[name="location"]')?.value || 'Werk 1';
+                const isStorage = storageCheckbox && storageCheckbox.checked;
+                if (!toolId) {
+                    setInputState();
+                    hideTooltip();
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('tool_id', toolId);
+                formData.append('category', category);
+                formData.append('location', location);
+                formData.append('is_storage', isStorage ? 'true' : '');
+                try {
+                    const response = await fetch('/validate-tool-id/', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': document.querySelector('[name="csrfmiddlewaretoken"]').value },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (isStorage) {
+                        setInputState('success');
+                        hideTooltip();
+                    } else {
+                        setInputState('error');
+                        showTooltip(data.tooltip || 'ID nicht verfügbar');
+                    }
+                } catch (e) {
+                    setInputState('error');
+                    showTooltip('Fehler bei der Validierung');
+                }
+            }
+
+            // Immer alles zurücksetzen, wenn das Feld geleert wird
+            if (toolIdInput) {
+                toolIdInput.addEventListener('input', function(e) {
+                    if (toolIdInput.value.trim() === '') {
+                        setInputState();
+                        hideTooltip();
+                    } else {
+                        debouncedValidate();
+                    }
+                });
+                toolIdInput.addEventListener('blur', validateToolId);
+            }
+            if (storageCheckbox) {
+                storageCheckbox.addEventListener('change', validateToolId);
+            }
+            const debouncedValidate = debounce(validateToolId, 300);
+        });
+    })();
+});
+
+// Live-Validierung: Zeigt Erfolgs- oder Fehlermeldung nach HTMX-Request
+document.addEventListener("htmx:afterRequest", function (event) {
+    if (!event.detail || !event.detail.target) return;
+    
+    let target;
+    // Wenn event.detail.target bereits ein DOM-Element ist, verwende es direkt
+    if (event.detail.target instanceof Element) {
+        target = event.detail.target;
+    } else {
+        target = document.querySelector(event.detail.target);
+    }
+    
+    if (!target) return;
+    
+    let inputField = target.previousElementSibling;
+    
+    // Versuche, die Serverantwort als JSON zu parsen, falls möglich
+    let data;
+    try {
+        data = JSON.parse(event.detail.xhr.responseText);
+    } catch (e) {
+        data = null;
+    }
+    
+    if (event.detail.xhr.status === 200) {
+        const message = data && data.success ? data.success : event.detail.xhr.responseText;
+        target.innerHTML = `<span class="text-success">${message}</span>`;
+        if (inputField) {
+            inputField.classList.remove("border-error");
+            inputField.classList.add("border-success");
+        }
+    } else {
+        const message = data && data.error ? data.error : event.detail.xhr.responseText;
+        target.innerHTML = `<span class="text-error">${message}</span>`;
+        if (inputField) {
+            inputField.classList.remove("border-success");
+            inputField.classList.add("border-error");
+        }
+    }
+});
+
+// Globale Variable, um die aktuell geladene URL zu speichern
+let currentTabUrl = "";
+
+function handleTabClick(button) {
+    const contentWrapper = document.getElementById('custom-tab-content-wrapper');
+    const url = button.getAttribute('data-url');
+    
+    // Wenn der angeklickte Tab bereits aktiv ist und dieselbe URL geladen wurde, tue nichts.
+    if (button.classList.contains('is-active') && currentTabUrl === url) {
+        return;
+    }
+    
+    // Aktualisiere die aktuell geladene URL
+    currentTabUrl = url;
+    
+    // Alle Tabs als inaktiv markieren
+    document.querySelectorAll('.glass-tab').forEach(tab => {
+        tab.classList.remove('is-active');
+        tab.dataset.active = "false";
+    });
+    
+    // Den angeklickten Tab als aktiv markieren
+    button.classList.add('is-active');
+    button.dataset.active = "true";
+    
+    if (!url) return;
+    if (!contentWrapper) {
+        console.error("Content wrapper (#custom-tab-content-wrapper) nicht gefunden!");
+        return;
+    }
+    
+    // HTMX-Request ausführen, um den neuen Inhalt zu laden
+    htmx.ajax('GET', url, {
+        target: '#custom-tab-content-wrapper',
+        swap: 'innerHTML',
+        onSuccess: () => {
+            // Neu geladenen Inhalt verarbeiten
+            htmx.process(contentWrapper);
+        },
+        onError: (error) => {
+            console.error("HTMX AJAX Fehler:", error);
+        }
+    });
+}
+
+// Funktion: Event-Handler für Tab-Klicks einrichten (verhindert doppelte Events)
+function attachTabHandlers() {
+    document.querySelectorAll('.glass-tab').forEach(tab => {
+        // Entferne Inline-Event-Listener, um doppelte Aufrufe zu vermeiden
+        tab.onclick = null;
+        if (!tab.dataset.tabBound) {
+            // Nutze Capture-Phase, um HTMX-Standard-Click-Event zu unterbinden
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleTabClick(tab);
+            }, true);
+            tab.dataset.tabBound = "true";
+        }
+    });
+}
+
+// Initialisiert alle Drag-and-Drop-Datei-Upload-Bereiche auf der Seite
+function initFileUpload() {
+    console.log("=== Direkte File-Upload-Implementierung ===");
+    
+    // Basis-Elemente, die garantiert funktionieren sollen
+    var dropArea = document.getElementById('drop-area-tab1');
+    var fileInput = document.getElementById('file-input-tab1');
+    var fileList = document.getElementById('file-list-tab1');
+    
+    if (!dropArea || !fileInput || !fileList) {
+        console.error("Ein oder mehrere Elemente fehlen:", 
+                    "dropArea:", !!dropArea, 
+                    "fileInput:", !!fileInput, 
+                    "fileList:", !!fileList);
+        return;
+    }
+    
+    console.log("Alle Elemente gefunden, initialisiere...");
+    
+    // WICHTIG: Verhindern, dass der Browser die Datei öffnet
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+    });
+    
+    // 1. KLICK-HANDLING - Garantiert mit direkter inline-Funktion
+    // Das onClick ist bereits direkt im HTML mit onclick="document.getElementById('file-input-tab1').click();"
+    
+    // 2. DRAG-EVENT-HANDLING
+    dropArea.ondragover = function(e) {
+        console.log("DRAGOVER!");
+        e.preventDefault();
+        this.classList.add('dragover');
+        return false;
+    };
+    
+    dropArea.ondragleave = function(e) {
+        console.log("DRAGLEAVE!");
+        e.preventDefault();
+        this.classList.remove('dragover');
+        return false;
+    };
+    
+    dropArea.ondrop = function(e) {
+        console.log("DROP! Files:", e.dataTransfer.files.length);
+        e.preventDefault();
+        e.stopPropagation();
+        
+        this.classList.remove('dragover');
+        
+        var files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFiles(files);
+        }
+        
+        return false;
+    };
+    
+    // 3. FILE-INPUT-CHANGE-HANDLING
+    // Wir verwenden die native onchange bereits im HTML, aber hier zusätzlich für sicheren Fallback
+    fileInput.onchange = function() {
+        console.log("FILE INPUT CHANGE! Files:", this.files.length);
+        if (this.files.length > 0) {
+            handleFiles(this.files);
+        }
+    };
+    
+    // 4. DATEI-HANDLING
+    function handleFiles(files) {
+        console.log("Handle Files:", files.length);
+        
+        // Vorschaubereich leeren
+        fileList.innerHTML = '';
+        
+        // Datei-Vorschau erstellen
+        Array.from(files).forEach(function(file) {
+            var div = document.createElement('div');
+            div.className = 'flex items-center gap-2 p-2 bg-gray-100 rounded mb-2';
+            
+            // Icon nach Dateityp
+            var icon = document.createElement('span');
+            if (file.type.indexOf('image') !== -1) {
+                icon.className = 'icon-image text-blue-500 text-xl';
+            } else {
+                icon.className = 'icon-file text-gray-500 text-xl';
+            }
+            
+            // Dateiname
+            var name = document.createElement('span');
+            name.textContent = file.name;
+            name.className = 'flex-1';
+            
+            // Zusammenbauen
+            div.appendChild(icon);
+            div.appendChild(name);
+            fileList.appendChild(div);
+            
+            // Hochladen
+            uploadFile(file);
+        });
+    }
+    
+    // 5. UPLOAD
+    function uploadFile(file) {
+        console.log("Upload file:", file.name);
+        
+        var formData = new FormData();
+        formData.append('file', file);
+        
+        var csrf = document.querySelector('[name="csrfmiddlewaretoken"]');
+        
+        fetch('/upload/', {
+            method: 'POST',
+            headers: csrf ? {'X-CSRFToken': csrf.value} : {},
+            body: formData
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            console.log("Upload success:", data);
+        })
+        .catch(function(error) {
+            console.error("Upload error:", error);
+        });
+    }
+    
+    console.log("Drag & Drop fertig initialisiert!");
+}
+
+function checkToolId() {
+    let input = document.getElementById("tool_id");
+    let validationMessage = document.getElementById("tool-id-validation");
+
+    if (!input || !validationMessage) return;
+
+    let message = validationMessage.innerText.trim();
+
+    // Zuerst alle Klassen entfernen
+    input.classList.remove("input-success", "input-error");
+
+    if (message.includes("existiert bereits") || message.includes("bereits vergeben")) {
+        input.classList.add("input-error");
+    } else if (message.includes("verfügbar")) {
+        input.classList.add("input-success");
+    } else {
+        input.classList.remove("input-success", "input-error");
+    }
+}
+
+// 🔹 Direkt nach jedem HTMX-Update die Farbe prüfen!
+document.addEventListener("htmx:afterSwap", function(event) {
+    setTimeout(checkToolId, 50); // Sicherstellen, dass das Element aktualisiert wurde
+});
+
+// 🔹 Fehlerbehandlung für HTMX (400 Bad Request)
+document.addEventListener("htmx:responseError", function(event) {
+    if (event.detail.xhr.status === 400) {
+        let input = document.getElementById("tool_id");
+        if (input) {
+            input.classList.remove("input-success");
+            input.classList.add("input-error");
+        }
+    }
+});
+
+
+// Verhindert Fehler bei ungültigem Ziel während HTMX-Verarbeitung
+document.body.addEventListener('htmx:beforeProcess', function(evt) {
+    if (!evt.detail.target || !evt.detail.target.tagName) {
+        console.log("HTMX Target ungültig - Request abgebrochen");
+        evt.preventDefault();
+    }
+});
+
+// Nach jeder HTMX-Aktion: Datei-Upload und Tabs ggf. neu initialisieren
+document.addEventListener('htmx:afterProcess', () => {
+    initFileUpload();
+    attachTabHandlers();
+});
+
+document.body.addEventListener('htmx:configRequest', (event) => {
+    let csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (csrfToken) {
+        event.detail.headers['X-CSRFToken'] = csrfToken.value;
+    }
+});
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Element-Referenzen
+    const toggleBtn = document.getElementById("toggleWerk");
+    const currentWerkDisplay = document.getElementById("currentWerk");
+
+    // Überprüfung der erforderlichen Elemente
+    if (!toggleBtn || !currentWerkDisplay) {
+        console.error("Toggle-Button oder Display-Element nicht gefunden");
+        return;
+    }
+
+    // Initialisierung
+    const initializeToggle = () => {
+        const savedWerk = sessionStorage.getItem("currentWerk") || "Werk 1";
+        updateToggleState(savedWerk);
+    };
+
+    // Zustands-Update-Funktion
+    const updateToggleState = (werk) => {
+        toggleBtn.textContent = werk;
+        currentWerkDisplay.textContent = werk;
+        toggleBtn.classList.toggle("werk2", werk === "Werk 2");
+        sessionStorage.setItem("currentWerk", werk);
+    };
+
+    // Click-Handler
+    toggleBtn.addEventListener("click", function () {
+        try {
+            const newWerk = toggleBtn.textContent === "Werk 1" ? "Werk 2" : "Werk 1";
+            updateToggleState(newWerk);
+
+            // HTMX-Request
+            const url = "{% url 'filter_tools_by_location' %}";
+            htmx.ajax("GET", url, {
+                target: "#werkzeug-container",
+                swap: "innerHTML",
+                values: { location: newWerk }
+            }).catch(error => {
+                console.error("HTMX-Request fehlgeschlagen:", error);
+            });
+        } catch (error) {
+            console.error("Fehler beim Umschalten:", error);
+        }
+    });
+
+    // Initialisierung aufrufen
+    initializeToggle();
+});
+
+
+// HTMX-Konfiguration
+htmx.config.selfRequestsOnly = true;
+htmx.config.useTemplateFragments = true;
+
+// Formularvalidierung
+function validateForm(form) {
+    const errors = [];
+    const requiredFields = form.querySelectorAll("[required]");
+
+    requiredFields.forEach((field) => {
+        if (!field.value.trim()) {
+            errors.push(
+                `${field.getAttribute("data-label") || field.name} ist erforderlich.`
+            );
+        }
+    });
+
+    // Spezifische Validierungen
+    const numberFields = form.querySelectorAll('[type="number"]');
+    numberFields.forEach((field) => {
+        const value = parseFloat(field.value);
+        const min = parseFloat(field.getAttribute("min"));
+        const max = parseFloat(field.getAttribute("max"));
+
+        if (field.value && (isNaN(value) || value < min || value > max)) {
+            errors.push(
+                `${field.getAttribute("data-label") || field.name} muss zwischen ${min} und ${max} liegen.`
+            );
+        }
+    });
+
+    return errors;
+}
+
+// Kategorie wechseln
+function switchCategory(category) {
+  // Alle Kategorie-Buttons zurücksetzen
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+  });
+
+  // Aktiven Button hervorheben
+  const activeButton = document.querySelector(`[data-category="${category}"]`);
+  if (activeButton) {
+    activeButton.classList.add('active');
+    activeButton.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+  }
+}
+
+// Lager/Ersatz Toggle
+function toggleStorageCount(checkbox) {
+    const container = document.getElementById('storage-count-container');
+    if (container) {
+        if (checkbox.checked) {
+            container.classList.remove('hidden');  // Zeige Container an
+        } else {
+            container.classList.add('hidden');  // Verstecke Container
+        }
+        console.log('Checkbox toggled: ', checkbox.checked ? 'Ein' : 'Aus');  // Debugging-Log
+    } else {
+        console.error('Element storage-count-container nicht gefunden');
+    }
+}
+
+// Maße formatieren
+function formatMeasurement(input, allowNegative = false) {
+  let value = input.value.replace(',', '.');
+  
+  // Nur Zahlen, Punkt und optional Minus zulassen
+  value = value.replace(/[^\d.-]/g, '');
+  
+  // Negative Zahlen behandeln
+  if (!allowNegative && value.startsWith('-')) {
+    value = value.substring(1);
+  }
+  
+  // Maximal zwei Nachkommastellen
+  const parts = value.split('.');
+  if (parts[1] && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2);
+    value = parts.join('.');
+  }
+  
+  input.value = value;
+}
+
+// Debounce-Funktion
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}

@@ -1,0 +1,44 @@
+- generic [ref=f8e234]:
+  - complementary [ref=f8e235]:
+    - generic [ref=f8e236]:
+      - generic [ref=f8e237]:
+        - generic [ref=f8e238]: hp hp
+        - generic [ref=f8e239]: olytechnik
+      - generic [ref=f8e240]:
+        - generic [ref=f8e241]: ToolSync
+        - generic [ref=f8e242]: Werkzeug- & Lagerverwaltung
+  - main [ref=f8e257]:
+    - generic [ref=f8e258]:
+      - navigation [ref=f8e260]:
+        - generic [ref=f8e261]:
+          - button "Werkzeuge" [ref=f8e262]
+          - button "Serienartikel" [ref=f8e263]
+          - button "Lager/Ersatz" [ref=f8e264]
+          - button "Historie" [ref=f8e265]
+        - button "Anlegen" [ref=f8e266]
+      - complementary [ref=f8e307]:
+        - generic [ref=f8e308]:
+          - generic [ref=f8e309]:
+            - paragraph [ref=f8e310]: Aktive Ausleihen
+            - paragraph [ref=f8e311]: —
+          - generic [ref=f8e312]:
+            - paragraph [ref=f8e313]: Verfügbare Werkzeuge
+            - paragraph [ref=f8e314]: —
+          - generic [ref=f8e315]:
+            - paragraph [ref=f8e316]: Lagerbestand
+            - paragraph [ref=f8e317]: —
+          - generic [ref=f8e318]:
+            - paragraph [ref=f8e319]: Serienartikel
+            - paragraph [ref=f8e320]: —
+  - generic [ref=f8e401]:
+    - generic [ref=f8e403]:
+      - generic [ref=f8e404]: hp hp
+      - generic [ref=f8e405]: olytechnik
+    - heading "ToolSync" [level=2] [ref=f8e406]
+    - paragraph [ref=f8e407]: Anmeldung
+    - generic [ref=f8e408]:
+      - button "Mitarbeiter" [ref=f8e409] [cursor=pointer]
+      - button "Admin" [ref=f8e414] [cursor=pointer]
+    - generic [ref=f8e421]:
+      - textbox "Personalnummer" [ref=f8e423]
+      - button "Anmelden" [ref=f8e424] [cursor=pointer]

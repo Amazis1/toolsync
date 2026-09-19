@@ -1,0 +1,210 @@
+﻿=== D:\Web\theme\templates\base.html ===
+{% load static %} {% load django_htmx %}
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}ToolSync{% endblock %}</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{% static 'img/favicon.ico' %}"
+    />
+    <link href="{% static 'css/style.css' %}" rel="stylesheet" />
+    <script src="{% static 'js/alpine.js' %}" defer></script>
+    <script src="{% static 'js/htmx.min.js' %}" defer></script>
+    <script src="{% static 'js/main.js' %}" defer></script>
+    {% django_htmx_script %}
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css"
+    />
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+  </head>
+
+  <body class="bg-[var(--background)] text-[var(--text)] flex h-full">
+    <!-- Sidebar -->
+    <nav
+      class="sidebar w-20 flex flex-col items-center py-6 space-y-6 fixed h-full"
+    >
+      <div class="mb-6">
+        <h1 class="text-lg font-bold italic text-gradient">ToolSync</h1>
+      </div>
+
+      <div class="group relative">
+        <button
+          hx-get="{% url 'werkzeug_form_partial' %}"
+          hx-target="#werkzeug-container"
+          hx-swap="outerHTML"
+          class="btn"
+          aria-label="Neues Werkzeug anlegen"
+        >
+          <span class="icon-add"></span>
+        </button>
+        <div class="tooltip-right">Anlegen</div>
+      </div>
+
+      <div class="group relative">
+        <button class="btn bg-[var(--success)]">
+          <span class="icon-help"></span>
+        </button>
+        <div class="tooltip-right">Help</div>
+      </div>
+
+      <div class="group relative">
+        <button class="btn bg-[var(--accent-blue)]">
+          <span class="icon-tool"></span>
+        </button>
+        <div class="tooltip-right">Tool</div>
+      </div>
+
+      <div class="mt-auto text-[var(--text-muted)] text-sm icon-label">
+        <span class="icon-user"></span>
+        Alex
+      </div>
+    </nav>
+
+    <!-- Hauptbereich -->
+    <main class="ml-24 flex-1 p-6 space-y-6">
+      <header
+        class="glass-panel p-6 flex flex-col md:flex-row justify-between items-center gap-6"
+      >
+        <div class="logo-main relative w-[100px] h-[100px]">
+          <span
+            class="logo-text-hp text-[70px] absolute top-[-15px] left-[-5px] z-20"
+            >hp</span
+          >
+          <span class="logo-text text-xs absolute bottom-[16px] left-10 z-20"
+            >olytechnik</span
+          >
+        </div>
+
+        <div class="text-center">
+          <h2
+            class="text-gradient text-xl font-bold flex items-center justify-center gap-2"
+          >
+            <span class="icon-trending"></span>
+            Werkzeuge Gesamt: {{ tools.count }}
+          </h2>
+          <p class="text-sm text-[var(--text-muted)] mt-1">
+            Werkzeuge in Nutzung, Lagerbestand
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button class="btn btn-primary icon-label">
+            <span class="icon-serial"></span>
+            Werkzeugbewegungen
+          </button>
+          <button class="btn bg-[var(--success)] text-white icon-label">
+            <span class="icon-chat"></span>
+            Live Status
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-6">
+        <!-- Linke Spalte -->
+        <div class="space-y-6">
+          <!-- Serienartikel-Block (Original-Überschrift) -->
+          <section class="glass-card p-6">
+            <h3 class="text-lg font-semibold mb-4 icon-label">
+              <span class="icon-serialv2"></span>
+              Serienartikel
+            </h3>
+            <div class="search-container">
+              <span class="icon-search"></span>
+              <input
+                type="search"
+                placeholder="Suchen..."
+                class="search-input"
+              />
+              <button class="search-clear icon-x-circle"></button>
+            </div>
+            <ul class="space-y-3 mt-4">
+              <li class="glass-item p-3 icon-label">
+                <span
+                  class="icon-arrow-badge-right text-[var(--text-muted)]"
+                ></span>
+                Artikel 1
+              </li>
+              <li class="glass-item p-3 icon-label">
+                <span
+                  class="icon-arrow-badge-right text-[var(--text-muted)]"
+                ></span>
+                Artikel 2
+              </li>
+            </ul>
+          </section>
+
+          <section class="glass-card p-6">
+            <h3 class="text-lg font-semibold mb-4 icon-label">
+              <span class="icon-help"></span>
+              Info / Hilfe
+            </h3>
+            <ul class="space-y-3">
+              <li class="glass-item p-3 icon-label">
+                <span class="icon-add text-[var(--accent-blue)]"></span>
+                Wie lege ich ein Werkzeug an?
+              </li>
+            </ul>
+          </section>
+        </div>
+        <!-- Mittlere Spalte -->
+        <div class="glass-panel p-6" id="werkzeug-container">
+          {% include 'werkzeug/tool_list_partial.html' %}
+        </div>
+
+        <!-- Rechte Spalte -->
+        <div class="space-y-6">
+          <!-- Live Chat (Original-Überschrift) -->
+          <section class="glass-card p-6">
+            <h3 class="text-lg font-semibold mb-4 icon-label">
+              <span class="icon-chat"></span>
+              Live Chat
+            </h3>
+            <div class="glass-item p-4 rounded-lg h-40 overflow-auto">
+              <!-- Chat-Inhalt unverändert -->
+            </div>
+          </section>
+
+          <!-- Lager/Ersatz (Original-Überschrift) -->
+          <section class="glass-card p-6">
+            <h3 class="text-lg font-semibold mb-4 icon-label">
+              <span class="icon-warehouse"></span>
+              Lager / Ersatz
+            </h3>
+            <div class="search-container">
+              <span class="icon-search"></span>
+              <input
+                type="search"
+                placeholder="Suchen..."
+                class="search-input"
+              />
+              <button class="search-clear icon-x-circle"></button>
+            </div>
+            <ul class="space-y-3 mt-4">
+              <li class="glass-item p-3 icon-label">
+                <span class="icon-point text-[var(--success)]"></span>
+                Ersatzteil 1
+                <span
+                  class="icon-arrow-badge-right text-[var(--text-muted)]"
+                ></span>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (typeof htmx !== "undefined") {
+          htmx.config.defaultSwapStyle = "outerHTML"; // Standard-Swap-Verhalten
+          htmx.config.selfRequestsOnly = true; // Verhindert rekursive Requests
+        }
+      });
+    </script>
+  </body>
+</html>

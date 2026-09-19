@@ -1,0 +1,11 @@
+﻿=== D:\Web\werkzeug\templates\werkzeug\index.html ===
+{% extends 'base.html' %}
+
+{% block title %}Toolsync Startseite{% endblock %}
+
+{% block content %}
+<div class="p-4">
+    <h1 class="text-2xl font-bold mb-4">Willkommen bei Toolsync</h1>
+    <p>Dies ist die Startseite deiner Anwendung.</p>
+</div>
+{% endblock %}

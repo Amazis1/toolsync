@@ -1,0 +1,4 @@
+﻿=== D:\Web\werkzeug\templates\tabs\tab4.html ===
+<div data-active-tab="tab4">
+    <h3 class="text-lg font-medium mb-4">Tab4 Lager / Ersatz</h3>
+  </div>

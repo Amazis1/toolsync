@@ -1,0 +1,75 @@
+- generic [ref=f6e65]:
+  - complementary [ref=f6e66]:
+    - generic [ref=f6e67]:
+      - generic [ref=f6e68]: ToolSync
+      - generic [ref=f6e69]: Admin Panel
+    - generic [ref=f6e70]:
+      - generic [ref=f6e71]:
+        - generic "Admin User" [ref=f6e72]: AU
+        - generic [ref=f6e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f6e74] [cursor=pointer]
+      - button "Abmelden" [ref=f6e75] [cursor=pointer]
+    - navigation [ref=f6e76]:
+      - button "Übersicht" [ref=f6e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f6e79] [cursor=pointer]
+      - button "Lagerplätze" [active] [ref=f6e81] [cursor=pointer]
+    - generic [ref=f6e83]: Admin Panel
+  - generic [ref=f6e86]:
+    - banner [ref=f6e87]:
+      - generic [ref=f6e88]:
+        - generic [ref=f6e89]: Admin Panel
+        - generic [ref=f6e90]: Lagerplätze
+      - generic [ref=f6e91]:
+        - generic "Admin User" [ref=f6e92]: AU
+        - generic [ref=f6e93]: Admin User
+    - generic [ref=f6e210]:
+      - generic [ref=f6e213]:
+        - heading "Lagerplatz-Verwaltung" [level=3] [ref=f6e214]
+        - paragraph [ref=f6e215]: Schrank anlegen, Plätze automatisch erzeugen, Werkzeuge per Klick oder Drag & Drop verschieben.
+      - generic [ref=f6e216]:
+        - generic [ref=f6e217]:
+          - heading "Schrank anlegen" [level=3] [ref=f6e218]
+          - generic [ref=f6e219]:
+            - generic [ref=f6e220]: Werk
+            - combobox [ref=f6e221]:
+              - option "Werk auswählen…" [selected]
+              - option "Werk 1"
+              - option "Werk 2"
+          - generic [ref=f6e222]:
+            - generic [ref=f6e223]: Schrank Nummern-ID
+            - spinbutton "z. B. 3 (wird zu 03)" [ref=f6e224]
+          - generic [ref=f6e225]:
+            - generic [ref=f6e226]: Anzahl Schubladen
+            - spinbutton [ref=f6e227]: "1"
+          - generic [ref=f6e229]:
+            - generic [ref=f6e230]: Schublade A
+            - generic [ref=f6e231]:
+              - generic [ref=f6e232]:
+                - generic [ref=f6e233]: "Anzahl X:"
+                - spinbutton "z. B. 5" [ref=f6e234]: "5"
+              - generic [ref=f6e235]:
+                - generic [ref=f6e236]: "Anzahl Y:"
+                - spinbutton "z. B. 2" [ref=f6e237]: "2"
+          - button "Schrank anlegen" [ref=f6e238] [cursor=pointer]
+        - generic [ref=f6e239]:
+          - generic [ref=f6e240]:
+            - generic [ref=f6e241]: "💡 2 Wege zum Massen-Verschieben (Perlenkette):"
+            - paragraph [ref=f6e242]:
+              - text: "1."
+              - strong [ref=f6e243]: "Per Klick:"
+              - text: Klicke ein belegtes blaues Fach an (wird gelb umrandet) und klicke danach auf das Ziel-Fach.
+            - paragraph [ref=f6e244]:
+              - text: "2."
+              - strong [ref=f6e245]: "Per Drag & Drop:"
+              - text: Ziehe eine blaue Karte direkt auf ein anderes Fach.
+          - generic [ref=f6e246]:
+            - generic [ref=f6e247]: Lagerstruktur-Ansicht
+            - generic [ref=f6e249]:
+              - button "Werk 1" [ref=f6e250] [cursor=pointer]
+              - button "Werk 2" [ref=f6e251] [cursor=pointer]
+            - generic [ref=f6e254]:
+              - button "▶ Schrank 01 1 Schubladen" [ref=f6e255]:
+                - generic [ref=f6e256]: ▶
+                - generic [ref=f6e257]: Schrank 01
+                - generic [ref=f6e258]: 1 Schubladen
+              - button "Löschen" [ref=f6e259] [cursor=pointer]

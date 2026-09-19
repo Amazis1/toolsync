@@ -1,0 +1,81 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: hp hp
+        - generic [ref=e8]: olytechnik
+      - generic [ref=e9]:
+        - generic [ref=e10]: ToolSync
+        - generic [ref=e11]: Werkzeug- & Lagerverwaltung
+    - generic [ref=e65]:
+      - generic [ref=e66]:
+        - generic "Admin User" [ref=e67]: AU
+        - generic [ref=e68]: Admin User (Admin)
+      - button "Admin-Panel" [ref=e69]
+      - button "Logout" [ref=e73]
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - navigation [ref=e15]:
+          - generic [ref=e16]:
+            - button "Werkzeuge" [ref=e17]
+            - button "Serienartikel" [ref=e18]
+            - button "Lager/Ersatz" [ref=e19]
+            - button "Historie" [ref=e20]
+          - button "Anlegen" [ref=e21]
+        - generic [ref=e79]:
+          - heading "Werkzeuge" [level=2] [ref=e80]
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - searchbox "Werkzeug-ID, Bezeichnung, Typ oder Werk…" [ref=e86]
+              - combobox [ref=e87] [cursor=pointer]:
+                - option "Alle Kategorien" [selected]
+                - option "Stempel"
+                - option "Abstreifer"
+                - option "Matrize"
+              - combobox [ref=e88] [cursor=pointer]:
+                - option "Alle Status" [selected]
+                - option "Verfügbar"
+                - option "Ausgeliehen"
+                - option "In Transit"
+                - option "Defekt"
+                - option "In Wartung"
+            - table [ref=e90]:
+              - rowgroup [ref=e91]:
+                - row [ref=e92]:
+                  - columnheader "Werkzeug-ID" [ref=e93]
+                  - columnheader "Bezeichnung" [ref=e94]
+                  - columnheader "Standort" [ref=e95]
+                  - columnheader "Status" [ref=e96]
+                  - columnheader "Aktionen" [ref=e97]
+              - rowgroup [ref=e98]:
+                - row [ref=e99]:
+                  - cell "01025000" [ref=e100]
+                  - cell "Rund 2.5 ALU" [ref=e102]
+                  - cell "Werk 1" [ref=e103]
+                  - cell "—" [ref=e104]
+                  - cell [ref=e105]:
+                    - button "Bearbeiten" [ref=e106] [cursor=pointer]
+                    - button "Löschen" [ref=e107] [cursor=pointer]
+                - row [ref=e108]:
+                  - cell "01060000" [ref=e109]
+                  - cell "Rund 6,0" [ref=e111]
+                  - cell "Werk 1" [ref=e112]
+                  - cell "—" [ref=e113]
+                  - cell [ref=e114]:
+                    - button "Bearbeiten" [ref=e115] [cursor=pointer]
+                    - button "Löschen" [ref=e116] [cursor=pointer]
+      - complementary [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - paragraph [ref=e27]: Aktive Ausleihen
+            - paragraph [ref=e28]: —
+          - generic [ref=e29]:
+            - paragraph [ref=e30]: Verfügbare Werkzeuge
+            - paragraph [ref=e31]: —
+          - generic [ref=e32]:
+            - paragraph [ref=e33]: Lagerbestand
+            - paragraph [ref=e34]: —
+          - generic [ref=e35]:
+            - paragraph [ref=e36]: Serienartikel
+            - paragraph [ref=e37]: —
