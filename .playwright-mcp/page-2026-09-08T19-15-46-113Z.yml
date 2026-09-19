@@ -1,0 +1,85 @@
+- generic [ref=e92]:
+  - complementary [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]: ToolSync
+      - generic [ref=e96]: Admin Panel
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - generic "Admin User" [ref=e99]: AU
+        - generic [ref=e100]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=e101] [cursor=pointer]
+      - button "Abmelden" [ref=e102] [cursor=pointer]
+    - navigation [ref=e103]:
+      - button "Übersicht" [ref=e104] [cursor=pointer]
+      - button "Stammdaten" [ref=e106] [cursor=pointer]
+      - button "Lagerplätze" [active] [ref=e108] [cursor=pointer]
+    - generic [ref=e110]: Admin Panel
+  - generic [ref=e113]:
+    - banner [ref=e114]:
+      - generic [ref=e115]:
+        - generic [ref=e116]: Admin Panel
+        - generic [ref=e117]: Lagerplätze
+      - generic [ref=e118]:
+        - generic "Admin User" [ref=e119]: AU
+        - generic [ref=e120]: Admin User
+    - generic [ref=e161]:
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - heading "Schrank anlegen" [level=3] [ref=e164]
+          - generic [ref=e165]:
+            - generic [ref=e166]: Werk
+            - combobox [ref=e167]:
+              - option "Werk auswählen…" [selected]
+          - generic [ref=e168]:
+            - generic [ref=e169]: Schrank Nummern-ID
+            - spinbutton "z. B. 3 (wird zu 03)" [ref=e170]
+          - generic [ref=e171]:
+            - generic [ref=e172]: Anzahl Schubladen
+            - spinbutton [ref=e173]: "1"
+          - generic [ref=e175]:
+            - generic [ref=e176]: Schublade A
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - generic [ref=e179]: "Anzahl X:"
+                - spinbutton [ref=e180]: "5"
+              - generic [ref=e181]:
+                - generic [ref=e182]: "Anzahl Y:"
+                - spinbutton [ref=e183]: "2"
+          - button "Schrank anlegen" [ref=e184] [cursor=pointer]
+        - generic [ref=e185]:
+          - generic [ref=e186]: Verlauf
+          - paragraph [ref=e187]: Verlauf wird geladen…
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - generic [ref=e190]: ℹ
+          - generic [ref=e191]:
+            - strong [ref=e192]: Wege zum Verschieben, Tauschen & Einreihen
+            - generic [ref=e193]:
+              - paragraph [ref=e194]:
+                - text: "1."
+                - strong [ref=e195]: "Per Klick:"
+                - text: Quelle antippen (Ablage-Chip oder belegtes Fach), danach das Ziel-Fach antippen.
+              - paragraph [ref=e196]:
+                - text: "2."
+                - strong [ref=e197]: "Per Drag & Drop:"
+                - text: Ablage-Chip auf Platz ziehen, Fach auf Fach ziehen oder Fach in die Ablage-Fläche ziehen.
+              - paragraph [ref=e198]:
+                - text: Belegtes Ziel =
+                - strong [ref=e199]: Tausch
+                - text: . Leeres Ziel =
+                - strong [ref=e200]: Verschieben
+                - text: . Ablage → belegter Platz =
+                - strong [ref=e201]: Einreihen
+                - text: (blockiert bei voller Schublade).
+        - generic [ref=e202]:
+          - generic [ref=e203]:
+            - generic [ref=e204]:
+              - text: Werkzeug-Ablage
+              - paragraph [ref=e205]: Nicht eingelagerte Werkzeuge – per Drag & Drop oder Klick auf einen Platz einreihen.
+            - generic [ref=e206]: 0 Werkzeuge
+          - paragraph [ref=e207]: Keine Werkzeuge ohne Platz. Über die Werkzeug-Anlage oder durch Herausziehen aus einer Schublade gelangen Werkzeuge in die Ablage.
+          - generic [ref=e208]: Werkzeug hierher ziehen, um es in die Ablage zu legen (Platz wird frei)
+        - generic [ref=e209]:
+          - generic [ref=e210]: Lagerstruktur-Ansicht
+          - paragraph [ref=e212]: Bitte wähle oben ein Werk aus.
+        - status [ref=e213]

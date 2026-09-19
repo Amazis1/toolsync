@@ -1,0 +1,149 @@
+- generic [ref=f6e65]:
+  - complementary [ref=f6e66]:
+    - generic [ref=f6e67]:
+      - generic [ref=f6e68]: ToolSync
+      - generic [ref=f6e69]: Admin Panel
+    - generic [ref=f6e70]:
+      - generic [ref=f6e71]:
+        - generic "Admin User" [ref=f6e72]: AU
+        - generic [ref=f6e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f6e74] [cursor=pointer]
+      - button "Abmelden" [ref=f6e75] [cursor=pointer]
+    - navigation [ref=f6e76]:
+      - button "Übersicht" [ref=f6e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f6e79] [cursor=pointer]
+      - button "Lagerplätze" [ref=f6e81] [cursor=pointer]
+    - generic [ref=f6e83]: Admin Panel
+  - generic [ref=f6e86]:
+    - banner [ref=f6e87]:
+      - generic [ref=f6e88]:
+        - generic [ref=f6e89]: Admin Panel
+        - generic [ref=f6e90]: Lagerplätze
+      - generic [ref=f6e91]:
+        - generic "Admin User" [ref=f6e92]: AU
+        - generic [ref=f6e93]: Admin User
+    - generic [ref=f6e210]:
+      - generic [ref=f6e213]:
+        - heading "Lagerplatz-Verwaltung" [level=3] [ref=f6e214]
+        - paragraph [ref=f6e215]: Schrank anlegen, Plätze automatisch erzeugen, Werkzeuge per Klick oder Drag & Drop verschieben.
+      - generic [ref=f6e216]:
+        - generic [ref=f6e217]:
+          - heading "Schrank anlegen" [level=3] [ref=f6e218]
+          - generic [ref=f6e219]:
+            - generic [ref=f6e220]: Werk
+            - combobox [ref=f6e221]:
+              - option "Werk auswählen…" [selected]
+              - option "Werk 1"
+              - option "Werk 2"
+          - generic [ref=f6e222]:
+            - generic [ref=f6e223]: Schrank Nummern-ID
+            - spinbutton "z. B. 3 (wird zu 03)" [ref=f6e224]
+          - generic [ref=f6e225]:
+            - generic [ref=f6e226]: Anzahl Schubladen
+            - spinbutton [ref=f6e227]: "1"
+          - generic [ref=f6e229]:
+            - generic [ref=f6e230]: Schublade A
+            - generic [ref=f6e231]:
+              - generic [ref=f6e232]:
+                - generic [ref=f6e233]: "Anzahl X:"
+                - spinbutton "z. B. 5" [ref=f6e234]: "5"
+              - generic [ref=f6e235]:
+                - generic [ref=f6e236]: "Anzahl Y:"
+                - spinbutton "z. B. 2" [ref=f6e237]: "2"
+          - button "Schrank anlegen" [ref=f6e238] [cursor=pointer]
+        - generic [ref=f6e239]:
+          - generic [ref=f6e240]:
+            - generic [ref=f6e241]: "💡 2 Wege zum Massen-Verschieben (Perlenkette):"
+            - paragraph [ref=f6e242]:
+              - text: "1."
+              - strong [ref=f6e243]: "Per Klick:"
+              - text: Klicke ein belegtes blaues Fach an (wird gelb umrandet) und klicke danach auf das Ziel-Fach.
+            - paragraph [ref=f6e244]:
+              - text: "2."
+              - strong [ref=f6e245]: "Per Drag & Drop:"
+              - text: Ziehe eine blaue Karte direkt auf ein anderes Fach.
+          - generic [ref=f6e246]:
+            - generic [ref=f6e247]: Lagerstruktur-Ansicht
+            - generic [ref=f6e249]:
+              - button "Werk 1" [ref=f6e250] [cursor=pointer]
+              - button "Werk 2" [ref=f6e251] [cursor=pointer]
+            - generic [ref=f6e253]:
+              - generic [ref=f6e254]:
+                - button "▶ Schrank 01 1 Schubladen" [ref=f6e255]:
+                  - generic [ref=f6e256]: ▶
+                  - generic [ref=f6e257]: Schrank 01
+                  - generic [ref=f6e258]: 1 Schubladen
+                - button "Löschen" [ref=f6e259] [cursor=pointer]
+              - generic [ref=f6e261]:
+                - generic [ref=f6e262]:
+                  - button "▶ Schrank 01 - Schublade A (10 Plätze)" [active] [ref=f6e263]:
+                    - generic [ref=f6e264]: ▶
+                    - generic [ref=f6e265]: Schrank 01 - Schublade A
+                    - generic [ref=f6e266]: (10 Plätze)
+                  - button "Schublade löschen" [ref=f6e267] [cursor=pointer]
+                - generic [ref=f6e269]:
+                  - generic "Schrank 01 - Schublade A - Platz 01045000 -" [ref=f6e270] [cursor=pointer]:
+                    - generic [ref=f6e271]:
+                      - generic [ref=f6e272]: 01-A-
+                      - generic [ref=f6e273]: X:1 Y:1
+                    - generic [ref=f6e274]: "01045000"
+                    - generic [ref=f6e276]:
+                      - button "Werkzeug bearbeiten" [ref=f6e277]
+                      - button "Werkzeug loeschen" [ref=f6e280]
+                  - generic "Schrank 01 - Schublade A - Platz 02 01045000 -" [ref=f6e284] [cursor=pointer]:
+                    - generic [ref=f6e285]:
+                      - generic [ref=f6e286]: 01-A-02
+                      - generic [ref=f6e287]: X:2 Y:1
+                    - generic [ref=f6e288]: "01045000"
+                    - generic [ref=f6e290]:
+                      - button "Werkzeug bearbeiten" [ref=f6e291]
+                      - button "Werkzeug loeschen" [ref=f6e294]
+                  - generic "Schrank 01 - Schublade A - Platz 03 01037000 -" [ref=f6e298] [cursor=pointer]:
+                    - generic [ref=f6e299]:
+                      - generic [ref=f6e300]: 01-A-03
+                      - generic [ref=f6e301]: X:3 Y:1
+                    - generic [ref=f6e302]: "01037000"
+                    - generic [ref=f6e304]:
+                      - button "Werkzeug bearbeiten" [ref=f6e305]
+                      - button "Werkzeug loeschen" [ref=f6e308]
+                  - generic "Schrank 01 - Schublade A - Platz 04 01040000 -" [ref=f6e312] [cursor=pointer]:
+                    - generic [ref=f6e313]:
+                      - generic [ref=f6e314]: 01-A-04
+                      - generic [ref=f6e315]: X:4 Y:1
+                    - generic [ref=f6e316]: "01040000"
+                    - generic [ref=f6e318]:
+                      - button "Werkzeug bearbeiten" [ref=f6e319]
+                      - button "Werkzeug loeschen" [ref=f6e322]
+                  - generic "Schrank 01 - Schublade A - Platz 05 01028000 -" [ref=f6e326] [cursor=pointer]:
+                    - generic [ref=f6e327]:
+                      - generic [ref=f6e328]: 01-A-05
+                      - generic [ref=f6e329]: X:5 Y:1
+                    - generic [ref=f6e330]: "01028000"
+                    - generic [ref=f6e332]:
+                      - button "Werkzeug bearbeiten" [ref=f6e333]
+                      - button "Werkzeug loeschen" [ref=f6e336]
+                  - generic "Schrank 01 - Schublade A - Platz 06" [ref=f6e340] [cursor=pointer]:
+                    - generic [ref=f6e341]:
+                      - generic [ref=f6e342]: 01-A-06
+                      - generic [ref=f6e343]: X:1 Y:2
+                    - generic [ref=f6e344]: "[Frei]"
+                  - generic "Schrank 01 - Schublade A - Platz 07" [ref=f6e345] [cursor=pointer]:
+                    - generic [ref=f6e346]:
+                      - generic [ref=f6e347]: 01-A-07
+                      - generic [ref=f6e348]: X:2 Y:2
+                    - generic [ref=f6e349]: "[Frei]"
+                  - generic "Schrank 01 - Schublade A - Platz 08" [ref=f6e350] [cursor=pointer]:
+                    - generic [ref=f6e351]:
+                      - generic [ref=f6e352]: 01-A-08
+                      - generic [ref=f6e353]: X:3 Y:2
+                    - generic [ref=f6e354]: "[Frei]"
+                  - generic "Schrank 01 - Schublade A - Platz 09" [ref=f6e355] [cursor=pointer]:
+                    - generic [ref=f6e356]:
+                      - generic [ref=f6e357]: 01-A-09
+                      - generic [ref=f6e358]: X:4 Y:2
+                    - generic [ref=f6e359]: "[Frei]"
+                  - generic "Schrank 01 - Schublade A - Platz 10" [ref=f6e360] [cursor=pointer]:
+                    - generic [ref=f6e361]:
+                      - generic [ref=f6e362]: 01-A-10
+                      - generic [ref=f6e363]: X:5 Y:2
+                    - generic [ref=f6e364]: "[Frei]"

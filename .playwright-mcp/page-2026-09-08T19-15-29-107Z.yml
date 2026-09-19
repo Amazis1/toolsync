@@ -1,0 +1,55 @@
+- generic [ref=e92]:
+  - complementary [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]: ToolSync
+      - generic [ref=e96]: Admin Panel
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - generic "Admin User" [ref=e99]: AU
+        - generic [ref=e100]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=e101] [cursor=pointer]
+      - button "Abmelden" [ref=e102] [cursor=pointer]
+    - navigation [ref=e103]:
+      - button "Übersicht" [ref=e104] [cursor=pointer]
+      - button "Stammdaten" [ref=e106] [cursor=pointer]
+      - button "Lagerplätze" [ref=e108] [cursor=pointer]
+    - generic [ref=e110]: Admin Panel
+  - generic [ref=e113]:
+    - banner [ref=e114]:
+      - generic [ref=e115]:
+        - generic [ref=e116]: Admin Panel
+        - generic [ref=e117]: Übersicht
+      - generic [ref=e118]:
+        - generic "Admin User" [ref=e119]: AU
+        - generic [ref=e120]: Admin User
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]: Gesamt
+          - generic [ref=e126]: …
+        - generic [ref=e127]:
+          - generic [ref=e128]: Frei
+          - generic [ref=e129]: …
+        - generic [ref=e130]:
+          - generic [ref=e131]: Ausgeliehen
+          - generic [ref=e132]: …
+        - generic [ref=e133]:
+          - generic [ref=e134]: Wartung
+          - generic [ref=e135]: …
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - heading "Benutzer" [level=3] [ref=e138]
+          - button "Neu" [ref=e139] [cursor=pointer]
+        - table [ref=e143]:
+          - rowgroup [ref=e144]:
+            - row [ref=e145]:
+              - columnheader "Name" [ref=e146]
+              - columnheader "Status" [ref=e147]
+              - columnheader "Aktionen" [ref=e148]
+          - rowgroup
+      - searchbox "Werkzeug, ID oder Typ filtern…" [ref=e154]
+      - generic [ref=e155]:
+        - generic [ref=e156]:
+          - generic [ref=e157]: Werkzeugbestand
+          - generic [ref=e158]: 0 Einträge
+        - generic [ref=e159]: Wird geladen…

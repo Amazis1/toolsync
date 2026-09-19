@@ -1,0 +1,12 @@
+- generic [ref=e3]:
+  - generic [ref=e4]: "[plugin:vite:oxc] Transform failed with 1 error: [PARSE_ERROR] Unterminated string ╭─[ src/pages/admin/AdminStorageLocations.tsx:1:1 ] │ 1 │ \"import { useCallback, useEffect, useState } from 'react' │ ─────────────────────────────┬──────────────────────────── │ ╰────────────────────────────── ───╯"
+  - generic [ref=e5]: D:/toolsync/frontend/src/pages/admin/AdminStorageLocations.tsx
+  - generic [ref=e7]: at transformWithOxc (file:///D:/toolsync/frontend/node_modules/vite/dist/node/chunks/node.js:4033:19) at TransformPluginContext.transform (file:///D:/toolsync/frontend/node_modules/vite/dist/node/chunks/node.js:4104:26) at EnvironmentPluginContainer.transform (file:///D:/toolsync/frontend/node_modules/vite/dist/node/chunks/node.js:30201:51) at async loadAndTransform (file:///D:/toolsync/frontend/node_modules/vite/dist/node/chunks/node.js:20124:26) at async viteTransformMiddleware (file:///D:/toolsync/frontend/node_modules/vite/dist/node/chunks/node.js:24604:20)
+  - generic [ref=e8]:
+    - text: Click outside, press Esc key, or fix the code to dismiss.You can also disable this overlay by setting
+    - code [ref=e9]: server.hmr.overlay
+    - text: to
+    - code [ref=e10]: "false"
+    - text: in
+    - code [ref=e11]: vite.config.ts
+    - text: .

@@ -1,0 +1,91 @@
+﻿=== D:\Web\werkzeug\templates\werkzeug\werkzeug_form_partial.html ===
+<div id="tool-container" class="glass-panel p-6 rounded-xl shadow-xl">
+  <h2 class="text-xl font-semibold mb-6">
+    <span class="icon-tool mr-2"></span>
+    Anlegen
+  </h2>
+
+  <div class="flex gap-6">
+    <div class="glass-tab-nav w-1/5">
+      <button
+        type="button"
+        class="glass-tab is-active"
+        data-tab="tab1"
+        data-active="true"
+        data-url="{% url 'tab1' %}"
+        onclick="handleTabClick(this)"
+      >
+        <span class="icon-point text-lg"></span>
+        Werkzeug
+      </button>
+
+      <button
+        type="button"
+        class="glass-tab"
+        data-tab="tab2"
+        data-active="false"
+        data-url="{% url 'tab2' %}"
+        onclick="handleTabClick(this)"
+      >
+        <span class="icon-point text-lg"></span>
+        Serienartikel
+      </button>
+
+      <button
+        type="button"
+        class="glass-tab"
+        data-tab="tab3"
+        data-active="false"
+        data-url="{% url 'tab3' %}"
+        onclick="handleTabClick(this)"
+      >
+        <span class="icon-point text-lg"></span>
+        Info / Hilfe
+      </button>
+
+      <button
+        type="button"
+        class="glass-tab"
+        data-tab="tab4"
+        data-active="false"
+        data-url="{% url 'tab4' %}"
+        onclick="handleTabClick(this)"
+      >
+        <span class="icon-point text-lg"></span>
+        Lager / Ersatz
+      </button>
+    </div>
+
+    <!-- Content Area -->
+    <div id="glass-tab-content" class="glass-tab-content w-4/5">
+      <div id="custom-tab-content-wrapper" class="space-y-6" hx-preserve="true">
+        {% if active_tab %} {% with "tabs/"|add:active_tab|add:".html" as template_name %} {% include template_name %} {% endwith %} {% else %}
+        <div
+          class="text-red-500 p-4 rounded-lg bg-red-50 border border-red-200"
+        >
+          ❌ Fehler: Kein aktiver Tab ausgewählt!
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="flex gap-4 mt-6">
+        <button
+          type="button"
+          class="btn w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+          hx-get="{% url 'tool_list_partial' %}"
+          hx-target="#tool-container"
+          hx-swap="outerHTML"
+        >
+          Abbrechen
+        </button>
+        <button
+          type="submit"
+          class="btn w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          form="werkzeug-form"
+        >
+          Anlegen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

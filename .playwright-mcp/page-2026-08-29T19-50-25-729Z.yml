@@ -1,0 +1,124 @@
+- generic [ref=f8e433]:
+  - complementary [ref=f8e434]:
+    - generic [ref=f8e435]:
+      - generic [ref=f8e436]:
+        - generic [ref=f8e437]: hp hp
+        - generic [ref=f8e438]: olytechnik
+      - generic [ref=f8e439]:
+        - generic [ref=f8e440]: ToolSync
+        - generic [ref=f8e441]: Werkzeug- & Lagerverwaltung
+    - generic [ref=f8e442]:
+      - generic [ref=f8e443]:
+        - generic "Admin User" [ref=f8e444]: AU
+        - generic [ref=f8e445]: Admin User (Admin)
+      - button "Admin-Panel" [ref=f8e446]
+      - button "Logout" [ref=f8e450]
+  - main [ref=f8e456]:
+    - generic [ref=f8e457]:
+      - generic [ref=f8e458]:
+        - navigation [ref=f8e459]:
+          - generic [ref=f8e460]:
+            - button "Werkzeuge" [ref=f8e461]
+            - button "Serienartikel" [ref=f8e462]
+            - button "Lager/Ersatz" [ref=f8e463]
+            - button "Historie" [ref=f8e464]
+          - button "Anlegen" [ref=f8e465]
+        - generic [ref=f8e469]:
+          - generic [ref=f8e470]:
+            - heading "Anlegen" [level=2] [ref=f8e471]
+            - button "Zurück" [ref=f8e474]
+          - generic [ref=f8e477]:
+            - generic [ref=f8e478]:
+              - button "Werkzeug" [ref=f8e479]
+              - button "Serienartikel" [ref=f8e481]
+              - button "Info / Hilfe" [ref=f8e483]
+              - button "Lager / Ersatz" [ref=f8e485]
+            - generic [ref=f8e488]:
+              - generic [ref=f8e489]:
+                - generic [ref=f8e490]:
+                  - generic [ref=f8e491] [cursor=pointer]:
+                    - radio "Stempel" [checked] [ref=f8e492]
+                    - text: Stempel
+                  - generic [ref=f8e493] [cursor=pointer]:
+                    - radio "Abstreifer" [ref=f8e494]
+                    - text: Abstreifer
+                  - generic [ref=f8e495] [cursor=pointer]:
+                    - radio "Matrize" [ref=f8e496]
+                    - text: Matrize
+                - generic [ref=f8e497]:
+                  - generic [ref=f8e498]:
+                    - checkbox [ref=f8e499]
+                    - generic [ref=f8e500] [cursor=pointer]: Lager/Ersatz
+                  - spinbutton [disabled] [ref=f8e501]: "1"
+              - generic [ref=f8e502]:
+                - generic [ref=f8e503]:
+                  - generic [ref=f8e504]: Werkzeug-ID
+                  - textbox "z.B. TS-1004" [ref=f8e505]
+                - generic [ref=f8e506]:
+                  - generic [ref=f8e507]: Werkzeug-Typ
+                  - combobox [ref=f8e508]:
+                    - option "Bitte wählen..." [selected]
+                    - option "01 Rund"
+              - generic [ref=f8e509]:
+                - generic [ref=f8e510]:
+                  - generic [ref=f8e511]: Maß A (Pflicht)
+                  - generic [ref=f8e512]:
+                    - textbox "z.B. 12,5" [ref=f8e513]
+                    - generic [ref=f8e514]: mm
+                - generic [ref=f8e515]:
+                  - generic [ref=f8e516]: Maß B (Optional)
+                  - generic [ref=f8e517]:
+                    - textbox "z.B. 8,0" [ref=f8e518]
+                    - generic [ref=f8e519]: mm
+              - generic [ref=f8e520]:
+                - generic [ref=f8e521]: Lagerplatz (Pflicht)
+                - generic [ref=f8e522]:
+                  - generic [ref=f8e523]:
+                    - generic [ref=f8e524]: Schrank
+                    - combobox [ref=f8e525]:
+                      - option "Schrank wählen" [selected]
+                  - generic [ref=f8e526]:
+                    - generic [ref=f8e527]: Schublade
+                    - combobox [disabled] [ref=f8e528]:
+                      - option "Schublade wählen" [selected]
+                  - generic [ref=f8e529]:
+                    - generic [ref=f8e530]: Platz
+                    - combobox [disabled] [ref=f8e531]:
+                      - option "Platz wählen" [selected]
+                - paragraph [ref=f8e532]: Es werden nur freie Plätze angezeigt. Werkzeuge müssen einem Lagerplatz zugeordnet werden.
+              - generic [ref=f8e533]:
+                - generic [ref=f8e534]:
+                  - generic [ref=f8e535]: Werk
+                  - combobox [ref=f8e536]:
+                    - option "Werk wählen" [selected]
+                    - option "Werk 1"
+                    - option "Werk 2"
+                - generic [ref=f8e537]:
+                  - generic [ref=f8e538]: Status
+                  - combobox [ref=f8e539]:
+                    - option "— ohne Status —" [selected]
+                    - option "Verfügbar"
+                    - option "Ausgeliehen"
+                    - option "In Transit"
+                    - option "Defekt"
+                    - option "In Wartung"
+              - generic [ref=f8e540]:
+                - generic [ref=f8e541]: Beschreibung
+                - textbox "Zusätzliche Informationen..." [ref=f8e542]
+              - generic [ref=f8e543]:
+                - button "Abbrechen" [ref=f8e544]
+                - button "Anlegen" [ref=f8e545]
+      - complementary [ref=f8e546]:
+        - generic [ref=f8e547]:
+          - generic [ref=f8e548]:
+            - paragraph [ref=f8e549]: Aktive Ausleihen
+            - paragraph [ref=f8e550]: —
+          - generic [ref=f8e551]:
+            - paragraph [ref=f8e552]: Verfügbare Werkzeuge
+            - paragraph [ref=f8e553]: —
+          - generic [ref=f8e554]:
+            - paragraph [ref=f8e555]: Lagerbestand
+            - paragraph [ref=f8e556]: —
+          - generic [ref=f8e557]:
+            - paragraph [ref=f8e558]: Serienartikel
+            - paragraph [ref=f8e559]: —

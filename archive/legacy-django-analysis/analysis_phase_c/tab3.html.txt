@@ -1,0 +1,4 @@
+﻿=== D:\Web\werkzeug\templates\tabs\tab3.html ===
+<div data-active-tab="tab3">
+    <h3 class="text-lg font-medium mb-4">Tab3 Info / Hilfe</h3>
+  </div>

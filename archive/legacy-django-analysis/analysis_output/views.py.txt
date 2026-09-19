@@ -1,0 +1,344 @@
+﻿=== D:\Web\werkzeug\views.py ===
+from django.shortcuts import render
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_protect
+from django.conf import settings
+import os
+
+from .models import ToolType, Tool, StorageLocation, Cabinet, Drawer, Position, Customer, Machine
+
+# 🔹 Datei-Upload View
+@csrf_exempt
+def upload_file(request):
+    """Verarbeitet Datei-Uploads und speichert sie im Ordner 'uploads/'."""
+    if request.method == 'POST' and request.FILES:
+        uploaded_file = request.FILES['file']
+        upload_dir = os.path.join(settings.BASE_DIR, "uploads")
+
+        # Ordner erstellen, falls nicht vorhanden
+        os.makedirs(upload_dir, exist_ok=True)
+
+        upload_path = os.path.join(upload_dir, uploaded_file.name)
+
+        # Datei speichern
+        with open(upload_path, "wb+") as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+
+        return JsonResponse({"message": "Datei erfolgreich hochgeladen!"})
+
+    return JsonResponse({"error": "Keine Datei hochgeladen"}, status=400)
+
+
+# 🔹 Index / Startseite
+def index(request):
+    """Startseite mit allen Werkzeugen"""
+    tools = Tool.objects.all()
+    return render(request, 'base.html', {'tools': tools})
+
+
+# 🔹 Formular für Werkzeug
+def add_item(request):
+    """Zeigt das Formular für das Hinzufügen eines Werkzeugs"""
+    storage_locations = StorageLocation.objects.select_related("cabinet", "drawer", "position").all()
+    return render(request, "werkzeug/werkzeug_form_partial.html", {
+        "storage_locations": storage_locations,
+    })
+
+
+# 🔹 Live-Validierung für Werkzeug-ID
+@csrf_protect
+def validate_tool_id(request):
+    """Prüft, ob die Werkzeug-ID bereits existiert."""
+    tool_id = request.POST.get("tool_id", "").strip()
+    category = request.POST.get("category", "stamp")
+    location = request.POST.get("location", "Werk 1")
+    is_storage = request.POST.get("is_storage") == "true"
+
+    if not tool_id:
+        return JsonResponse({
+            "valid": True,
+            "tooltip": None
+        })
+
+    existing_tools = Tool.objects.filter(tool_id=tool_id)
+    
+    # Für Lager/Ersatz-Werkzeuge
+    if is_storage:
+        storage_count = existing_tools.filter(is_storage=True).count()
+        normal_tool = existing_tools.filter(is_storage=False, category=category, location=location).exists()
+        
+        if normal_tool:
+            return JsonResponse({
+                "valid": True,
+                "tooltip": f"{storage_count}x als Lager/Ersatz vorhanden"
+            })
+        else:
+            return JsonResponse({
+                "valid": False,
+                "tooltip": "Erst normales Werkzeug anlegen!"
+            }, status=400)
+    
+    # Für normale Werkzeuge
+    else:
+        # Prüfe, ob ein normales Werkzeug mit dieser ID existiert (egal welches Werk)
+        existing = existing_tools.filter(is_storage=False)
+        if existing.exists():
+            fundorte = []
+            for tool in existing:
+                if tool.storage_location:
+                    loc = tool.storage_location
+                    fundorte.append(f"{loc.cabinet.number}, {loc.drawer.letter}, {loc.position.number} im {tool.location}")
+                else:
+                    fundorte.append(f"im {tool.location}")
+            tooltip = "ID ist bereits angelegt: " + "; ".join(fundorte)
+            return JsonResponse({
+                "valid": False,
+                "tooltip": tooltip
+            }, status=400)
+        storage_count = existing_tools.filter(is_storage=True).count()
+        tooltip = f"{storage_count}x als Lager/Ersatz vorhanden" if storage_count > 0 else None
+        return JsonResponse({
+            "valid": True,
+            "tooltip": tooltip
+        })
+
+
+# 🔹 Live-Validierung für Lagerplätze
+def validate_storage_location(request):
+    """Prüft, ob der Lagerplatz bereits belegt ist."""
+    storage_id = request.POST.get("storage_location", "").strip()
+    if Tool.objects.filter(storage_location_id=storage_id).exists():
+        return JsonResponse({"error": "Lagerplatz belegt!"}, status=400)
+    return JsonResponse({"success": "Lagerplatz frei!"}, status=200)
+
+
+# 🔹 Schubladen nach Schrank filtern (HTMX)
+def get_drawers(request):
+    """Lädt alle Schubladen für einen gewählten Schrank und gibt sie als HTML zurück."""
+    cabinet_id = request.GET.get("cabinet")
+    
+    # Falls kein Schrank gewählt wurde, gib leeres Dropdown zurück
+    if not cabinet_id or not cabinet_id.isdigit():
+        return HttpResponse('<option value="">Schublade wählen</option>')
+
+    drawers = Drawer.objects.filter(cabinet_id=int(cabinet_id))
+    
+    # Erzeuge HTML für das Dropdown
+    options_html = '<option value="">Schublade wählen</option>'
+    for drawer in drawers:
+        options_html += f'<option value="{drawer.id}">{drawer.letter}</option>'
+
+    return HttpResponse(options_html)
+
+
+# 🔹 Plätze nach Schublade filtern (HTMX)
+def get_positions(request):
+    """Lädt nur die freien Plätze für eine gewählte Schublade und blendet belegte aus."""
+    drawer_id = request.GET.get("drawer")
+
+    if not drawer_id or not drawer_id.isdigit():
+        return HttpResponse('<option value="">Platz wählen</option>')
+
+    # Alle freien Positionen abrufen (Plätze ohne Werkzeug)
+    occupied_positions = Tool.objects.values_list('storage_location_id', flat=True)
+    free_positions = Position.objects.filter(drawer_id=int(drawer_id)).exclude(id__in=occupied_positions)
+
+    options_html = '<option value="">Platz wählen</option>'
+    for position in free_positions:
+        options_html += f'<option value="{position.id}">Platz {position.number}</option>'
+
+    return HttpResponse(options_html)
+
+
+# 🔹 HTMX: Formular für Werkzeug anzeigen
+def load_form(request):
+    """Lädt das Hauptformular"""
+    context = get_common_context(request.GET.get('active_tab', 'tab1'))
+    return render(request, 'werkzeug/werkzeug_form_partial.html', context)
+
+
+# 🔹 HTMX: Werkzeugliste anzeigen
+def load_tool_list(request):
+    """Lädt die Werkzeugliste dynamisch."""
+    tools = Tool.objects.all()
+    return render(request, 'werkzeug/tool_list_partial.html', {'tools': tools})
+
+
+# 🔹 HTMX: Werkzeug-Formular als Partial
+def werkzeug_form_partial(request):
+    """Rendert das Werkzeug-Hauptformular mit Tabs (Partial) für HTMX."""
+    context = get_common_context(active_tab='tab1')
+    return render(request, 'werkzeug/werkzeug_form_partial.html', context)
+
+
+# 🔹 HTMX: Werkzeugliste als Partial
+def tool_list_partial(request):
+    """Rendert die Werkzeugliste als Partial für HTMX."""
+    tools = Tool.objects.all()
+    return render(request, 'werkzeug/tool_list_partial.html', {'tools': tools})
+
+
+# 🔹 HTMX: Tabs
+@csrf_protect
+def tab1_content(request):
+    return render(request, 'tabs/tab1.html', get_common_context('tab1'))
+
+def tab2_content(request):
+    return render(request, 'tabs/tab2.html', get_common_context('tab2'))
+
+def tab3_content(request):
+    return render(request, 'tabs/tab3.html', get_common_context('tab3'))
+
+def tab4_content(request):
+    return render(request, 'tabs/tab4.html', get_common_context('tab4'))
+
+def get_common_context(active_tab):
+    """Liefert Standard-Daten für alle Tabs"""
+    return {
+        'active_tab': active_tab,
+        'cabinets': Cabinet.objects.all(),
+        'tool_types': ToolType.objects.all(),
+        'customers': Customer.objects.all(),
+        'machines': Machine.objects.all(),
+        'storage_locations': StorageLocation.objects.select_related('cabinet', 'drawer', 'position').all(),
+        'tools': Tool.objects.all()  # Für Werkzeugliste hinzugefügt
+    }
+
+def filter_tools_by_location(request):
+    """Filtert Werkzeuge basierend auf der Werksauswahl."""
+    location = request.GET.get("location", "Werk 1")  # Standard: Werk 1
+    tools = Tool.objects.filter(location=location)
+    
+    return render(request, "werkzeug/tool_list_partial.html", {"tools": tools})
+
+@csrf_protect
+def add_tool(request):
+    """Speichert ein Werkzeug und gibt die aktualisierte Werkzeugliste zurück"""
+    if request.method == "POST":
+        try:
+            # Daten aus dem Formular holen
+            tool_id = request.POST.get("tool_id", "").strip()
+            tool_type_id = request.POST.get("tool_type")
+            category = request.POST.get("category", "stamp")
+            location = request.POST.get("location", "Werk 1")
+            is_storage = request.POST.get("is_storage") == "on"
+            storage_count = int(request.POST.get("storage_count", 1))
+            
+            # Validierung
+            errors = {}
+            
+            if not tool_id:
+                errors["tool_id"] = ["Werkzeug-ID ist erforderlich"]
+            
+            if not tool_type_id:
+                errors["tool_type"] = ["Bitte wählen Sie einen Werkzeug-Typ"]
+            
+            # IDs für Beziehungen
+            position_id = request.POST.get("position")
+            customer_id = request.POST.get("customer")
+            machine_id = request.POST.get("machine")
+            description = request.POST.get("description", "").strip()
+
+            # Prüfe ob ID bereits existiert, aber nur wenn keine anderen Feldfehler
+            if not errors:
+                existing = Tool.objects.filter(tool_id=tool_id, category=category, location=location, is_storage=False).first()
+                if existing:
+                    if existing.storage_location:
+                        loc = existing.storage_location
+                        errors["tool_id"] = [f"ID ist bereits angelegt: Schrank {loc.cabinet.number}, Schublade {loc.drawer.letter}, Platz {loc.position.number} im {location}"]
+                    else:
+                        errors["tool_id"] = [f"ID ist bereits angelegt im {location}"]
+            
+            if errors:
+                return JsonResponse({"errors": errors}, status=400)
+            
+            # Maße verarbeiten
+            try:
+                size_a = request.POST.get("size_a", "").strip()
+                size_b = request.POST.get("size_b", "").strip()
+                
+                # Konvertiere Komma zu Punkt für die Datenbank
+                if size_a:
+                    size_a = size_a.replace(",", ".")
+                    # Validiere das Format
+                    if not size_a.replace(".", "").isdigit():
+                        errors["size_a"] = ["Maß A enthält ungültige Zeichen"]
+                    whole, *decimal = size_a.split(".")
+                    if len(whole) > 4:
+                        errors["size_a"] = ["Maß A darf maximal 4 Stellen vor dem Komma haben"]
+                    if decimal and len(decimal[0]) > 2:
+                        errors["size_a"] = ["Maß A darf maximal 2 Stellen nach dem Komma haben"]
+                
+                if size_b:
+                    size_b = size_b.replace(",", ".")
+                    if not size_b.replace(".", "").isdigit():
+                        errors["size_b"] = ["Maß B enthält ungültige Zeichen"]
+                    whole, *decimal = size_b.split(".")
+                    if len(whole) > 4:
+                        errors["size_b"] = ["Maß B darf maximal 4 Stellen vor dem Komma haben"]
+                    if decimal and len(decimal[0]) > 2:
+                        errors["size_b"] = ["Maß B darf maximal 2 Stellen nach dem Komma haben"]
+                
+            except ValueError as e:
+                errors["__all__"] = [str(e)]
+            
+            if errors:
+                return JsonResponse({"errors": errors}, status=400)
+            
+            # Werkzeug speichern
+            try:
+                if is_storage:
+                    # Prüfe, ob das Lager-Werkzeug schon existiert
+                    existing_tool = Tool.objects.filter(
+                        tool_id=tool_id,
+                        category=category,
+                        location=location,
+                        is_storage=True
+                    ).first()
+                    if existing_tool:
+                        # Bestand addieren
+                        existing_tool.storage_count += storage_count
+                        existing_tool.save()
+                        return JsonResponse({"success": True, "message": f"Bestand aktualisiert: {existing_tool.storage_count} Stück im Lager."})
+                    else:
+                        Tool.objects.create(
+                            tool_id=tool_id,
+                            tool_type_id=tool_type_id,
+                            category=category,
+                            location=location,
+                            is_storage=True,
+                            storage_count=storage_count,
+                            size_a=float(size_a) if size_a else None,
+                            size_b=float(size_b) if size_b else None,
+                            storage_location_id=position_id,
+                            customer_id=customer_id if customer_id else None,
+                            machine_id=machine_id if machine_id else None,
+                            description=description
+                        )
+                        return JsonResponse({"success": True, "message": "Lager-Werkzeug erfolgreich angelegt!"})
+                else:
+                    Tool.objects.create(
+                        tool_id=tool_id,
+                        tool_type_id=tool_type_id,
+                        category=category,
+                        location=location,
+                        is_storage=False,
+                        storage_count=1,
+                        size_a=float(size_a) if size_a else None,
+                        size_b=float(size_b) if size_b else None,
+                        storage_location_id=position_id,
+                        customer_id=customer_id if customer_id else None,
+                        machine_id=machine_id if machine_id else None,
+                        description=description
+                    )
+                    return JsonResponse({"success": True, "message": "Werkzeug erfolgreich gespeichert!"})
+            
+            except Exception as e:
+                return JsonResponse({"errors": {"__all__": [str(e)]}}, status=400)
+
+        except Exception as e:
+            return JsonResponse({"errors": {"__all__": [str(e)]}}, status=400)
+
+    return JsonResponse({"errors": {"__all__": ["Ungültige Anfrage"]}}, status=400)

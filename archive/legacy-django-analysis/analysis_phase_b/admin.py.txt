@@ -1,0 +1,10 @@
+﻿=== D:\Web\bewegung\admin.py ===
+from django.contrib import admin
+from .models import ToolMovement
+
+@admin.register(ToolMovement)
+class ToolMovementAdmin(admin.ModelAdmin):
+    list_display = ('tool', 'from_location', 'to_location', 'status', 'timestamp', 'user')
+    list_filter = ('status', 'from_location', 'to_location')
+    search_fields = ('tool__tool_id',)
+

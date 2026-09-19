@@ -1,0 +1,48 @@
+﻿=== D:\Web\werkzeug\templates\werkzeug\tool_list_partial.html ===
+<div id="werkzeug-container" class="glass-panel p-6 rounded-xl shadow-xl">
+  <!-- Toggle für Werk 1 & Werk 2 -->
+  <div class="flex items-center justify-center gap-4 mb-4">
+    <button
+      id="toggleWerk"
+      class="toggle-btn px-6 py-2 font-bold rounded-lg transition-colors bg-gray-100 hover:bg-gray-200 text-gray-700"
+      hx-get="{% url 'filter_tools_by_location' %}"
+      hx-target="#werkzeug-container"
+      hx-vals='{"location": document.getElementById("toggleWerk").textContent}'
+    >
+      Werk 1
+    </button>
+  </div>
+
+  <!-- Werkzeugliste -->
+  <h2 class="text-lg font-bold mb-4">
+    Aktuelle Ansicht: <span id="currentWerk">{{ location }}</span>
+  </h2>
+
+  <!-- Suchleiste -->
+  <div class="relative">
+    <input
+      type="search"
+      placeholder="Suchen..."
+      class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
+    />
+    <span
+      class="icon-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+    ></span>
+    <button
+      class="icon-x-circle absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+    ></button>
+  </div>
+
+  <!-- Werkzeugliste -->
+  <ul class="mt-4 space-y-2 text-gray-600">
+    {% for tool in tools %}
+    <li
+      class="bg-white bg-opacity-50 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+    >
+      🔧 {{ tool.tool_id }} - {{ tool.tool_type.name }} {% if tool.storage_location %} ({{ tool.storage_location }}) {% endif %}
+    </li>
+    {% empty %}
+    <li class="text-gray-500 text-center py-4">Keine Werkzeuge gefunden.</li>
+    {% endfor %}
+  </ul>
+</div>

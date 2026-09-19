@@ -1,0 +1,7 @@
+[  107246ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=12966894:14335
+[  107282ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:5173/api/auth/me:0
+[  107283ms] [WARNING] Session konnte nicht wiederhergestellt werden: Die Anfrage ist fehlgeschlagen. Bitte versuche es später erneut. @ http://localhost:5173/src/context/AuthContext.tsx:23
+[  107296ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:5173/api/auth/me:0
+[  107296ms] [WARNING] Session konnte nicht wiederhergestellt werden: Die Anfrage ist fehlgeschlagen. Bitte versuche es später erneut. @ http://localhost:5173/src/context/AuthContext.tsx:23
+[  321736ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/admin:0
+[  326327ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:5173/api/auth/admin/login:0

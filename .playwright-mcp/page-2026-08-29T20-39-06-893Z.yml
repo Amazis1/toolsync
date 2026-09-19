@@ -1,0 +1,102 @@
+- generic [ref=f10e65]:
+  - complementary [ref=f10e66]:
+    - generic [ref=f10e67]:
+      - generic [ref=f10e68]: ToolSync
+      - generic [ref=f10e69]: Admin Panel
+    - generic [ref=f10e70]:
+      - generic [ref=f10e71]:
+        - generic "Admin User" [ref=f10e72]: AU
+        - generic [ref=f10e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f10e74] [cursor=pointer]
+      - button "Abmelden" [ref=f10e75] [cursor=pointer]
+    - navigation [ref=f10e76]:
+      - button "Übersicht" [ref=f10e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f10e79] [cursor=pointer]
+      - button "Lagerplätze" [ref=f10e81] [cursor=pointer]
+    - generic [ref=f10e83]: Admin Panel
+  - generic [ref=f10e86]:
+    - banner [ref=f10e87]:
+      - generic [ref=f10e88]:
+        - generic [ref=f10e89]: Admin Panel
+        - generic [ref=f10e90]: Übersicht
+      - generic [ref=f10e91]:
+        - generic "Admin User" [ref=f10e92]: AU
+        - generic [ref=f10e93]: Admin User
+    - generic [ref=f10e95]:
+      - generic [ref=f10e96]:
+        - generic [ref=f10e97]:
+          - generic [ref=f10e98]: Gesamt
+          - generic [ref=f10e99]: "3"
+        - generic [ref=f10e100]:
+          - generic [ref=f10e101]: Frei
+          - generic [ref=f10e102]: "0"
+        - generic [ref=f10e103]:
+          - generic [ref=f10e104]: Ausgeliehen
+          - generic [ref=f10e105]: "0"
+        - generic [ref=f10e106]:
+          - generic [ref=f10e107]: Wartung
+          - generic [ref=f10e108]: "0"
+      - generic [ref=f10e109]:
+        - generic [ref=f10e110]:
+          - heading "Benutzer" [level=3] [ref=f10e111]
+          - button "Neu" [ref=f10e112] [cursor=pointer]
+        - table [ref=f10e116]:
+          - rowgroup [ref=f10e117]:
+            - row [ref=f10e118]:
+              - columnheader "Name" [ref=f10e119]
+              - columnheader "Status" [ref=f10e120]
+              - columnheader "Aktionen" [ref=f10e121]
+          - rowgroup [ref=f10e122]:
+            - row [ref=f10e123]:
+              - cell "Admin User Admin" [ref=f10e124]:
+                - text: Admin User
+                - generic [ref=f10e125]: Admin
+              - cell "Aktiv" [ref=f10e126]
+              - cell [ref=f10e128]:
+                - generic [ref=f10e129]:
+                  - button "Bearbeiten" [ref=f10e130] [cursor=pointer]
+                  - button "Löschen" [ref=f10e131] [cursor=pointer]
+            - row [ref=f10e132]:
+              - cell "A A Admin" [ref=f10e133]:
+                - text: A A
+                - generic [ref=f10e134]: Admin
+              - cell "Aktiv" [ref=f10e135]
+              - cell [ref=f10e137]:
+                - generic [ref=f10e138]:
+                  - button "Bearbeiten" [ref=f10e139] [cursor=pointer]
+                  - button "Löschen" [ref=f10e140] [cursor=pointer]
+            - row [ref=f10e141]:
+              - cell "Er RE" [ref=f10e142]
+              - cell "Aktiv" [ref=f10e143]
+              - cell [ref=f10e145]:
+                - generic [ref=f10e146]:
+                  - button "Bearbeiten" [ref=f10e147] [cursor=pointer]
+                  - button "Löschen" [ref=f10e148] [cursor=pointer]
+      - searchbox "Werkzeug, ID oder Typ filtern…" [ref=f10e154]
+      - generic [ref=f10e155]:
+        - generic [ref=f10e156]:
+          - generic [ref=f10e157]: Werkzeugbestand
+          - generic [ref=f10e158]: 3 Einträge
+        - table [ref=f10e160]:
+          - rowgroup [ref=f10e161]:
+            - row [ref=f10e162]:
+              - columnheader "ID" [ref=f10e163]
+              - columnheader "Bezeichnung" [ref=f10e164]
+              - columnheader "Typ" [ref=f10e165]
+              - columnheader "Status" [ref=f10e166]
+          - rowgroup [ref=f10e167]:
+            - row [ref=f10e168]:
+              - cell "01025000" [ref=f10e169]
+              - cell "Rund 2.5 ALU" [ref=f10e170]
+              - cell "01 Rund" [ref=f10e171]
+              - cell "—" [ref=f10e172]
+            - row [ref=f10e174]:
+              - cell "01060000" [ref=f10e175]
+              - cell "Rund 6,0" [ref=f10e176]
+              - cell "01 Rund" [ref=f10e177]
+              - cell "—" [ref=f10e178]
+            - row [ref=f10e180]:
+              - cell "01030000" [ref=f10e181]
+              - cell "—" [ref=f10e182]
+              - cell "01 Rund" [ref=f10e183]
+              - cell "—" [ref=f10e184]

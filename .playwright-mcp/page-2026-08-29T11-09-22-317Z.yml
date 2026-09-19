@@ -1,0 +1,58 @@
+- generic [ref=e117]:
+  - complementary [ref=e118]:
+    - generic [ref=e119]:
+      - generic [ref=e120]: ToolSync
+      - generic [ref=e121]: Admin Panel
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic "Admin User" [ref=e124]: AU
+        - generic [ref=e125]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=e126] [cursor=pointer]
+      - button "Abmelden" [ref=e127] [cursor=pointer]
+    - navigation [ref=e128]:
+      - button "Übersicht" [ref=e129] [cursor=pointer]
+      - button "Stammdaten" [ref=e131] [cursor=pointer]
+      - button "Lagerplätze" [active] [ref=e133] [cursor=pointer]
+    - generic [ref=e135]: Admin Panel
+  - generic [ref=e138]:
+    - banner [ref=e139]:
+      - generic [ref=e140]:
+        - generic [ref=e141]: Admin Panel
+        - generic [ref=e142]: Lagerplätze
+      - generic [ref=e143]:
+        - generic "Admin User" [ref=e144]: AU
+        - generic [ref=e145]: Admin User
+    - generic [ref=e232]:
+      - generic [ref=e235]:
+        - heading "Lagerplatz-Verwaltung" [level=3] [ref=e236]
+        - paragraph [ref=e237]: Schrank als Matrix anlegen, Plätze automatisch erzeugen, Werkzeuge per Klick oder Drag & Drop verschieben.
+      - generic [ref=e238]:
+        - generic [ref=e239]:
+          - heading "Schrank mit X/Y-Grid anlegen" [level=3] [ref=e240]
+          - generic [ref=e241]:
+            - generic [ref=e242]: Werk
+            - combobox [ref=e243]:
+              - option "Werk auswählen…" [selected]
+              - option "Werk 1"
+              - option "Werk 2"
+          - generic [ref=e244]:
+            - generic [ref=e245]: Schrank Nummern-ID
+            - spinbutton "z. B. 3 (wird zu 03)" [ref=e246]
+          - generic [ref=e247]:
+            - generic [ref=e248]: Anzahl Schubladen
+            - spinbutton [ref=e249]: "1"
+          - button "Schrank als Matrix anlegen" [ref=e250] [cursor=pointer]
+        - generic [ref=e251]:
+          - generic [ref=e252]:
+            - generic [ref=e253]: "💡 2 Wege zum Massen-Verschieben (Perlenkette):"
+            - paragraph [ref=e254]:
+              - text: "1."
+              - strong [ref=e255]: "Per Klick:"
+              - text: Klicke ein belegtes blaues Fach an (wird gelb umrandet) und klicke danach auf das Ziel-Fach.
+            - paragraph [ref=e256]:
+              - text: "2."
+              - strong [ref=e257]: "Per Drag & Drop:"
+              - text: Ziehe eine blaue Karte direkt auf ein anderes Fach.
+          - generic [ref=e258]:
+            - generic [ref=e259]: Lagerstruktur-Ansicht
+            - paragraph [ref=e261]: Bitte zuerst ein Werk auswählen.

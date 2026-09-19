@@ -1,0 +1,69 @@
+- generic [ref=f3e65]:
+  - complementary [ref=f3e66]:
+    - generic [ref=f3e67]:
+      - generic [ref=f3e68]: ToolSync
+      - generic [ref=f3e69]: Admin Panel
+    - generic [ref=f3e70]:
+      - generic [ref=f3e71]:
+        - generic "Admin User" [ref=f3e72]: AU
+        - generic [ref=f3e73]: Admin User (Admin)
+      - button "← Zur Hauptseite" [ref=f3e74] [cursor=pointer]
+      - button "Abmelden" [ref=f3e75] [cursor=pointer]
+    - navigation [ref=f3e76]:
+      - button "Übersicht" [ref=f3e77] [cursor=pointer]
+      - button "Stammdaten" [ref=f3e79] [cursor=pointer]
+      - button "Lagerplätze" [active] [ref=f3e81] [cursor=pointer]
+    - generic [ref=f3e83]: Admin Panel
+  - generic [ref=f3e86]:
+    - banner [ref=f3e87]:
+      - generic [ref=f3e88]:
+        - generic [ref=f3e89]: Admin Panel
+        - generic [ref=f3e90]: Lagerplätze
+      - generic [ref=f3e91]:
+        - generic "Admin User" [ref=f3e92]: AU
+        - generic [ref=f3e93]: Admin User
+    - generic [ref=f3e186]:
+      - generic [ref=f3e189]:
+        - heading "Lagerplatz-Verwaltung" [level=3] [ref=f3e190]
+        - paragraph [ref=f3e191]: Schrank als Matrix anlegen, Plätze automatisch erzeugen, Werkzeuge per Klick oder Drag & Drop verschieben.
+      - generic [ref=f3e192]:
+        - generic [ref=f3e193]:
+          - heading "Schrank mit X/Y-Grid anlegen" [level=3] [ref=f3e194]
+          - generic [ref=f3e195]:
+            - generic [ref=f3e196]: Werk
+            - combobox [ref=f3e197]:
+              - option "Werk auswählen…"
+              - option "Werk 1" [selected]
+              - option "Werk 2"
+          - generic [ref=f3e198]:
+            - generic [ref=f3e199]: Schrank Nummern-ID
+            - spinbutton "z. B. 3 (wird zu 03)" [ref=f3e200]
+          - generic [ref=f3e201]:
+            - generic [ref=f3e202]: Anzahl Schubladen
+            - spinbutton [ref=f3e203]: "1"
+          - generic [ref=f3e205]:
+            - generic [ref=f3e206]: Schublade C
+            - generic [ref=f3e207]:
+              - generic [ref=f3e208]:
+                - generic [ref=f3e209]: "Breite X:"
+                - spinbutton "z. B. 5" [ref=f3e210]: "5"
+              - generic [ref=f3e211]:
+                - generic [ref=f3e212]: "Tiefe Y:"
+                - spinbutton "z. B. 2" [ref=f3e213]: "2"
+          - button "Schrank als Matrix anlegen" [ref=f3e214] [cursor=pointer]
+        - generic [ref=f3e215]:
+          - generic [ref=f3e216]:
+            - generic [ref=f3e217]: "💡 2 Wege zum Massen-Verschieben (Perlenkette):"
+            - paragraph [ref=f3e218]:
+              - text: "1."
+              - strong [ref=f3e219]: "Per Klick:"
+              - text: Klicke ein belegtes blaues Fach an (wird gelb umrandet) und klicke danach auf das Ziel-Fach.
+            - paragraph [ref=f3e220]:
+              - text: "2."
+              - strong [ref=f3e221]: "Per Drag & Drop:"
+              - text: Ziehe eine blaue Karte direkt auf ein anderes Fach.
+          - generic [ref=f3e222]:
+            - generic [ref=f3e223]: Lagerstruktur-Ansicht
+            - generic [ref=f3e227]:
+              - generic [ref=f3e228]: Schrank 01
+              - button "Löschen" [ref=f3e229] [cursor=pointer]
