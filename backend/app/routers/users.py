@@ -29,7 +29,7 @@ async def get_user(
     service = UserService(db)
     user = await service.get_user(id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
     return user
 
 @router.post("/", response_model=UserRead, status_code=201)
@@ -54,7 +54,7 @@ async def update_user(
     service = UserService(db)
     user = await service.update_user(id, data)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
     return user
 
 @router.delete("/{id}", status_code=204)

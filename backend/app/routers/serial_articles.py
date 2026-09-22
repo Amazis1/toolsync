@@ -36,13 +36,13 @@ async def get_serial_article_pdf(
     service = SerialArticleService(db)
     article = await service.get(id)
     if not article:
-        raise HTTPException(status_code=404, detail="Serial article not found")
+        raise HTTPException(status_code=404, detail="Serienartikel nicht gefunden")
     if not article.pdf_path:
-        raise HTTPException(status_code=404, detail="No PDF available for this serial article")
+        raise HTTPException(status_code=404, detail="Für diesen Serienartikel ist kein PDF hinterlegt")
 
     pdf_path = service.resolve_pdf_path(article.pdf_path)
     if not pdf_path or not os.path.isfile(pdf_path):
-        raise HTTPException(status_code=404, detail="PDF file is missing on the server")
+        raise HTTPException(status_code=404, detail="Die PDF-Datei fehlt auf dem Server")
 
     # Sicherer Download-Dateiname: Leerzeichen/Sonderzeichen ersetzen
     safe_name = "".join(
@@ -63,7 +63,7 @@ async def get_serial_article(
     service = SerialArticleService(db)
     article = await service.get(id)
     if not article:
-        raise HTTPException(status_code=404, detail="Serial article not found")
+        raise HTTPException(status_code=404, detail="Serienartikel nicht gefunden")
     return article
 
 @router.post("/", response_model=SerialArticleRead, status_code=201)

@@ -144,7 +144,7 @@ async def get_tool(
     service = ToolService(db)
     tool = await service.get_tool(id)
     if not tool:
-        raise HTTPException(status_code=404, detail="Tool not found")
+        raise HTTPException(status_code=404, detail="Werkzeug nicht gefunden")
     return tool
 
 
@@ -174,7 +174,7 @@ async def update_tool(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     if not tool:
-        raise HTTPException(status_code=404, detail="Tool not found")
+        raise HTTPException(status_code=404, detail="Werkzeug nicht gefunden")
     return tool
 
 
