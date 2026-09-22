@@ -38,13 +38,20 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 |---|---|---|
 | Primary | `#0f766e` | Buttons, aktive Tabs, Badges, Fokus |
 | Primary Hover | `#115e59` | Button-Hover |
-| Text | `#0f172a` | Primärtext |
-| Text Muted | `#64748b` | Sekundärtext |
+| **Primary als Textfarbe** | `#115e59` | Textrollen der Primärfarbe (aktiver Tab, Ghost-Button, Breadcrumb-Link) – siehe §1.8 |
+| Text | `#0f172a` | Primärtext (Ebene 1) |
+| Text Sekundär | `#334155` | Feldbeschriftungen, Werte (Ebene 2) |
+| Text Muted | `#475569` | Hinweise, Sekundärtext, inaktive Tabs (Ebene 3) |
 | Danger | `#e11d48` | Löschen, Fehler |
+| Danger als Text | `#9f1239` | Fehler- und Gefahrtext |
 | Success | `#10b981` / `#065f46` | Erfolg, Verfügbar |
 | Warning | `#f59e0b` / `#92400e` | Hinweis, Wartung |
 | Info | `#3b82f6` / `#1e3a8a` | Ausgeliehen, Info |
 | Background | `#c5cbd3` | Seitenhintergrund |
+
+> **Textskala:** Im Haupt-Frontend gibt es genau **drei** Textstufen (Ebene 1/2/3, siehe §1.8).
+> Kein anderer Grauton ist für Text zulässig; die Werte erreichen auf den Glasflächen
+> mindestens 6:1.
 
 ### 1.2 Glasflächen
 
@@ -91,11 +98,11 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 .ui-tabs { display:flex; gap:.4rem; padding:.25rem; border-radius:.8rem;
            background:rgba(255,255,255,.35); border:1px solid rgba(255,255,255,.55); }
 .ui-tabs button { border:0; border-radius:.65rem; padding:.45rem .7rem; background:transparent;
-                  color:#64748b; font-size:.72rem; font-weight:700; white-space:nowrap; }
-.ui-tabs button.is-active { background:#fff; color:#0f766e; box-shadow:0 2px 8px rgba(15,23,42,.06); }
+                  color:#475569; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.ui-tabs button.is-active { background:#fff; color:#115e59; box-shadow:0 2px 8px rgba(15,23,42,.06); }
 
 .ui-alert { display:flex; gap:.75rem; align-items:flex-start; padding:.75rem .9rem;
-            border-radius:.8rem; border:1px solid; font-size:.72rem; }
+            border-radius:.8rem; border:1px solid; font-size:.8rem; }
 .ui-alert-info    { background:rgba(59,130,246,.08);  border-color:rgba(59,130,246,.2);  color:#1e3a8a; }
 .ui-alert-success { background:rgba(16,185,129,.08);  border-color:rgba(16,185,129,.2);  color:#065f46; }
 .ui-alert-warning { background:rgba(245,158,11,.1);   border-color:rgba(245,158,11,.25); color:#92400e; }
@@ -103,7 +110,7 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 
 .ui-badge { display:inline-flex; align-items:center; gap:.4rem; padding:.15rem .65rem;
             border-radius:999px; font-size:.7rem; font-weight:700; border:1px solid; }
-.ui-badge-success { background:rgba(15,118,110,.12);  color:#0f766e; border-color:rgba(15,118,110,.25); }
+.ui-badge-success { background:rgba(15,118,110,.12);  color:#115e59; border-color:rgba(15,118,110,.25); }
 .ui-badge-warning { background:rgba(245,158,11,.12);  color:#92400e; border-color:rgba(245,158,11,.25); }
 .ui-badge-danger  { background:rgba(225,29,72,.12);   color:#9f1239; border-color:rgba(225,29,72,.25); }
 .ui-badge-info    { background:rgba(59,130,246,.12);  color:#1e40af; border-color:rgba(59,130,246,.25); }
@@ -120,7 +127,7 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 | `.ui-spinner` | 20×20px, Border-Top `#0f766e`, Rotation `.8s linear infinite` |
 | `.ui-skeleton` | Gradient-Shimmer, Animation `1.4s ease-in-out infinite` |
 | `.ui-menu` | Dropdown, Shadow `0 18px 38px rgba(15,23,42,.12)` |
-| `.ui-breadcrumbs` | Links `#0f766e`, Font-Weight `700` |
+| `.ui-breadcrumbs` | Links `#115e59`, Font-Weight `700` |
 | `.ui-avatar` | 32×32px, BG `#0f766e`, weiß, Font-Weight `800` |
 | `.modal-overlay` | `rgba(15,23,42,0.45)`, **kein** `backdrop-filter` |
 | `.modal-panel` | `rgba(255,255,255,.8)`, Radius `.85rem`, Blur `10px`, Shadow `0 20px 50px` |
@@ -136,6 +143,146 @@ Pflichtattribute: `xmlns` · `width="24"` · `height="24"` · `viewBox="0 0 24 2
 
 `viewBox` niemals ändern. Größe nur über CSS-Klassen (`w-4 h-4` = 16px, `w-5 h-5` = 20px,
 `w-6 h-6` = 24px).
+
+### 1.8 Textskala und Kontrast (verbindlich)
+
+Der Guide kannte bisher nur zwei Textwerte, der Code nutzte sechs verschiedene Grautöne.
+Diese Ergänzung legt eine **drei**stufige Skala fest; alle Werte sind auf den Glasflächen
+gemessen (hellste Fläche `.app-content-block`, Weiß 0.48 über `#c5cbd3` → `rgb(227,230,233)`):
+
+| Ebene | Wert | Tailwind | Kontrast | Verwendung |
+|---|---|---|---|---|
+| 1 — Text | `#0f172a` | `slate-900` | **14,3:1** | Fließtext, Werte, Überschriften |
+| 2 — Sekundär | `#334155` | `slate-700` | **8,3:1** | Feldbeschriftungen, Tabelleninhalte |
+| 3 — Gedämpft | `#475569` | `slate-600` | **6,0:1** | Hinweise, Ladezustände, inaktive Tabs |
+
+**Statusfarben als Text** (dieselben Werte, die §1.5 für Alerts und Badges nutzt):
+
+| Bedeutung | Wert | Tailwind | Kontrast |
+|---|---|---|---|
+| Erfolg | `#065f46` | `emerald-800` | 6,1:1 |
+| Warnung | `#92400e` | `amber-800` | 5,7:1 |
+| Gefahr | `#9f1239` | `rose-700` | 4,8:1 |
+| Info | `#1e3a8a` | `sky-800` | 6,0:1 |
+| Primär (Textrolle) | `#115e59` | `teal-800` | 6,0:1 |
+
+> Die Spalte **Tailwind** ist die praktische Umsetzung im Code. Die Palette von Tailwind v4
+> weicht pro Farbkanal um bis zu 4 Stufen von den Nominalwerten ab (z. B. `slate-600` =
+> `#45556c` statt `#475569`); die Kontrastwerte sind mit den tatsächlichen Tailwind-Werten
+> gemessen. Die Nominalwerte gelten, wo Farbe direkt im CSS steht (`index.css`, Klassen).
+
+**Regeln:**
+
+1. Für Text sind **nur** die Werte dieser Tabelle zulässig – keine weiteren Grautöne.
+   (`slate-400`, `slate-500`, `slate-800`, `rose-500`, `rose-600`, `emerald-700`,
+   `amber-700` waren im Einsatz und sind für kleinen Text zu kontrastarm.)
+2. Die Primärfarbe `#0f766e` (4,3:1) ist für **Flächen, Rahmen und Fokus** zulässig;
+   als **Textfarbe** wird `#115e59` verwendet (aktiver Tab, Ghost-Button, Badge-Erfolg,
+   Breadcrumb-Link).
+3. Alle Textgrößen halten 12px als Untergrenze; `.ui-alert` wurde dafür von `.72rem`
+   auf **`.8rem`** (12,8px) angehoben, weil Fehlermeldungen der zuerst gelesene Text sind.
+4. Eingabefelder erhalten `text-base sm:text-sm` (16px auf mobil, 14px ab `sm`), damit
+   iOS Safari beim Fokussieren nicht in die Seite zoomt (bei `.ui-field` ist das in der
+   Klasse selbst gelöst, siehe §1.9).
+
+### 1.9 Feld mit Innenlabel (.ui-field) – Sparform
+
+Für **lange Formulare** gibt es eine zweite Feldart, bei der die Beschriftung **im** Feld
+steht statt darüber. Sie spart pro beschrifteter Feldzeile rund **20 px** (Label-Zeile
+16 px + Abstand 4 px) und ist damit die erste Wahl, wenn ein Formular ohne Scrollen
+auskommen soll.
+
+Das Feld ist eine **Glasfläche** wie `.app-content-block` / `.glass-card`: transluzentes
+Weiß, Blur, weiße Kante, weicher Schatten. Die Beschriftung ist darin **reiner Text** –
+ohne eigene Fläche, ohne Farbe, ohne Trennlinie.
+
+```css
+.ui-field { display:flex; align-items:stretch; min-width:0;
+            border:1px solid rgba(255,255,255,.75); border-radius:.75rem;
+            background:rgba(255,255,255,.52); overflow:hidden;
+            backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+            box-shadow:0 4px 15px rgba(0,0,0,.03);
+            transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.ui-field:hover          { background:rgba(255,255,255,.66); }
+.ui-field:focus-within   { background:rgba(255,255,255,.80); border-color:#0f766e;
+                           box-shadow:0 0 0 3px rgba(15,118,110,.15), 0 4px 15px rgba(0,0,0,.03); }
+.ui-field > label        { flex:0 0 7.5rem; display:flex; align-items:center;
+                           padding:0 .25rem 0 .85rem; background:transparent; border:0;
+                           color:#475569; font-size:.75rem; font-weight:600; white-space:nowrap;
+                           overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.ui-field > input,
+.ui-field > select,
+.ui-field > textarea     { flex:1 1 auto; min-width:0; border:0; outline:0; background:transparent;
+                           padding:.45rem .75rem; color:#0f172a; font-weight:500;
+                           font-size:1rem; }  /* mobil 16px, ab sm .875rem */
+.ui-field.is-error       { background:rgba(239,68,68,.12);  border-color:#ef4444; }
+.ui-field.is-ok          { background:rgba(34,197,94,.15);  border-color:#22c55e; }
+```
+
+**Regeln:**
+
+1. Das Innenlabel ist immer ein **echtes `<label for>`** mit `htmlFor`/`id` – nie ein
+   `<span>`. Ohne die Zuordnung hätte das Feld keinen zugänglichen Namen (§1.8/A-10).
+2. **Feste Label-Breite `7.5rem`**, damit alle Eingabekanten untereinander fluchten.
+   Zu lange Beschriftungen werden an der Kante abgeschnitten – die Beschriftung ist dann
+   zu kürzen (z. B. „Ort / Lagerplatz" → „Lagerplatz"), nicht die Breite aufzuweichen.
+3. Pflichtfelder bekommen ein `*` im Label (`aria-hidden`) plus `required` am Feld;
+   der ausführliche Hinweis „(Pflicht)" entfällt im Label.
+4. Der Fehler-/Erfolgszustand liegt **auf dem Wrapper** (`.is-error` / `.is-ok`).
+5. **Beschriftung in Satzschreibung** („Werkzeug-ID"), nicht in Großbuchstaben –
+   §1.8 und die übrige Oberfläche schreiben Satzschreibung.
+6. **Das Feld trägt die Abgrenzung, das Label nur die Typografie.** Diese Regel ist das
+   Ergebnis von drei verworfenen Versuchen (solider Neutralblock `#0f172a`, solider
+   Primaryblock `#0f766e`, 12-%-Teal-Tönung) und der Messung in
+   `.audit/analyze-tag-color.mjs`:
+
+   | Variante | Abstand Label ↔ Feld | Ergebnis |
+   |---|---|---|
+   | Solider Block `#0f172a` | 14,2:1 | zu laut |
+   | Solider Block `#0f766e` | 4,92:1 | zu laut |
+   | Teal-Tönung 12 % | 1,17:1 | verträglich, aber immer noch ein „Kästchen" |
+   | **Reiner Text im Glas-Feld** | **1,14:1** (Feldfläche gegen Karte) | **gewählt** |
+
+   Zur Einordnung: Das System trennt Zustände selbst mit 1,15–1,17:1 (Eingabefeld/Karte,
+   aktiver Tab/Streifen, Badge-Tönung/Fläche). Alles ab ~1,5:1 ist lauter als die
+   Oberfläche und wurde in den Entwürfen als „sticht heraus" verworfen.
+   Label = `#475569` (Ebene 3, §1.8), Wert = `#0f172a` (Ebene 1) – die Hierarchie
+   entsteht aus der Textskala, nicht aus Flächen.
+7. **Abweichung zu §1.3:** `.ui-field` ist eine Glasfläche und nutzt bewusst
+   `backdrop-filter`. §1.3 verbietet Blur für **nackte** `.input-bordered`-Felder
+   (dort liegt der Text direkt auf der Karte), hier ist das Feld eine eigene Fläche.
+8. **Nicht** verwenden für: mehrzeilige Felder (`textarea` behält das Label darüber),
+   Suchfelder (ohne Beschriftung, nur `aria-label`) und sehr schmale Inline-Felder
+   (z. B. „Anzahl" neben einer Checkbox).
+9. `.input-bordered` bleibt für Felder **ohne** Innenlabel bestehen – beide Feldarten
+   dürfen nicht in derselben Zeile gemischt werden.
+10. **Gemessenes Ergebnis** im Werkzeugformular (`.audit/measure-anlegen.mjs`): Formular
+   604 px statt 726 px (−122 px) bei 1440 px Breite. Damit kommt **1440×900 und größer
+   ohne Scrollen** aus; bei 1280×800 fehlen noch 94 px, bei 1366×768 126 px.
+   Die restlichen Hebel dafür sind im Audit-Report (`docs/19-frontend-ui-audit.md` §1.6)
+   benannt und wurden auf Wunsch noch nicht umgesetzt.
+11. **Ausnahme 3-spaltige Reihe:** Im Lagerplatz-Block (Schrank/Schublade/Platz) blieben
+   dem Select neben dem 7,5-rem-Label nur 65 px (bei 1280 px Breite 33 px), während
+   „Bitte zuerst Schrank wählen" 142 px braucht → diese drei Felder behalten das Label
+   darüber.
+12. **Keine Hilfstexte im Formular:** Der Blockkopf trägt kein Zusatz-Badge („nur freie
+   Plätze"), und unter einem Feld steht kein erklärender Hinweissatz. Die Abhängigkeit
+   steckt im Optionstext des Feldes selbst (`Bitte zuerst Schrank wählen`) und in der
+   `disabled`-Darstellung. Tooltips (`title=`) sind im Formular nicht erlaubt – die
+   Beschriftung trägt die Information.
+
+> **Herkunft:** Zwei Entwürfe des Auftraggebers (`input_test.html`). Von deren Farbgebung
+> blieb nichts übrig (`#0284c7`/`#2563eb` Fokus, `#0f172a` Tag) – drei Anläufe wurden vom
+> Auftraggeber als „sticht heraus" verworfen, bis die Messung in Regel 6 zeigte, dass das
+> Problem nicht der Farbton, sondern das **Gewicht** war. Erhalten geblieben ist die
+> Struktur (Beschriftung links im Feld, kein zweiter Fokus-Kanal); die Fläche selbst ist
+> jetzt die des Glas-Systems und das Label nur noch Typografie.
+
+
+> **Hinweis zur Historie:** Die Werte `#64748b` (Muted) und `.72rem` (Alerts) stammen aus
+> der ersten Fassung dieses Guides und wurden wegen zu geringem Kontrast bzw. zu kleiner
+> Schriftgröße ersetzt. Diese Änderung ist bewusst im Guide und in `index.css` gemeinsam
+> erfolgt – nicht als stille Abweichung im CSS.
 
 ---
 

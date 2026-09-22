@@ -44,3 +44,7 @@ frontend/test-results/
 # Temporaere Screenshot-Pruefartefakte (nicht versionieren)
 /aktion-panel-open.png
 /stammdaten-*.png
+
+# Pruefartefakte des UI-Audits: Skripte, Logs und Screenshots.
+# Der Befundbericht selbst liegt versioniert in docs/19-frontend-ui-audit.md.
+.audit/
