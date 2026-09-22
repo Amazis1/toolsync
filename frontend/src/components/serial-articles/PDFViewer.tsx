@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getSerialArticlePdf } from '../../lib/api';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 import type { SerialArticle } from '../../types/serial-article';
 
 interface PDFViewerProps {
@@ -17,6 +18,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ article, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Escape schließt die Vorschau (Tastaturbedienung).
+  useEscapeKey(onClose);
+
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
@@ -31,7 +35,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ article, onClose }) => {
         setPdfUrl(objectUrl);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'PDF konnte nicht geladen werden.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Das PDF konnte nicht geladen werden. Versuche es erneut.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -54,13 +58,18 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ article, onClose }) => {
   }
 
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="modal-panel flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden">
+    <div
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pdf-viewer-title"
+    >
+      <div className="modal-panel flex h-[90dvh] max-h-[calc(100dvh-2rem)] w-full max-w-4xl flex-col overflow-hidden">
         {/* Kopfzeile */}
         <div className="flex items-center justify-between border-b border-white/70 px-4 py-3">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">{article.article_number}</h3>
-            {article.description && <p className="text-sm text-slate-500">{article.description}</p>}
+            <h3 id="pdf-viewer-title" className="text-base font-semibold text-slate-900">{article.article_number}</h3>
+            {article.description && <p className="text-sm text-slate-600">{article.description}</p>}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -85,7 +94,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ article, onClose }) => {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-3">
                 <div className="ui-spinner" />
-                <p className="text-sm text-slate-500">PDF wird geladen …</p>
+                <p className="text-sm text-slate-600">PDF wird geladen …</p>
               </div>
             </div>
           )}

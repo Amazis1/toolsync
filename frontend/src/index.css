@@ -2,15 +2,18 @@
 
 @theme {
   --background: #c5cbd3;
-  --text: #3a3a3a;
-  --text-strong: #1a1a1a;
-  --text-muted: #707070;
+  /* Text- und Statuswerte nach Guide §1.1 (K-01: der Guide ist verbindlich). */
+  --text: #0f172a;
+  --text-strong: #0f172a;
+  /* Ebene 3 der Textskala: #475569 (6,0:1). Der Guide-Wert #64748b erreichte
+     auf den Glasflächen nur 3,8:1 – siehe Guide §1.8. */
+  --text-muted: #475569;
   --surface: rgba(255, 255, 255, 0.35);
   --surface-light: rgba(255, 255, 255, 0.45);
   --surface-dark: rgba(220, 220, 220, 0.3);
-  --success: #1fc96d;
-  --warning: #e6a21d;
-  --error: #e23a3a;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #e11d48;
   --accent-orange: #ff7a2e;
   --accent-blue: #5a9deb;
   --accent-purple: #b87af5;
@@ -20,7 +23,8 @@
 }
 
 :root {
-  --icon-color: #3a3a3a;
+  /* Guide §1.1: Text ist #0f172a – EIN dunkler Textwert im System. */
+  --icon-color: #0f172a;
 }
 
 @layer base {
@@ -126,7 +130,12 @@
     border: 1px solid rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    @apply p-4 rounded-xl transition-all shadow-xl duration-300;
+    @apply p-4 rounded-xl shadow-xl duration-300;
+    /* better-ui: exakte Properties statt `all` */
+    transition:
+      background 0.3s ease,
+      box-shadow 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .glass-card-hover:hover {
@@ -149,7 +158,11 @@
       rgba(255, 255, 255, 0.40) 0%,
       rgba(255, 255, 255, 0.45) 100%
     );
-    @apply p-3 rounded-lg transition-all duration-300 hover:scale-[1.02];
+    @apply p-3 rounded-lg duration-300 hover:scale-[1.02];
+    transition:
+      background 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.3s ease;
   }
   .glass-item:hover {
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
@@ -160,7 +173,97 @@
     border: 1px solid rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    transition: all 0.2s ease-in-out;
+    transition:
+      background-color 0.2s ease-in-out,
+      border-color 0.2s ease-in-out,
+      box-shadow 0.2s ease-in-out;
+  }
+
+  /* ==================== */
+  /* FELD MIT INNENLABEL (.ui-field) — Guide §1.9 */
+  /* Das Feld ist eine Glasfläche (wie .app-content-block/.glass-card):     */
+  /* transluzentes Weiß + Blur + weiße Kante. Das Label sitzt als schlichter*/
+  /* Text darin – ohne eigene Fläche, ohne Farbe, ohne Trennlinie.          */
+  /* Spart pro Feldzeile ~20px Höhe (Label + Abstand).                      */
+  /* ==================== */
+  .ui-field {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.52);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .ui-field:hover {
+    background-color: rgba(255, 255, 255, 0.66);
+  }
+  .ui-field:focus-within {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-color: #0f766e;
+    /* Ring (Guide §1.3) plus die weiche Glas-Schattenkante. */
+    box-shadow:
+      0 0 0 3px rgba(15, 118, 110, 0.15),
+      0 4px 15px rgba(0, 0, 0, 0.03);
+  }
+  /* Der Tag ist ein ECHTES <label> (htmlFor) – nicht nur Zierde, aber rein */
+  /* typografisch: Ebene-3-Text der Skala (§1.8), keine Fläche, keine Kante. */
+  .ui-field > label {
+    flex: 0 0 7.5rem;
+    display: flex;
+    align-items: center;
+    padding: 0 0.25rem 0 0.85rem;
+    background: transparent;
+    border: 0;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .ui-field > input,
+  .ui-field > select,
+  .ui-field > textarea {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    padding: 0.45rem 0.75rem;
+    color: #0f172a;
+    font-weight: 500;
+    /* 16px auf mobil gegen den iOS-Zoom, ab sm 14px (Guide §1.8/A-22). */
+    font-size: 1rem;
+  }
+  @media (min-width: 640px) {
+    .ui-field > input,
+    .ui-field > select,
+    .ui-field > textarea {
+      font-size: 0.875rem;
+    }
+  }
+  .ui-field.is-error {
+    background-color: rgba(239, 68, 68, 0.12);
+    border-color: #ef4444;
+  }
+  .ui-field.is-ok {
+    background-color: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+  }
+  .ui-field:has(> :disabled) {
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+  .ui-field > :disabled {
+    cursor: not-allowed;
   }
 
   /* ==================== */
@@ -235,7 +338,13 @@
     padding: 0.55rem 0.9rem;
     font-size: 0.75rem;
     font-weight: 700;
-    transition: all 0.18s ease;
+    /* better-ui: exakte Properties statt `all` – nur was sich ändert. */
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
     cursor: pointer;
     border: 0;
   }
@@ -248,8 +357,13 @@
     background: #115e59;
     transform: translateY(-1px);
   }
-  .ui-btn-primary:active {
-    transform: scale(0.97);
+  /* Press-Feedback für alle Varianten – genau 0.96 (better-ui §9). */
+  .ui-btn-primary:active,
+  .ui-btn-secondary:active,
+  .ui-btn-ghost:active,
+  .ui-btn-danger:active,
+  .ui-btn-danger-soft:active {
+    transform: scale(0.96);
   }
   .ui-btn-secondary {
     background: rgba(255, 255, 255, 0.55);
@@ -260,7 +374,8 @@
     background: rgba(255, 255, 255, 0.75);
   }
   .ui-btn-ghost {
-    color: #0f766e;
+    /* Primary als Textfarbe: #115e59 (6,0:1) statt #0f766e (4,3:1). */
+    color: #115e59;
     background: transparent;
   }
   .ui-btn-ghost:hover {
@@ -309,7 +424,8 @@
     border-radius: 0.65rem;
     padding: 0.45rem 0.7rem;
     background: transparent;
-    color: #64748b;
+    /* Ebene 3 der Textskala (6,0:1) – vorher #64748b mit nur 3,8:1. */
+    color: #475569;
     font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
@@ -317,7 +433,8 @@
   }
   .ui-tabs button.is-active {
     background: #fff;
-    color: #0f766e;
+    /* Primary als TEXTFARBE dunkler als die Fläche (6,0:1 statt 4,3:1). */
+    color: #115e59;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   }
 
@@ -331,7 +448,9 @@
     padding: 0.75rem 0.9rem;
     border-radius: 0.8rem;
     border: 1px solid;
-    font-size: 0.72rem;
+    /* Lesbarkeit: 0.8rem (12,8px) statt 0.72rem (11,5px) – Fehlermeldungen
+       sind der Text, der am schnellsten gelesen werden muss (Guide §1.8). */
+    font-size: 0.8rem;
   }
   .ui-alert-info {
     background: rgba(59, 130, 246, 0.08);
@@ -369,7 +488,7 @@
   }
   .ui-badge-success {
     background: rgba(15, 118, 110, 0.12);
-    color: #0f766e;
+    color: #115e59;
     border-color: rgba(15, 118, 110, 0.25);
   }
   .ui-badge-warning {
@@ -546,10 +665,10 @@
     gap: 0.35rem;
     align-items: center;
     font-size: 0.72rem;
-    color: #64748b;
+    color: #475569;
   }
   .ui-breadcrumbs a {
-    color: #0f766e;
+    color: #115e59;
     font-weight: 700;
     text-decoration: none;
   }
@@ -734,10 +853,11 @@
   }
   .logo-text {
     @apply italic z-20 select-none;
+    /* Logo unverändert: feste Werte statt Tokens (Regel 11 §Logos). */
     background: linear-gradient(
       135deg,
-      var(--text-muted) 10%,
-      var(--text-strong) 90%
+      #707070 10%,
+      #1a1a1a 90%
     );
     -webkit-background-clip: text !important;
     background-clip: text !important;
@@ -746,10 +866,11 @@
 
   .logo-text-hp {
     @apply font-bold italic z-20 relative select-none;
+    /* Logo unverändert: feste Werte statt Tokens (Regel 11 §Logos). */
     background: linear-gradient(
       135deg,
-      var(--text-muted) 10%,
-      var(--text-strong) 90%
+      #707070 10%,
+      #1a1a1a 90%
     );
     letter-spacing: -7px;
     -webkit-background-clip: text !important;
@@ -768,10 +889,11 @@
     left: 2px;
     top: 2px;
     letter-spacing: -7px;
+    /* Logo unverändert: feste Werte statt Tokens (Regel 11 §Logos). */
     background: linear-gradient(
       135deg,
-      var(--text-muted) 10%,
-      var(--text-strong) 90%
+      #707070 10%,
+      #1a1a1a 90%
     );
     -webkit-background-clip: text !important;
     background-clip: text !important;

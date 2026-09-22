@@ -1,20 +1,8 @@
-// Schlanker API-Client: zentrale Fehlerbehandlung + Auth-Token
-import { ApiError } from '../lib/api'
+// Schlanker API-Client: Auth-Token + gemeinsame Fehlerbehandlung.
+// Die Fehlertexte kommen aus lib/api, damit beide Module identisch formulieren.
+import { ApiError, getErrorMessage } from '../lib/api'
 
 const API_BASE = '/api'
-
-function getErrorMessage(status: number, detail: unknown): string {
-  if (typeof detail === 'string' && detail) {
-    return detail
-  }
-  if (status === 401) {
-    return 'Nicht angemeldet oder Sitzung abgelaufen.'
-  }
-  if (status === 403) {
-    return 'Du hast keine Berechtigung für diese Aktion.'
-  }
-  return 'Die Anfrage ist fehlgeschlagen. Bitte versuche es später erneut.'
-}
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
@@ -30,7 +18,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(`${API_BASE}${url}`, { ...options, headers })
   } catch {
-    throw new ApiError(0, 'Keine Verbindung zum Server. Läuft das Backend?')
+    throw new ApiError(0, getErrorMessage(0, null))
   }
 
   if (!res.ok) {

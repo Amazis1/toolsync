@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { createSerialArticle } from '../../lib/api';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 import type { SerialArticle } from '../../types/serial-article';
 
 interface SerialArticleUploadProps {
@@ -54,34 +55,47 @@ const SerialArticleUpload: React.FC<SerialArticleUploadProps> = ({ onCreated, on
       );
       onCreated(created);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Der Serienartikel konnte nicht gespeichert werden. Prüfe deine Eingaben.',
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
-  const inputClass = 'input-bordered text-sm';
+  const inputClass = 'input-bordered text-base sm:text-sm';
+
+  // Escape schließt das Formular (Tastaturbedienung), außer während gespeichert wird.
+  useEscapeKey(onClose, !submitting);
 
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="modal-panel w-full max-w-lg p-6">
+    <div
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="serial-upload-title"
+    >
+      <div className="modal-panel max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto p-6 pb-0">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Serienartikel anlegen</h3>
+          <h3 id="serial-upload-title" className="text-lg font-semibold text-slate-900">Serienartikel anlegen</h3>
           <button
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-white/60 hover:text-slate-700"
+            className="rounded-lg px-2 py-1 text-slate-700 hover:bg-white/60 hover:text-slate-900"
             aria-label="Schließen"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Artikelnummer <span className="text-rose-500">*</span>
+            <label htmlFor="serial-article-number" className="mb-1 block text-sm font-medium text-slate-700">
+              Artikelnummer <span aria-hidden="true" className="text-rose-700">*</span>
             </label>
             <input
+              id="serial-article-number"
               type="text"
               value={articleNumber}
               onChange={(e) => setArticleNumber(e.target.value)}
@@ -91,8 +105,9 @@ const SerialArticleUpload: React.FC<SerialArticleUploadProps> = ({ onCreated, on
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+            <label htmlFor="serial-description" className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
             <input
+              id="serial-description"
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -103,25 +118,25 @@ const SerialArticleUpload: React.FC<SerialArticleUploadProps> = ({ onCreated, on
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              PDF-Einrichteplan <span className="text-slate-400">(optional)</span>
+              PDF-Einrichteplan <span className="text-slate-600">(optional)</span>
             </label>
             <div
               {...getRootProps()}
               className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center text-sm transition-colors ${
                 isDragActive
-                  ? 'border-teal-500 bg-teal-500/10'
-                  : 'border-white/80 bg-white/40 hover:border-teal-400 hover:bg-white/60'
+                  ? 'border-teal-700 bg-teal-700/10'
+                  : 'border-white/80 bg-white/40 hover:border-teal-700/50 hover:bg-white/60'
               }`}
             >
               <input {...getInputProps()} />
               {file ? (
-                <p className="text-slate-800">
+                <p className="text-slate-900">
                   <span className="font-medium">{file.name}</span>
-                  <span className="text-slate-500"> ({(file.size / 1024).toFixed(1)} KB)</span>
-                  <span className="mt-1 block text-xs text-slate-400">Klicken, um zu ersetzen</span>
+                  <span className="text-slate-600"> ({(file.size / 1024).toFixed(1)} KB)</span>
+                  <span className="mt-1 block text-xs text-slate-600">Klicken, um zu ersetzen</span>
                 </p>
               ) : (
-                <p className="text-slate-500">
+                <p className="text-slate-600">
                   {isDragActive ? 'Datei hier ablegen …' : 'PDF hierher ziehen oder klicken zum Auswählen'}
                 </p>
               )}
@@ -135,7 +150,7 @@ const SerialArticleUpload: React.FC<SerialArticleUploadProps> = ({ onCreated, on
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-white/70 bg-white/95 px-6 pb-6 pt-4 backdrop-blur">
             <button
               type="button"
               onClick={onClose}

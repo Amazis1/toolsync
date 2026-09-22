@@ -24,14 +24,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'historie', label: 'Historie' },
 ];
 
-// Tab-Klassen nach test.html Standard: aktiv = bg-white/80 text-teal-700 shadow-xs
-const tabClasses = (isActive: boolean) =>
-  `px-3.5 py-1.5 rounded-xl text-xs transition-all whitespace-nowrap ${
-    isActive
-      ? 'font-semibold bg-white/80 text-teal-700 shadow-xs'
-      : 'font-medium text-slate-600 hover:bg-white/40'
-  }`;
-
+// Tab-Leiste und "+ Anlegen" kommen aus dem Guide-System (.ui-tabs / .ui-btn).
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
 }
@@ -40,7 +33,7 @@ function Placeholder({ title }: { title: string }) {
   return (
     <div className="app-content-block rounded-2xl p-5 shadow-xs">
       <h2 className="text-base font-bold text-slate-900">{title}</h2>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-slate-600">
         Dieser Bereich folgt in einem späteren Schritt.
       </p>
     </div>
@@ -53,19 +46,19 @@ function StatisticsSidebar() {
     <div className="space-y-3">
       <div className="app-stat-card rounded-2xl p-4">
         <p className="text-xs font-medium text-slate-600">Aktive Ausleihen</p>
-        <p className="mt-1 text-xl font-bold text-slate-800">—</p>
+        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
       </div>
       <div className="app-stat-card rounded-2xl p-4">
         <p className="text-xs font-medium text-slate-600">Verfügbare Werkzeuge</p>
-        <p className="mt-1 text-xl font-bold text-slate-800">—</p>
+        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
       </div>
       <div className="app-stat-card rounded-2xl p-4">
         <p className="text-xs font-medium text-slate-600">Lagerbestand</p>
-        <p className="mt-1 text-xl font-bold text-slate-800">—</p>
+        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
       </div>
       <div className="app-stat-card rounded-2xl p-4">
         <p className="text-xs font-medium text-slate-600">Serienartikel</p>
-        <p className="mt-1 text-xl font-bold text-slate-800">—</p>
+        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
       </div>
     </div>
   );
@@ -108,7 +101,7 @@ const MainApp: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-slate-500">Wird geladen…</p>
+        <p className="text-slate-600">Wird geladen…</p>
       </div>
     );
   }
@@ -164,8 +157,36 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* SIDEBAR (.app-sidebar): NUR Branding + User/Logout – KEINE Navigation */}
+    <div className="flex min-h-screen flex-col md:flex-row">
+      {/* MOBILE KOPFZEILE (nur < md): Branding, Benutzer, Admin-Panel, Abmelden.
+          Die Sidebar ist erst ab md sichtbar – ohne diese Zeile gäbe es auf
+          Telefon und Tablet keinen Weg zum Abmelden. */}
+      <header className="app-tabbar sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 md:hidden">
+        <span className="shrink-0 text-sm font-bold tracking-tight text-slate-900">ToolSync</span>
+        {user && (
+          <div className="flex min-w-0 items-center gap-3 text-xs font-medium text-slate-600">
+            <span className="min-w-0 truncate">{getDisplayName(user)}</span>
+            {user.is_admin && (
+              <button
+                type="button"
+                onClick={openAdmin}
+                className="ui-btn ui-btn-secondary ui-btn-sm shrink-0"
+              >
+                Admin-Panel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={logout}
+              className="ui-btn ui-btn-secondary ui-btn-sm shrink-0"
+            >
+              Abmelden
+            </button>
+          </div>
+        )}
+      </header>
+
+      {/* SIDEBAR (.app-sidebar): NUR Branding + User/Abmelden – KEINE Navigation */}
       <aside className="app-sidebar hidden md:flex w-60 p-6 flex-col justify-between shrink-0">
         <div className="flex flex-col items-center gap-3 pb-4 mb-4 border-b border-white/20">
           {/* Firmenlogo HPolytechnik (wie im LoginForm) */}
@@ -178,20 +199,17 @@ const MainApp: React.FC = () => {
             <span className="block text-2xl font-bold tracking-tight text-slate-900 leading-tight">
               ToolSync
             </span>
-            <span className="block text-[12px] font-medium text-slate-500 leading-tight">
+            <span className="block text-[12px] font-medium text-slate-600 leading-tight">
               Werkzeug- &amp; Lagerverwaltung
             </span>
           </div>
         </div>
 
-        {/* Profil + Logout – nur wenn eingeloggt */}
+        {/* Profil + Abmelden – nur wenn eingeloggt */}
         {user && (
           <div className="space-y-2 border-t border-white/40 pt-4 text-xs font-medium text-slate-600">
             <div className="flex items-center gap-2 px-2 py-1 group">
-              <div
-                className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center font-bold text-xs text-white shrink-0 cursor-help"
-                title={`${getDisplayName(user)}`}
-              >
+              <div className="ui-avatar shrink-0">
                 {getInitials(user.first_name, user.last_name)}
               </div>
               <span className="truncate">
@@ -202,7 +220,7 @@ const MainApp: React.FC = () => {
             {user.is_admin && (
               <button
                 onClick={openAdmin}
-                className="w-full flex items-center gap-2 px-2 py-1 text-left text-slate-600 hover:text-teal-700 transition-colors"
+                className="ui-btn ui-btn-ghost ui-btn-sm w-full justify-start"
               >
                 <AdminIcon className="w-3.5 h-3.5" />
                 Admin-Panel
@@ -210,10 +228,10 @@ const MainApp: React.FC = () => {
             )}
             <button
               onClick={logout}
-              className="w-full flex items-center gap-2 px-2 py-1 text-left text-slate-500 hover:text-rose-600 transition-colors"
+              className="ui-btn ui-btn-ghost ui-btn-sm w-full justify-start"
             >
               <LoginIcon className="w-3.5 h-3.5" />
-              Logout
+              Abmelden
             </button>
           </div>
         )}
@@ -225,29 +243,24 @@ const MainApp: React.FC = () => {
           {/* CONTENT SPALTE */}
           <div className="col-span-12 xl:col-span-9 space-y-4">
             {/* TABBAR (.app-tabbar): NUR über dem Content, + Anlegen rechts */}
-            <nav className="app-tabbar flex items-center justify-between px-3 py-1.5 rounded-2xl shadow-xs">
-              <div className="flex items-center gap-1 overflow-x-auto">
-                {TABS.map((tab) => {
-                  const isActive = activeTab === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => switchTab(tab.key)}
-                      className={tabClasses(isActive)}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
+            <nav aria-label="Bereiche wechseln" className="app-tabbar flex items-center justify-between gap-2 px-3 py-1.5 rounded-2xl shadow-xs">
+              <div className="ui-tabs min-w-0 overflow-x-auto">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => switchTab(tab.key)}
+                    className={activeTab === tab.key ? 'is-active' : undefined}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
               {/* + Anlegen öffnet das passende Formular je nach aktivem Tab */}
               <button
                 onClick={handleCreateClick}
-                className={`shrink-0 h-8 px-4 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  activeTab === 'create'
-                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-500/30 ring-2 ring-teal-400'
-                    : 'bg-teal-500 hover:bg-teal-600 text-white shadow-sm shadow-teal-500/20'
+                className={`ui-btn ui-btn-primary shrink-0 ${
+                  activeTab === 'create' ? 'ring-2 ring-teal-700/30' : ''
                 }`}
               >
                 <AddIcon className="w-3.5 h-3.5" />

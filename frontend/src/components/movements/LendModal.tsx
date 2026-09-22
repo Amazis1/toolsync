@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { createMovement } from '../../api/movements'
 import { TOOL_CATEGORY_LABELS } from '../../api/types'
+import { useEscapeKey } from '../../lib/useEscapeKey'
 import type { Tool } from '../../api/types'
 
 interface LendModalProps {
@@ -15,7 +16,10 @@ export default function LendModal({ tool, onClose, onSuccess }: LendModalProps) 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const inputClass = 'input-bordered text-sm'
+  const inputClass = 'input-bordered text-base sm:text-sm'
+
+  // Escape schließt den Dialog (Tastaturbedienung), außer während gespeichert wird.
+  useEscapeKey(onClose, !saving)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -37,19 +41,30 @@ export default function LendModal({ tool, onClose, onSuccess }: LendModalProps) 
       })
       onSuccess()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ausleihe fehlgeschlagen')
+      setError(
+        e instanceof Error ? e.message : 'Die Ausleihe konnte nicht gespeichert werden. Versuche es erneut.'
+      )
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="modal-panel w-full max-w-md p-6">
+    <div
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lend-title"
+    >
+      <div className="modal-panel max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Werkzeug ausleihen</h2>
-          <button onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-white/60 hover:text-slate-700">
-            ✕
+          <h2 id="lend-title" className="text-lg font-semibold text-slate-900">Werkzeug ausleihen</h2>
+          <button
+            onClick={onClose}
+            aria-label="Schließen"
+            className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+          >
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -68,23 +83,29 @@ export default function LendModal({ tool, onClose, onSuccess }: LendModalProps) 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Personalnummer *</label>
+            <label htmlFor="lend-personalnummer" className="mb-1 block text-sm font-medium text-slate-700">
+              Personalnummer <span aria-hidden="true">*</span>
+            </label>
             <input
+              id="lend-personalnummer"
               type="text"
               value={personalNumber}
               onChange={(e) => setPersonalNumber(e.target.value)}
-              placeholder="z.B. 4711"
+              placeholder="z. B. 4711"
               className={inputClass}
               required
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Notiz (optional)</label>
+            <label htmlFor="lend-notiz" className="mb-1 block text-sm font-medium text-slate-700">
+              Notiz (optional)
+            </label>
             <input
+              id="lend-notiz"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="z.B. für welche Maschine"
+              placeholder="z. B. für welche Maschine"
               className={inputClass}
             />
           </div>

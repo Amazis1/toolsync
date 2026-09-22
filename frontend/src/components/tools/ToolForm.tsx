@@ -54,8 +54,8 @@ export function formatMeasureMm(value: string | null | undefined): string {
 
 type SubTab = 'tool' | 'series' | 'help' | 'storage'
 
-const inputClass = 'input-bordered text-xs'
-const selectClass = 'select-bordered text-xs'
+// Beschriftete Felder nutzen `.ui-field` (Innenlabel, Guide §1.9) und bringen
+// ihre Schriftgröße selbst mit – daher hier keine inputClass/selectClass mehr.
 
 type IdState = 'idle' | 'checking' | 'ok' | 'error'
 
@@ -112,7 +112,7 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
           setPlantId(String(pl[0].id))
         }
       })
-      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Stammdaten konnten nicht geladen werden'))
+      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Stammdaten konnten nicht geladen werden. Lade die Seite neu.'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -124,7 +124,7 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
     }
     getMachines(Number(plantId))
       .then(setMachines)
-      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Maschinen konnten nicht geladen werden'))
+      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Maschinen konnten nicht geladen werden. Lade die Seite neu.'))
   }, [plantId])
 
   // Live-Prüfung der Werkzeug-ID (Debounce 400 ms).
@@ -184,7 +184,7 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
     }
     getCabinets(Number(plantId))
       .then(setCabinets)
-      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Schränke konnten nicht geladen werden'))
+      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Schränke konnten nicht geladen werden. Lade die Seite neu.'))
   }, [plantId])
 
   // Schubladen laden, sobald ein Schrank gewählt ist
@@ -199,7 +199,7 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
         setDrawers(drs)
         setFreePositions([])
       })
-      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Schubladen konnten nicht geladen werden'))
+      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Schubladen konnten nicht geladen werden. Lade die Seite neu.'))
   }, [cabinetId])
 
   // Nur FREIE Plätze anzeigen. Beim Bearbeiten bleibt der eigene Platz
@@ -215,7 +215,7 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
           allPos.filter((p) => p.tool_id === null || p.id === initial?.position_id),
         )
       })
-      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Plätze konnten nicht geladen werden'))
+      .catch((e) => setMetaError(e instanceof Error ? e.message : 'Plätze konnten nicht geladen werden. Lade die Seite neu.'))
   }, [drawerId, initial])
 
   // Platz-Code für die Auswahl anzeigen (z. B. 01-A-01)
@@ -296,26 +296,23 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
         await onSave(input)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen')
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'Das Werkzeug konnte nicht gespeichert werden. Prüfe deine Eingaben.',
+      )
     } finally {
       setSaving(false)
     }
   }
 
   const subTabClass = (active: boolean) =>
-    `w-full text-left p-2 rounded-lg flex items-center gap-2 text-xs transition-all ${
-      active
-        ? 'font-semibold text-slate-900 bg-white/80 shadow-xs border-l-4 border-teal-500'
-        : 'font-medium text-slate-600 hover:bg-white/40'
-    }`
-
-  const subTabDotClass = (active: boolean) =>
-    `h-2 w-2 rounded-full ${active ? 'bg-teal-500' : 'bg-slate-400'}`
+    `w-full justify-start lg:justify-start ${active ? 'is-active' : ''}`
 
   return (
     <div className="flex flex-col lg:flex-row gap-5">
-      {/* Sub-Tabs Navigation */}
-      <div className="w-full lg:w-1/5 flex flex-row lg:flex-col gap-1.5 p-1.5 rounded-xl bg-white/30 border border-white/50">
+      {/* Sub-Tabs Navigation – dasselbe Muster wie die Tabbar (.ui-tabs) */}
+      <div className="ui-tabs w-full lg:w-1/5 flex-row lg:flex-col overflow-x-auto">
         {([
           ['tool', 'Werkzeug'],
           ['series', 'Serienartikel'],
@@ -328,7 +325,6 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
             onClick={() => setSubTab(key)}
             className={subTabClass(subTab === key)}
           >
-            <span className={subTabDotClass(subTab === key)} />
             {label}
           </button>
         ))}
@@ -336,8 +332,9 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
 
       <div className="w-full lg:w-4/5 p-4 rounded-xl border border-white/60 bg-white/30">
         {metaError && (
-          <div className="mb-4 rounded-xl bg-rose-500/15 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-500/20">
-            {metaError}
+          <div className="ui-alert ui-alert-error mb-4">
+            <span aria-hidden="true">×</span>
+            <div>{metaError}</div>
           </div>
         )}
 
@@ -347,14 +344,14 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
             <div className="flex gap-8 flex-wrap items-center bg-white/40 p-3 rounded-xl border border-white/60">
               <div className="flex gap-6 flex-wrap">
                 {(Object.keys(TOOL_CATEGORY_LABELS) as ToolCategory[]).map((c) => (
-                  <label key={c} className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-800">
+                  <label key={c} className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-900">
                     <input
                       type="radio"
                       name="category"
                       value={c}
                       checked={category === c}
                       onChange={() => setCategory(c)}
-                      className="accent-teal-600 h-4 w-4"
+                      className="accent-teal-700 h-4 w-4"
                     />
                     {TOOL_CATEGORY_LABELS[c]}
                   </label>
@@ -364,87 +361,92 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
               <div className="flex items-center gap-3 border-l border-slate-300 pl-6">
                 <div className="flex items-center gap-2">
                   <input
+                    id="tool-is-storage"
                     type="checkbox"
                     checked={isStorage}
                     onChange={(e) => setIsStorage(e.target.checked)}
-                    className="rounded accent-teal-600 h-4 w-4"
+                    className="rounded accent-teal-700 h-4 w-4"
                   />
-                  <label className="text-xs font-medium text-slate-800 cursor-pointer">Lager/Ersatz</label>
+                  <label htmlFor="tool-is-storage" className="text-xs font-medium text-slate-900 cursor-pointer">Lager/Ersatz</label>
                 </div>
+                <label htmlFor="tool-storage-count" className="text-xs font-medium text-slate-700">
+                  Anzahl
+                </label>
                 <input
+                  id="tool-storage-count"
                   type="number"
                   min={1}
                   value={storageCount}
                   onChange={(e) => setStorageCount(Number(e.target.value))}
                   disabled={!isStorage}
-                  className="input-bordered !w-20 text-xs !py-1"
-                  title="Anzahl der Exemplare, die in einem Zug angelegt werden"
+                  className="input-bordered w-20 text-base sm:text-sm py-1"
                 />
               </div>
             </div>
 
             {isStorage && (
-              <p className="-mt-2 text-[10px] font-medium text-sky-800">
+              <p className="-mt-2 text-xs font-medium text-sky-800">
                 Lager/Ersatz: Mehrfach-IDs sind erlaubt – jedes Exemplar wird einzeln geführt.
                 {existingCount > 0 && ` Diese ID existiert bereits ${existingCount}×.`}
               </p>
             )}
 
-            {/* Werkzeug-ID & Typ */}
+            {/* Werkzeug-ID & Typ – Innenlabel (.ui-field, Guide §1.9) spart je Zeile ~20px */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">
-                  Werkzeug-ID <span className="text-[10px] text-rose-600">(Pflicht)</span>
-                </label>
-                <div className="relative">
+              <div className="min-w-0">
+                <div className={`ui-field ${idState === 'error' ? 'is-error' : idState === 'ok' ? 'is-ok' : ''}`}>
+                  <label htmlFor="tool-id">
+                    Werkzeug-ID <span aria-hidden="true">*</span>
+                  </label>
                   <input
+                    id="tool-id"
                     type="text"
                     value={toolId}
                     onChange={(e) => setToolId(e.target.value)}
-                    placeholder="z.B. TS-1004"
+                    placeholder="z. B. TS-1004"
                     required
-                    className={`${inputClass} ${idState === 'error' ? 'input-error' : idState === 'ok' ? 'input-success' : ''}`}
                   />
                   {idState === 'checking' && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <span className="ui-spinner block h-3.5 w-3.5" />
-                    </span>
+                    <span className="ui-spinner mr-3 h-3.5 w-3.5 self-center" />
                   )}
                 </div>
                 {idState === 'ok' && (
-                  <p className="mt-1 text-[10px] font-medium text-emerald-700">{idMessage}</p>
+                  <p className="mt-1 text-xs font-medium text-emerald-800">{idMessage}</p>
                 )}
                 {idState === 'error' && (
-                  <p className="mt-1 text-[10px] font-medium text-rose-700">{idMessage}</p>
+                  <p className="mt-1 text-xs font-medium text-rose-700">{idMessage}</p>
                 )}
                 {idState === 'idle' && !plantId && (
-                  <p className="mt-1 text-[10px] text-slate-500">Bitte zuerst ein Werk wählen.</p>
+                  <p className="mt-1 text-xs text-slate-600">Bitte zuerst ein Werk wählen.</p>
                 )}
               </div>
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">Werkzeug-Typ</label>
-                <select
-                  value={toolTypeId}
-                  onChange={(e) => setToolTypeId(e.target.value)}
-                  required
-                  className={selectClass}
-                >
-                  <option value="">Bitte wählen...</option>
-                  {toolTypes.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+              <div className="min-w-0">
+                <div className="ui-field">
+                  <label htmlFor="tool-type">Werkzeug-Typ</label>
+                  <select
+                    id="tool-type"
+                    value={toolTypeId}
+                    onChange={(e) => setToolTypeId(e.target.value)}
+                    required
+                  >
+                    <option value="">Bitte wählen …</option>
+                    {toolTypes.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Maße A & B – Werte werden auf "123,45" normalisiert (Komma, 2 Stellen) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">
-                  Maß A <span className="text-[10px] text-rose-600">(Pflicht)</span>
-                </label>
-                <div className="relative">
+              <div className="min-w-0">
+                <div className="ui-field">
+                  <label htmlFor="tool-measure-a">
+                    Maß A <span aria-hidden="true">*</span>
+                  </label>
                   <input
+                    id="tool-measure-a"
                     type="text"
                     inputMode="decimal"
                     value={measureA}
@@ -453,19 +455,17 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
                       const normalized = normalizeMeasure(measureA)
                       if (normalized) setMeasureA(normalized)
                     }}
-                    placeholder="z.B. 7"
+                    placeholder="z. B. 7"
                     required
-                    className="input-bordered text-xs pr-10"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">mm</span>
+                  <span className="flex items-center pr-3 text-xs text-slate-600" aria-hidden="true">mm</span>
                 </div>
               </div>
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">
-                  Maß B <span className="text-[10px] text-slate-500">(Optional)</span>
-                </label>
-                <div className="relative">
+              <div className="min-w-0">
+                <div className="ui-field">
+                  <label htmlFor="tool-measure-b">Maß B</label>
                   <input
+                    id="tool-measure-b"
                     type="text"
                     inputMode="decimal"
                     value={measureB}
@@ -474,10 +474,9 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
                       const normalized = normalizeMeasure(measureB)
                       if (normalized) setMeasureB(normalized)
                     }}
-                    placeholder="z.B. 8"
-                    className="input-bordered text-xs pr-10"
+                    placeholder="z. B. 8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">mm</span>
+                  <span className="flex items-center pr-3 text-xs text-slate-600" aria-hidden="true">mm</span>
                 </div>
               </div>
             </div>
@@ -485,54 +484,55 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
             {/* Werk & Status – steht VOR dem Lagerplatz, damit Schrank und
                 Schublade geladen werden können, sobald das Werk feststeht. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">Werk</label>
-                <select
-                  value={plantId}
-                  onChange={(e) => {
-                    setPlantId(e.target.value)
-                    setCabinetId('')
-                    setDrawerId('')
-                    setPositionId('')
-                    setMachineId('')
-                  }}
-                  required
-                  className={selectClass}
-                >
-                  <option value="">Werk wählen</option>
-                  {plants.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+              <div className="min-w-0">
+                <div className="ui-field">
+                  <label htmlFor="tool-plant">Werk</label>
+                  <select
+                    id="tool-plant"
+                    value={plantId}
+                    onChange={(e) => {
+                      setPlantId(e.target.value)
+                      setCabinetId('')
+                      setDrawerId('')
+                      setPositionId('')
+                      setMachineId('')
+                    }}
+                    required
+                  >
+                    <option value="">Werk wählen</option>
+                    {plants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="font-semibold text-xs mb-1 block text-slate-700">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as ToolStatus | '')}
-                  className={selectClass}
-                >
-                  <option value="">— ohne Status —</option>
-                  {(Object.keys(TOOL_STATUS_LABELS) as ToolStatus[]).map((s) => (
-                    <option key={s} value={s}>{TOOL_STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
+              <div className="min-w-0">
+                <div className="ui-field">
+                  <label htmlFor="tool-status">Status</label>
+                  <select
+                    id="tool-status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ToolStatus | '')}
+                  >
+                    <option value="">— ohne Status —</option>
+                    {(Object.keys(TOOL_STATUS_LABELS) as ToolStatus[]).map((s) => (
+                      <option key={s} value={s}>{TOOL_STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Lagerplatz: fester Platz ODER Ablage */}
             <div className="bg-white/40 p-3 rounded-xl border border-white/60">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-slate-700">Lagerplatz</span>
-                  <span className="ui-badge ui-badge-neutral">nur freie Plätze</span>
-                </span>
+                <span className="text-xs font-bold text-slate-700 mb-1">Lagerplatz</span>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer mb-1">
                   <input
                     type="checkbox"
                     checked={inTray}
                     onChange={(e) => setInTray(e.target.checked)}
-                    className="rounded accent-teal-600 h-4 w-4"
+                    className="rounded accent-teal-700 h-4 w-4"
                   />
                   In Ablage legen (kein fester Platz)
                 </label>
@@ -540,15 +540,18 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
 
               {!inTray && (
                 <>
+                  {/* Ausnahme von §1.9: In einer 3-spaltigen Reihe bliebe dem Select
+                      neben dem Tag zu wenig Platz für „Bitte zuerst Schrank wählen". */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className="font-semibold text-xs mb-1 block text-slate-700">Schrank</label>
+                    <div className="min-w-0">
+                      <label htmlFor="tool-cabinet" className="mb-1 block text-xs font-semibold text-slate-700">Schrank</label>
                       <select
+                        id="tool-cabinet"
                         value={cabinetId}
                         onChange={(e) => { setCabinetId(e.target.value); setDrawerId(''); setPositionId('') }}
                         disabled={!plantId}
                         required
-                        className={selectClass}
+                        className="select-bordered text-base sm:text-sm"
                       >
                         <option value="">{plantId ? 'Schrank wählen' : 'Bitte zuerst Werk wählen'}</option>
                         {cabinets.map((c) => (
@@ -556,14 +559,15 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="font-semibold text-xs mb-1 block text-slate-700">Schublade</label>
+                    <div className="min-w-0">
+                      <label htmlFor="tool-drawer" className="mb-1 block text-xs font-semibold text-slate-700">Schublade</label>
                       <select
+                        id="tool-drawer"
                         value={drawerId}
                         onChange={(e) => { setDrawerId(e.target.value); setPositionId('') }}
                         disabled={!cabinetId}
                         required
-                        className={selectClass}
+                        className="select-bordered text-base sm:text-sm"
                       >
                         <option value="">{cabinetId ? 'Schublade wählen' : 'Bitte zuerst Schrank wählen'}</option>
                         {drawers.map((d) => (
@@ -571,27 +575,25 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="font-semibold text-xs mb-1 block text-slate-700">Platz</label>
+                    <div className="min-w-0">
+                      <label htmlFor="tool-position" className="mb-1 block text-xs font-semibold text-slate-700">Platz</label>
                       <select
+                        id="tool-position"
                         value={positionId}
                         onChange={(e) => setPositionId(e.target.value)}
                         disabled={!drawerId || freePositions.length === 0}
                         required
-                        className={selectClass}
+                        className="select-bordered text-base sm:text-sm"
                       >
                         <option value="">{freePositions.length === 0 && drawerId ? 'Keine freien Plätze' : 'Platz wählen'}</option>
                         {freePositions.map((p) => (
                           <option key={p.id} value={p.id}>{getPositionLabel(p)}</option>
                         ))}
                       </select>
-                      <p className="mt-1 text-[10px] text-slate-500">
-                        Es werden nur freie Plätze angezeigt.
-                      </p>
                     </div>
                   </div>
                   {plantId && cabinets.length === 0 && (
-                    <p className="mt-2 text-[10px] font-medium text-amber-700">
+                    <p className="mt-2 text-xs font-medium text-amber-800">
                       In diesem Werk sind keine Schränke angelegt (Admin → Lagerplätze).
                     </p>
                   )}
@@ -602,47 +604,52 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
             {/* Zuordnung: Kunde / Maschine (beide optional) */}
             <div className="bg-white/40 p-3 rounded-xl border border-white/60">
               <span className="mb-2 block text-xs font-bold text-slate-700">
-                Zuordnung <span className="text-[10px] font-normal text-slate-500">(optional)</span>
+                Zuordnung <span className="text-xs font-normal text-slate-600">(optional)</span>
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-xs mb-1 block text-slate-700">Kunde</label>
-                  <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                    className={selectClass}
-                  >
-                    <option value="">— kein Kunde —</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                <div className="min-w-0">
+                  <div className="ui-field">
+                    <label htmlFor="tool-customer">Kunde</label>
+                    <select
+                      id="tool-customer"
+                      value={customerId}
+                      onChange={(e) => setCustomerId(e.target.value)}
+                    >
+                      <option value="">— kein Kunde —</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="font-semibold text-xs mb-1 block text-slate-700">Maschine</label>
-                  <select
-                    value={machineId}
-                    onChange={(e) => setMachineId(e.target.value)}
-                    disabled={!plantId}
-                    className={selectClass}
-                  >
-                    <option value="">{plantId ? '— keine Maschine —' : 'Bitte zuerst Werk wählen'}</option>
-                    {machines.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
+                <div className="min-w-0">
+                  <div className="ui-field">
+                    <label htmlFor="tool-machine">Maschine</label>
+                    <select
+                      id="tool-machine"
+                      value={machineId}
+                      onChange={(e) => setMachineId(e.target.value)}
+                      disabled={!plantId}
+                    >
+                      <option value="">{plantId ? '— keine Maschine —' : 'zuerst Werk wählen'}</option>
+                      {machines.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Beschreibung */}
             <div>
-              <label className="font-semibold text-xs mb-1 block text-slate-700">Beschreibung</label>
+              <label htmlFor="tool-description" className="font-semibold text-xs mb-1 block text-slate-700">Beschreibung</label>
               <textarea
+                id="tool-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
-                className="textarea-bordered text-xs resize-none"
+                className="textarea-bordered text-base sm:text-sm resize-none"
                 placeholder="Zusätzliche Informationen..."
               />
             </div>
@@ -657,16 +664,16 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="w-1/2 bg-white/60 hover:bg-white/80 text-slate-700 font-semibold py-2 rounded-xl text-xs transition-all border border-white/80"
+                className="ui-btn ui-btn-secondary flex-1"
               >
                 Abbrechen
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="w-1/2 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 rounded-xl text-xs transition-all shadow-md shadow-teal-500/20 disabled:opacity-50"
+                className="ui-btn ui-btn-primary flex-1"
               >
-                {saving ? 'Wird gespeichert …' : 'Anlegen'}
+                {saving ? 'Wird gespeichert …' : initial ? 'Änderungen speichern' : 'Werkzeug anlegen'}
               </button>
             </div>
           </form>
@@ -675,21 +682,21 @@ export default function ToolForm({ initial, onSave, onClose }: ToolFormProps) {
         {subTab === 'series' && (
           <div>
             <h3 className="text-xs font-bold mb-2">Serienartikel anlegen</h3>
-            <p className="text-xs text-slate-500">Hier können PDF-Einrichtepläne zugeordnet werden.</p>
+            <p className="text-xs text-slate-600">Hier können PDF-Einrichtepläne zugeordnet werden.</p>
           </div>
         )}
 
         {subTab === 'help' && (
           <div>
             <h3 className="text-xs font-bold mb-2">Hilfe & Anleitung</h3>
-            <p className="text-xs text-slate-500">Erklärungen zu den Werkzeug-IDs und Pflichtfeldern.</p>
+            <p className="text-xs text-slate-600">Erklärungen zu den Werkzeug-IDs und Pflichtfeldern.</p>
           </div>
         )}
 
         {subTab === 'storage' && (
           <div>
             <h3 className="text-xs font-bold mb-2">Lagerplatz verwalten</h3>
-            <p className="text-xs text-slate-500">Standortverwaltung für Schrank, Schublade und Position.</p>
+            <p className="text-xs text-slate-600">Standortverwaltung für Schrank, Schublade und Position.</p>
           </div>
         )}
       </div>

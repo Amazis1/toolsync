@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { deleteSerialArticle, getSerialArticles } from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 import type { SerialArticle } from '../../types/serial-article';
 
 interface SerialArticleListProps {
@@ -23,7 +24,8 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [articleToDelete, setArticleToDelete] = useState<SerialArticle | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +37,7 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
           if (!cancelled) setArticles(data);
         })
         .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : 'Laden fehlgeschlagen.');
+          if (!cancelled) setError(err instanceof Error ? err.message : 'Serienartikel konnten nicht geladen werden. Lade die Seite neu.');
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
@@ -50,17 +52,19 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, refreshKey]);
 
-  async function handleDelete(article: SerialArticle) {
-    if (!window.confirm(`Serienartikel "${article.article_number}" wirklich löschen?`)) return;
-    setDeletingId(article.id);
+  async function confirmDelete() {
+    if (!articleToDelete) return;
+    setDeleting(true);
     setError(null);
     try {
-      await deleteSerialArticle(article.id);
-      setArticles((prev) => prev.filter((a) => a.id !== article.id));
+      await deleteSerialArticle(articleToDelete.id);
+      setArticles((prev) => prev.filter((a) => a.id !== articleToDelete.id));
+      setArticleToDelete(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen.');
+      setArticleToDelete(null);
+      setError(err instanceof Error ? err.message : 'Der Serienartikel konnte nicht gelöscht werden. Lade die Liste neu.');
     } finally {
-      setDeletingId(null);
+      setDeleting(false);
     }
   }
 
@@ -70,10 +74,11 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
       <div className="border-b border-white/70 p-4">
         <input
           type="search"
+          aria-label="Serienartikel durchsuchen"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Serienartikel suchen …"
-          className="input-bordered text-sm w-full max-w-md"
+          className="input-bordered text-base sm:text-sm w-full max-w-md"
         />
       </div>
 
@@ -87,11 +92,11 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
       {loading ? (
         <div className="flex items-center gap-3 px-4 py-8 justify-center">
           <div className="ui-spinner" />
-          <p className="text-sm text-slate-500">Wird geladen …</p>
+          <p className="text-sm text-slate-600">Wird geladen …</p>
         </div>
-      ) : articles.length === 0 ? (
+      ) : error && articles.length === 0 ? null : articles.length === 0 ? (
         <div className="px-4 py-8 text-center">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             {search.trim()
               ? 'Keine Serienartikel gefunden.'
               : 'Noch keine Serienartikel vorhanden. Lege den ersten an.'}
@@ -100,7 +105,7 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/70 text-left text-xs uppercase text-slate-500">
+            <tr className="border-b border-white/70 text-left text-xs uppercase text-slate-600">
               <th className="px-4 py-2 font-medium">Artikelnummer</th>
               <th className="px-4 py-2 font-medium">Beschreibung</th>
               <th className="px-4 py-2 font-medium">PDF</th>
@@ -134,11 +139,10 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
                       </button>
                     )}
                     <button
-                      onClick={() => handleDelete(article)}
-                      disabled={deletingId === article.id}
+                      onClick={() => setArticleToDelete(article)}
                       className="ui-btn ui-btn-danger-soft ui-btn-sm"
                     >
-                      {deletingId === article.id ? '…' : 'Löschen'}
+                      Löschen
                     </button>
                   </div>
                 </td>
@@ -146,6 +150,22 @@ const SerialArticleList: React.FC<SerialArticleListProps> = ({
             ))}
           </tbody>
         </table>
+      )}
+
+      {articleToDelete && (
+        <ConfirmDialog
+          title={`Serienartikel „${articleToDelete.article_number}“ löschen?`}
+          description={
+            articleToDelete.pdf_path
+              ? 'Der Eintrag und das hinterlegte PDF werden entfernt. Das lässt sich nicht rückgängig machen.'
+              : 'Der Eintrag wird endgültig entfernt. Das lässt sich nicht rückgängig machen.'
+          }
+          confirmLabel="Serienartikel löschen"
+          busyLabel="Wird gelöscht …"
+          busy={deleting}
+          onConfirm={() => { void confirmDelete(); }}
+          onCancel={() => setArticleToDelete(null)}
+        />
       )}
     </div>
   );

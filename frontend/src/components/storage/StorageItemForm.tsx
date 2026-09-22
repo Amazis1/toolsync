@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useEscapeKey } from '../../lib/useEscapeKey'
 import type { StorageItem, StorageItemInput } from '../../types/storage-item'
 
 interface StorageItemFormProps {
@@ -22,6 +23,9 @@ export default function StorageItemForm({ initial, onSave, onClose }: StorageIte
   const [allowDuplicate, setAllowDuplicate] = useState(initial?.allow_duplicate_id ?? false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Escape schließt das Formular (Tastaturbedienung), außer während gespeichert wird.
+  useEscapeKey(onClose, !saving)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -51,93 +55,117 @@ export default function StorageItemForm({ initial, onSave, onClose }: StorageIte
     try {
       await onSave(input)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Das Objekt konnte nicht gespeichert werden. Prüfe deine Eingaben.',
+      )
     } finally {
       setSaving(false)
     }
   }
 
-  const inputClass = 'input-bordered text-sm'
+  const inputClass = 'input-bordered text-base sm:text-sm'
 
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="modal-panel w-full max-w-2xl p-6">
+    <div
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="storage-form-title"
+    >
+      <div className="modal-panel max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto p-6 pb-0">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 id="storage-form-title" className="text-lg font-semibold text-slate-900">
             {initial ? `Lager-/Ersatzobjekt bearbeiten: ${initial.storage_id}` : 'Neues Lager-/Ersatzobjekt anlegen'}
           </h2>
-          <button onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-white/60 hover:text-slate-700">
-            ✕
+          <button
+            onClick={onClose}
+            aria-label="Schließen"
+            className="rounded-lg px-2 py-1 text-slate-700 hover:bg-white/60 hover:text-slate-900"
+          >
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Lager-ID *</label>
+              <label htmlFor="storage-id" className="mb-1 block text-sm font-medium text-slate-700">
+                Lager-ID <span aria-hidden="true">*</span>
+              </label>
               <input
+                id="storage-id"
                 type="text"
                 value={storageId}
                 onChange={(e) => setStorageId(e.target.value)}
-                placeholder="z.B. 01075000"
+                placeholder="z. B. 01075000"
                 className={inputClass}
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Name *</label>
+              <label htmlFor="storage-name" className="mb-1 block text-sm font-medium text-slate-700">
+                Name <span aria-hidden="true">*</span>
+              </label>
               <input
+                id="storage-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="z.B. Rundstempel 75x120"
+                placeholder="z. B. Rundstempel 75x120"
                 className={inputClass}
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Typ</label>
+              <label htmlFor="storage-type" className="mb-1 block text-sm font-medium text-slate-700">Typ</label>
               <input
+                id="storage-type"
                 type="text"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                placeholder="z.B. Rundstempel"
+                placeholder="z. B. Rundstempel"
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Artikelnummer</label>
+              <label htmlFor="storage-article-number" className="mb-1 block text-sm font-medium text-slate-700">Artikelnummer</label>
               <input
+                id="storage-article-number"
                 type="text"
                 value={articleNumber}
                 onChange={(e) => setArticleNumber(e.target.value)}
-                placeholder="z.B. 01075000"
+                placeholder="z. B. 01075000"
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Maschinen-ID</label>
+              <label htmlFor="storage-machine-id" className="mb-1 block text-sm font-medium text-slate-700">Maschinen-ID</label>
               <input
+                id="storage-machine-id"
                 type="number"
                 value={machineId}
                 onChange={(e) => setMachineId(e.target.value)}
-                placeholder="z.B. 3"
+                placeholder="z. B. 3"
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Ort / Lagerplatz</label>
+              <label htmlFor="storage-location-id" className="mb-1 block text-sm font-medium text-slate-700">Ort / Lagerplatz</label>
               <input
+                id="storage-location-id"
                 type="number"
                 value={locationId}
                 onChange={(e) => setLocationId(e.target.value)}
-                placeholder="z.B. 5"
+                placeholder="z. B. 5"
                 className={inputClass}
               />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+              <label htmlFor="storage-description" className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
               <input
+                id="storage-description"
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -163,7 +191,7 @@ export default function StorageItemForm({ initial, onSave, onClose }: StorageIte
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="sticky bottom-0 -mx-6 flex justify-end gap-3 border-t border-white/70 bg-white/95 px-6 pb-6 pt-4 backdrop-blur">
             <button
               type="button"
               onClick={onClose}

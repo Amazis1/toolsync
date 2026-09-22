@@ -7,7 +7,7 @@ import LendModal from '../movements/LendModal'
 
 interface ToolListProps {
   onEdit: (tool: Tool) => void
-  onDelete: (id: number) => void
+  onDelete: (tool: Tool) => void
   refreshKey: number
   onRefreshDone: () => void
 }
@@ -32,7 +32,11 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
     try {
       setTools(await getTools())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'Werkzeuge konnten nicht geladen werden. Lade die Seite neu.',
+      )
     } finally {
       setLoading(false)
       onRefreshDone()
@@ -44,7 +48,7 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
   }, [load, refreshKey])
 
   async function handleDelete(tool: Tool) {
-    onDelete(tool.id)
+    onDelete(tool)
   }
 
   const filtered = tools.filter((tool) => {
@@ -81,29 +85,13 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
     }
   }
 
-  const statusDotClass = (status: ToolStatus | null): string => {
-    switch (status) {
-      case 'available':
-        return 'bg-emerald-500'
-      case 'lent':
-        return 'bg-teal-500'
-      case 'maintenance':
-        return 'bg-amber-500'
-      case 'defective':
-      case 'in_transit':
-        return 'bg-rose-500'
-      default:
-        return 'bg-slate-400'
-    }
-  }
-
   return (
     <div>
       {/* Such- und Filterleiste */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative min-w-[220px] flex-1">
           <svg
-            className="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+            className="absolute left-3 top-2.5 h-5 w-5 text-slate-600"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -117,16 +105,18 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
           </svg>
           <input
             type="search"
+            aria-label="Werkzeuge durchsuchen"
             placeholder="Werkzeug-ID, Bezeichnung, Typ oder Werk…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input-bordered text-sm pl-10 pr-4 py-2"
+            className="input-bordered text-base sm:text-sm pl-10 pr-4 py-2"
           />
         </div>
         <select
+          aria-label="Nach Kategorie filtern"
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="select-bordered text-xs px-3 py-1.5 cursor-pointer"
+          className="select-bordered text-base sm:text-sm px-3 py-1.5 cursor-pointer"
         >
           <option value="">Alle Kategorien</option>
           {(Object.keys(TOOL_CATEGORY_LABELS) as ToolCategory[]).map((c) => (
@@ -136,9 +126,10 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
           ))}
         </select>
         <select
+          aria-label="Nach Status filtern"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="select-bordered text-xs px-3 py-1.5 cursor-pointer"
+          className="select-bordered text-base sm:text-sm px-3 py-1.5 cursor-pointer"
         >
           <option value="">Alle Status</option>
           {(Object.keys(TOOL_STATUS_LABELS) as ToolStatus[]).map((s) => (
@@ -166,10 +157,10 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
       {loading ? (
         <div className="flex items-center gap-3 py-8 justify-center">
           <div className="ui-spinner" />
-          <p className="text-sm text-slate-500">Werkzeuge werden geladen …</p>
+          <p className="text-sm text-slate-600">Werkzeuge werden geladen …</p>
         </div>
-      ) : filtered.length === 0 ? (
-        <p className="py-8 text-center text-slate-500">
+      ) : error && tools.length === 0 ? null : filtered.length === 0 ? (
+        <p className="py-8 text-center text-slate-600">
           {tools.length === 0
             ? 'Noch keine Werkzeuge vorhanden. Lege das erste Werkzeug an.'
             : 'Keine Werkzeuge für die aktuellen Filter gefunden.'}
@@ -177,7 +168,7 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/60 bg-white/30">
           <table className="w-full min-w-[760px] whitespace-nowrap text-left text-xs">
-            <thead className="border-b border-slate-200/60 bg-white/50 font-semibold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-white/50 font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="px-3.5 py-3">Werkzeug-ID</th>
                 <th className="px-3.5 py-3">Bezeichnung</th>
@@ -212,11 +203,12 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
                   <td className="px-3.5 py-3">
                     {tool.status ? (
                       <span className={statusBadgeClass(tool.status)}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${statusDotClass(tool.status)}`} />
+                        {/* Punkt erbt die Badge-Farbe (currentColor) – eine Farbe pro Bedeutung. */}
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {TOOL_STATUS_LABELS[tool.status] ?? tool.status}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-600">—</span>
                     )}
                   </td>
                   <td className="px-3.5 py-3 text-right whitespace-nowrap">
@@ -236,7 +228,6 @@ export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }
                     </button>
                     <button
                       onClick={() => handleDelete(tool)}
-                      title="Löschen"
                       className="ui-btn ui-btn-danger-soft ui-btn-sm"
                     >
                       Löschen

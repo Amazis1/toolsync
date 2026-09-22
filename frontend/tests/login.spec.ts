@@ -57,7 +57,7 @@ test('Admin-Login mit Personalnummer und Passwort', async ({ page }) => {
   // Nach dem Login: Kopfzeile, Name und Admin-Hinweis sichtbar
   await expect(page.getByRole('heading', { name: 'ToolSync' })).toBeVisible()
   await expect(page.getByText('Admin User (Admin)')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Abmelden' })).toBeVisible()
 })
 
 // ----------------------------------------------------------------
@@ -71,8 +71,8 @@ test('Logout führt zurück zur Login-Seite', async ({ page }) => {
   await page.getByRole('button', { name: 'Anmelden' }).click()
   await expect(page.getByRole('heading', { name: 'ToolSync' })).toBeVisible()
 
-  // Logout durchführen
-  await page.getByRole('button', { name: 'Logout' }).click()
+  // Abmelden durchführen
+  await page.getByRole('button', { name: 'Abmelden' }).click()
 
   // Zurück auf der Login-Seite
   await expect(page.getByRole('heading', { name: 'ToolSync Login' })).toBeVisible()

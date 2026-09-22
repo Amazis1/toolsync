@@ -30,7 +30,7 @@ const LoginForm: React.FC = () => {
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Login fehlgeschlagen. Bitte versuche es erneut.'
+        err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Versuche es erneut.'
       );
     } finally {
       setIsLoading(false);
@@ -59,7 +59,7 @@ const LoginForm: React.FC = () => {
       <h2 className='text-2xl font-bold mb-1 text-center text-slate-900'>
         ToolSync
       </h2>
-      <p className='text-sm text-slate-500 text-center mb-6'>
+      <p className='text-sm text-slate-600 text-center mb-6'>
         Anmeldung
       </p>
 
@@ -70,7 +70,8 @@ const LoginForm: React.FC = () => {
           className={tab === 'user' ? 'is-active flex-1' : 'flex-1'}
         >
           <span className='inline-flex items-center justify-center gap-2'>
-            <UserIcon className='icon w-4 h-4 text-teal-600' />
+            {/* Icon erbt die Farbe des Tabs (currentColor) statt fester Farbe. */}
+            <UserIcon className='w-4 h-4' />
             Mitarbeiter
           </span>
         </button>
@@ -80,7 +81,7 @@ const LoginForm: React.FC = () => {
           className={tab === 'admin' ? 'is-active flex-1' : 'flex-1'}
         >
           <span className='inline-flex items-center justify-center gap-2'>
-            <LoginIcon className='icon w-4 h-4 text-teal-600' />
+            <LoginIcon className='w-4 h-4' />
             Admin
           </span>
         </button>
@@ -88,6 +89,9 @@ const LoginForm: React.FC = () => {
 
       <form onSubmit={handleSubmit} className='space-y-4'>
         <div>
+          <label htmlFor='personalNumber' className='mb-1 block text-sm font-medium text-slate-700'>
+            Personalnummer
+          </label>
           <input
             id='personalNumber'
             name='personalNumber'
@@ -95,7 +99,7 @@ const LoginForm: React.FC = () => {
             value={personalNumber}
             onChange={(e) => setPersonalNumber(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder='Personalnummer'
+            placeholder='z. B. 4711'
             required
             autoComplete='off'
             autoCorrect='off'
@@ -111,6 +115,9 @@ const LoginForm: React.FC = () => {
 
         {tab === 'admin' && (
           <div>
+            <label htmlFor='password' className='mb-1 block text-sm font-medium text-slate-700'>
+              Passwort
+            </label>
             <input
               id='password'
               type='password'
@@ -128,13 +135,13 @@ const LoginForm: React.FC = () => {
 
         {error && (
           <div role='alert' className='ui-alert ui-alert-error'>
-            <span>×</span>
+            <span aria-hidden='true'>×</span>
             <div>{error}</div>
           </div>
         )}
 
         <button type='submit' disabled={isLoading} className='ui-btn ui-btn-primary w-full'>
-          {isLoading ? 'Anmelden...' : 'Anmelden'}
+          {isLoading ? 'Wird angemeldet …' : 'Anmelden'}
         </button>
       </form>
     </div>

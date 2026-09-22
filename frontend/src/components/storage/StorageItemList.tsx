@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { deleteStorageItem, getStorageItems } from '../../api/storage'
+import ConfirmDialog from '../ConfirmDialog'
 import type { StorageItem } from '../../types/storage-item'
 
 interface StorageItemListProps {
@@ -13,6 +14,8 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [itemToDelete, setItemToDelete] = useState<StorageItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -20,7 +23,11 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
     try {
       setItems(await getStorageItems(search))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'Lager/Ersatz konnte nicht geladen werden. Lade die Seite neu.',
+      )
     } finally {
       setLoading(false)
       onRefreshDone()
@@ -32,14 +39,23 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
     return () => clearTimeout(timer)
   }, [load, refreshKey])
 
-  async function handleDelete(item: StorageItem) {
-    const ok = window.confirm(`Lager-/Ersatzobjekt "${item.storage_id}" wirklich löschen?`)
-    if (!ok) return
+  async function confirmDelete() {
+    if (!itemToDelete) return
+    setDeleting(true)
+    setError(null)
     try {
-      await deleteStorageItem(item.id)
-      setItems((prev) => prev.filter((i) => i.id !== item.id))
+      await deleteStorageItem(itemToDelete.id)
+      setItems((prev) => prev.filter((i) => i.id !== itemToDelete.id))
+      setItemToDelete(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Löschen fehlgeschlagen')
+      setItemToDelete(null)
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'Das Objekt konnte nicht gelöscht werden. Lade die Liste neu.',
+      )
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -48,10 +64,11 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
       <div className="border-b border-white/70 p-4">
         <input
           type="text"
+          aria-label="Lager/Ersatz durchsuchen (ID, Name, Typ, Artikelnummer)"
           placeholder="Lager/Ersatz durchsuchen (ID, Name, Typ, Artikelnummer) …"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-bordered text-sm w-full max-w-md"
+          className="input-bordered text-base sm:text-sm w-full max-w-md"
         />
       </div>
 
@@ -65,10 +82,10 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
       {loading ? (
         <div className="flex items-center gap-3 py-8 justify-center">
           <div className="ui-spinner" />
-          <p className="text-sm text-slate-500">Lager/Ersatz wird geladen …</p>
+          <p className="text-sm text-slate-600">Lager/Ersatz wird geladen …</p>
         </div>
-      ) : items.length === 0 ? (
-        <p className="py-8 text-center text-slate-500">
+      ) : error && items.length === 0 ? null : items.length === 0 ? (
+        <p className="py-8 text-center text-slate-600">
           {search.trim()
             ? 'Keine Lager-/Ersatzobjekte gefunden.'
             : 'Noch keine Lager-/Ersatzobjekte vorhanden. Lege das erste Objekt an.'}
@@ -76,7 +93,7 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-sm">
-            <thead className="text-xs uppercase text-slate-500">
+            <thead className="text-xs uppercase text-slate-600">
               <tr className="border-b border-white/70">
                 <th className="px-3 py-2">Lager-ID</th>
                 <th className="px-3 py-2">Name</th>
@@ -97,7 +114,7 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
                       {item.storage_id}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-slate-800">{item.name}</td>
+                  <td className="px-3 py-2 text-slate-900">{item.name}</td>
                   <td className="px-3 py-2 text-slate-600">{item.type ?? '—'}</td>
                   <td className="px-3 py-2 text-slate-600">{item.article_number ?? '—'}</td>
                   <td className="px-3 py-2 text-slate-600">{item.machine_id ?? '—'}</td>
@@ -120,7 +137,7 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
                       Bearbeiten
                     </button>
                     <button
-                      onClick={() => handleDelete(item)}
+                      onClick={() => setItemToDelete(item)}
                       className="ui-btn ui-btn-danger-soft ui-btn-sm"
                     >
                       Löschen
@@ -131,6 +148,18 @@ export default function StorageItemList({ onEdit, refreshKey, onRefreshDone }: S
             </tbody>
           </table>
         </div>
+      )}
+
+      {itemToDelete && (
+        <ConfirmDialog
+          title={`Lager-/Ersatzobjekt „${itemToDelete.storage_id}“ löschen?`}
+          description="Das Objekt wird endgültig entfernt. Das lässt sich nicht rückgängig machen."
+          confirmLabel="Objekt löschen"
+          busyLabel="Wird gelöscht …"
+          busy={deleting}
+          onConfirm={() => { void confirmDelete() }}
+          onCancel={() => setItemToDelete(null)}
+        />
       )}
     </div>
   )
