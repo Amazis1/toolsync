@@ -260,6 +260,14 @@
       outline-offset: 2px;
     }
 
+    /* Derselbe Ring, in admin.css an .admin-shell gekapselt: das Panel wird in
+       eine bestehende Oberfläche eingebettet, deren eigene Fokusregeln
+       unangetastet bleiben müssen. Zwei Namen, ein Aussehen. */
+    .admin-shell :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+      outline: 2px solid var(--admin-primary);
+      outline-offset: 2px;
+    }
+
     /* ===== SKIP LINK ===== */
     .admin-skip {
       position: absolute; left: -9999px; top: 0; z-index: 60;
@@ -417,6 +425,20 @@
       opacity: .45; cursor: not-allowed; transform: none; box-shadow: none;
     }
 
+    /* Kompatibilitäts-Aliasse für Bestandsmarkup. .admin-btn-ghost ist
+       deckungsgleich mit Tertiary, .admin-btn-danger-soft die gefüllte
+       Danger-Variante für ruhige Kontexte. Beide tragen keine eigenen Werte —
+       sonst laufen zwei Namen für dieselbe Gewichtung optisch auseinander. */
+    .admin-btn-ghost {
+      background: transparent; color: var(--admin-primary); padding-inline: .6rem;
+    }
+    .admin-btn-ghost:hover { background: var(--admin-tertiary-hover-bg); }
+    .admin-btn-danger-soft {
+      background: var(--admin-danger-bg); color: var(--admin-danger-fg);
+      border: 1px solid var(--admin-danger-line);
+    }
+    .admin-btn-danger-soft:hover { background: var(--admin-danger-bg); filter: brightness(.97); }
+
     /* ===== INPUTS ===== */
     .admin-input, .admin-select, .admin-textarea {
       width: 100%; border: 1px solid var(--admin-border-strong);
@@ -455,6 +477,10 @@
     .admin-badge-warning { background: var(--admin-warning-bg); color: var(--admin-warning-fg); }
     .admin-badge-neutral { background: var(--admin-neutral-bg); color: var(--admin-neutral-fg); }
     .admin-badge-primary { background: var(--admin-primary-bg-soft); color: var(--admin-primary-fg-soft); }
+    /* Info-Familie: die Tokens existierten, es fehlte nur die Badge-Klasse.
+       Ohne sie wird Information als „Neutral" gelesen — ein Unterschied,
+       der in einer Statusspalte Bedeutung trägt. */
+    .admin-badge-info { background: var(--admin-info-bg); color: var(--admin-info-fg); }
     /* Dot erbt die Badge-Farbe → kein bg-*-Utility mehr nötig */
     .admin-badge .admin-dot { background: currentColor; }
     .admin-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
@@ -615,6 +641,22 @@
       }
     }
 
+    /* Dieselbe Absicherung zusätzlich an .admin-shell gebunden — so, wie
+       admin.css sie ausliefert. Bewegung wird nicht entfernt, sondern auf ein
+       Minimum gesetzt: Zustandswechsel finden weiterhin statt, nur ohne Weg.
+       Eine Dauer von 0 würde transitionend-Events verschlucken. */
+    @media (prefers-reduced-motion: reduce) {
+      .admin-shell *, .admin-shell *::before, .admin-shell *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+
+    /* Der Burger existiert nur unterhalb des Drawer-Breakpoints. In admin.css
+       blendet ihn diese Regel aus; das Markup braucht dafür kein Utility. */
+    .admin-burger { display: none; }
+
     @media (max-width: 1024px) {
       .grid-2 { grid-template-columns: 1fr; }
       /* Sidebar wird Drawer statt ersatzlos zu verschwinden */
@@ -662,6 +704,21 @@
     }
     .admin-icon-btn:hover { background: var(--admin-surface-hover); color: var(--admin-text); }
 
+    /* Icon-Button auf einer farbigen Fläche (z. B. belegte Platzkarte mit
+       --admin-primary). .admin-icon-btn ist für neutrale Flächen gedacht und
+       wäre hier unsichtbar. Die Danger-Variante ist ein Alpha-Wert auf der
+       Fläche, weil es dafür keinen eigenen Token gibt. */
+    .admin-icon-btn-on-color {
+      width: 24px; height: 24px; border-radius: var(--admin-radius-sm);
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 0; cursor: pointer; flex-shrink: 0;
+      background: rgba(255, 255, 255, .20); color: var(--admin-on-primary);
+      transition: background var(--admin-dur) var(--admin-ease);
+    }
+    .admin-icon-btn-on-color:hover { background: rgba(255, 255, 255, .40); }
+    .admin-icon-btn-on-color.is-danger { background: rgba(225, 29, 72, .30); }
+    .admin-icon-btn-on-color.is-danger:hover { background: rgba(225, 29, 72, .60); }
+
     /* ===== CHARTS ===== */
     .admin-chart-card {
       background: var(--admin-surface); border: 1px solid var(--admin-border);
@@ -708,6 +765,9 @@
     /* Peak = Positionsfarbe, nicht Blässe */
     .admin-bar.is-peak { background: var(--admin-primary-hover); }
     .admin-bar.is-peak:hover { background: var(--admin-primary-hover); }
+    /* Gedämpft = dieselbe Familie, eine Stufe tiefer: zeigt Vergleichswerte
+       neben dem Peak, ohne mit ihm um Aufmerksamkeit zu konkurrieren. */
+    .admin-bar.is-muted { background: var(--admin-primary-soft); }
     .admin-bar-label {
       font-size: .625rem; font-weight: 600; color: var(--admin-text-subtle);
     }
@@ -771,14 +831,68 @@
     .admin-toast-error { border-color: var(--admin-danger-bg); }
     .admin-toast-warning { border-color: var(--admin-warning-bg); }
 
-    /* ===== TOOLTIP ===== */
-    .admin-tip { position: relative; }
+    /* ===== TOOLTIP =====
+       Standardweg ist die Portal-Variante .is-fixed: die Bubble wird in
+       <body> gerendert und mit position: fixed an den Auslöser geheftet
+       (linke/obere Kante kommen als Inline-Style vom Auslöser).
+
+       Grund: eine absolut positionierte Bubble kommt aus Containern mit
+       overflow nicht heraus. Beides gibt es im AdminPanel:
+         .admin-card      { overflow: hidden }    -> Bubble wird abgeschnitten
+         .admin-scroll-y  { overflow-y: auto }    -> overflow-x rechnet sich
+                                                     laut Spezifikation auf
+                                                     auto mit, die Bubble
+                                                     erzeugt dadurch einen
+                                                     horizontalen Scrollbalken
+
+       .is-fixed liegt mit z-index 60 über dem Modal-Overlay (50). Die
+       absoluten Regeln darunter bleiben für Fälle ohne Portal; dort muss
+       z-index 30 den klebenden Tabellenkopf überbieten
+       (.admin-table-sticky thead th liegt auf z-index 5). */
+    .admin-tip { position: relative; z-index: 30; }
     .admin-tip-bubble {
       position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+      z-index: 30;
       background: var(--admin-tooltip-bg); color: var(--admin-tooltip-fg);
       font-size: .625rem; font-weight: 600; white-space: nowrap;
       padding: .3rem .5rem; border-radius: var(--admin-radius-sm);
       box-shadow: var(--admin-shadow-2); pointer-events: none;
+    }
+    .admin-tip-bubble.is-fixed {
+      position: fixed; bottom: auto; z-index: 60;
+      transform: translate(-50%, -100%);
+    }
+    /* Variante unterhalb des Auslösers, wenn oberhalb kein Platz ist. */
+    .admin-tip-bubble.is-below {
+      top: calc(100% + 6px); bottom: auto;
+    }
+    .admin-tip-bubble.is-fixed.is-below {
+      transform: translate(-50%, 0);
+    }
+
+    /* ===== ZEILEN-AKTIONSMENÜ =====
+       Das Menü fährt als Slide-out aus der Tabellenzeile heraus, statt ein
+       Modal zu öffnen: die Zeile bleibt sichtbar, auf die sich die Aktion
+       bezieht. Der Trigger tritt dabei zurück, weil er seine Aufgabe an das
+       Panel abgibt — zwei sichtbare Ebenen an derselben Stelle wären eine
+       Doppelung. */
+    .admin-row-actions {
+      position: relative; display: flex; justify-content: flex-end; align-items: center;
+      min-height: 28px; min-width: 72px;
+    }
+    .admin-row-actions-trigger { transition: opacity var(--admin-dur) var(--admin-ease); }
+    /* z-index: 30 aus demselben Grund wie beim Tooltip: das transform erzeugt
+       einen eigenen Stacking-Context, der sonst unter dem Tabellenkopf landet. */
+    .admin-row-actions-panel {
+      position: absolute; z-index: 30; right: 0; top: 50%;
+      display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap;
+      opacity: 0; pointer-events: none;
+      transform: translateY(-50%) scaleX(.5); transform-origin: right center;
+      transition: transform .22s var(--admin-ease), opacity .18s var(--admin-ease);
+    }
+    .admin-row-actions.is-open .admin-row-actions-trigger { opacity: 0; pointer-events: none; }
+    .admin-row-actions.is-open .admin-row-actions-panel {
+      opacity: 1; pointer-events: auto; transform: translate(0, -50%);
     }
 
     /* ==========================================================================
@@ -825,6 +939,38 @@
     }
     /* In einem scrollenden Container muss der Kopf am Container kleben */
     .admin-scroll-y { max-height: 260px; overflow-y: auto; }
+
+    /* ===== TOKEN-HELFER & FLÄCHEN =====
+       Dünne Klassen über der Tokenschicht. Sie ersetzen die Inline-Styles im
+       Markup (style="color: var(--admin-text-subtle)") durch einen Namen, der
+       im Theme automatisch mitwandert. Keine eigenen Farbwerte. */
+    .admin-text        { color: var(--admin-text); }
+    .admin-text-muted  { color: var(--admin-text-muted); }
+    .admin-text-subtle { color: var(--admin-text-subtle); }
+    /* Linien setzen nur border-color — Breite und Stil kommen vom Element */
+    .admin-line        { border-color: var(--admin-border); }
+    .admin-line-soft   { border-color: var(--admin-divider); }
+    .admin-line-strong { border-color: var(--admin-border-strong); }
+    .admin-surface-sub { background-color: var(--admin-surface-subtle); }
+
+    /* Flächen für Aufklappzeilen und Inline-Panels: der Zeilenkopf trägt die
+       Hover-Fläche, das Panel darunter liegt zurückgesetzt (informativ) oder
+       hervorgehoben (bearbeitbar). */
+    .admin-rowhead {
+      background: var(--admin-surface);
+      transition: background var(--admin-dur) var(--admin-ease);
+    }
+    .admin-rowhead:hover { background: var(--admin-surface-hover); }
+    .admin-inline-panel {
+      background: var(--admin-surface-subtle);
+      border: 1px solid var(--admin-border);
+      border-radius: var(--admin-radius);
+    }
+    .admin-inline-panel-solid {
+      background: var(--admin-surface);
+      border: 1px solid var(--admin-border);
+      border-radius: var(--admin-radius);
+    }
 
     /* ===== SEITENMUSTER (Fehlerzustände, Anmeldung) ===== */
     .admin-page-center {
@@ -1173,6 +1319,77 @@
               „Farben &amp; Tokens" vollständig dokumentiert.</div>
             </div>
           </div>
+          <!-- Querschnittsregeln: Fokusring, Burger, Bewegungsreduktion -->
+          <div class="admin-card p-5">
+            <h2 class="section-title mb-1">Querschnittsregeln: Fokus, Burger &amp; Bewegung</h2>
+            <p class="text-xs mb-4 leading-relaxed" style="color: var(--admin-text-subtle)">
+              Drei Regeln ohne eigene Komponente, die aber jede Ansicht betreffen. Zwei davon sieht man nur,
+              wenn man sie auslöst — der Fokusring beim Tabulieren, der Burger unterhalb des Breakpoints.
+              Die dritte greift von selbst, sobald das Betriebssystem sie anfordert.
+            </p>
+            <div class="grid-2">
+              <div class="demo-surface space-y-4">
+                <div>
+                  <div class="admin-kpi-label mb-2">Fokusring · einmal Tab drücken</div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button class="admin-btn admin-btn-primary">Ausleihen</button>
+                    <button class="admin-btn admin-btn-secondary">Details</button>
+                    <input class="admin-input !w-40" type="text" placeholder="Inventarnummer" aria-label="Inventarnummer" />
+                  </div>
+                  <div class="text-[11px] mt-2" style="color: var(--admin-text-subtle)">
+                    Buttons, Felder und Links tragen dieselbe Kante: 2px Primary, 2px Abstand.
+                  </div>
+                </div>
+                <div>
+                  <div class="admin-kpi-label mb-2">Burger · nur bis 1024px sichtbar</div>
+                  <div class="flex items-center gap-3">
+                    <button class="admin-icon-btn admin-burger" style="display: inline-flex; border: 1px solid var(--admin-border)"
+                            aria-controls="admin-sidebar" aria-expanded="false" aria-label="Navigation öffnen">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                    </button>
+                    <span class="text-[11px] leading-relaxed" style="color: var(--admin-text-subtle)">
+                      Hier zur Ansicht erzwungen. In der Anwendung ist
+                      <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-burger</code>
+                      ausgeblendet und wird erst im Drawer-Breakpoint eingeblendet.
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="code-panel">
+                <button class="code-copy" @click="navigator.clipboard.writeText($refs.crosscode.innerText); copied='cross'; setTimeout(() => copied='', 1400)" :class="copied === 'cross' && 'is-done'" x-text="copied === 'cross' ? 'kopiert' : 'kopieren'"></button>
+                <pre x-ref="crosscode">/* Fokusring – an .admin-shell gekapselt, damit fremde
+   Oberflächen ihre eigenen Fokusregeln behalten */
+.admin-shell :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+/* Burger: unsichtbar über dem Breakpoint, Trigger darunter */
+.admin-burger { display: none; }
+@media (max-width: 1024px) { .admin-burger { display: inline-flex; } }
+
+/* Bewegung abschalten heißt hier: auf ein Minimum setzen.
+   Zustandswechsel finden weiterhin statt, nur ohne Weg. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell *, .admin-shell *::before, .admin-shell *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}</pre>
+              </div>
+            </div>
+            <div class="admin-alert admin-alert-info mt-4">
+              <span aria-hidden="true">i</span>
+              <div><strong>Warum 0,01ms und nicht 0:</strong> Ein auf
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">0</code> gesetzter Übergang
+              feuert keine <code class="px-1 rounded" style="background: var(--admin-surface-hover)">transitionend</code>-Events
+              mehr — Oberflächen, die darauf warten (z. B. um ein Overlay zu entfernen), bleiben dann hängen.
+              Deshalb wird die Dauer nur auf ein Minimum gesetzt. Die Absicherung existiert zweimal: global für
+              diese Referenzseite und an <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-shell</code>
+              gebunden für die Anwendung.</div>
+            </div>
+          </div>
         </section>
 
         <!-- ============================ COLORS ============================ -->
@@ -1280,6 +1497,83 @@
               bei 2,6:1 und wurde deshalb auf einen lesbaren Ton angehoben.
               Die Badge-Hintergründe sind vor allem <em>entsättigt</em>, damit vier Statusfarben nebeneinander
               nicht schreien; der Kontrastgewinn ist ein Nebeneffekt.</div>
+            </div>
+          </div>
+
+          <!-- Token-Helfer: Text, Linien, Flächen und die Info-Badge -->
+          <div class="admin-card p-5">
+            <h2 class="section-title mb-1">Token-Helfer &amp; die Info-Familie</h2>
+            <p class="text-xs mb-4 leading-relaxed" style="color: var(--admin-text-subtle)">
+              Dünne Klassen über der Tokenschicht. Sie ersetzen die Inline-Styles im Markup
+              (<code class="px-1 rounded" style="background: var(--admin-surface-hover)">style="color: var(--admin-text-subtle)"</code>)
+              durch einen Namen, der im Theme automatisch mitwandert. Zur Familie gehören auch die Badges:
+              Die Info-Tokens existierten bereits, es fehlte nur die Klasse — Information wurde deshalb
+              als „Neutral" gelesen, obwohl sie in einer Statusspalte etwas anderes bedeutet.
+            </p>
+            <div class="grid-2">
+              <div class="demo-surface space-y-4">
+                <div>
+                  <div class="admin-kpi-label mb-2">Text-Töne</div>
+                  <div class="space-y-1">
+                    <div class="admin-text text-xs font-semibold">Werkzeug ausgegeben · .admin-text</div>
+                    <div class="admin-text-muted text-xs">Werkzeug ausgegeben · .admin-text-muted</div>
+                    <div class="admin-text-subtle text-xs">Werkzeug ausgegeben · .admin-text-subtle</div>
+                  </div>
+                  <div class="text-[10px] mt-2 tnum" style="color: var(--admin-text-subtle)">
+                    #0f172a 17,9:1 · #334747 9,9:1 · #5d7070 5,2:1 (auf Surface)
+                  </div>
+                </div>
+                <div>
+                  <div class="admin-kpi-label mb-2">Linien</div>
+                  <div class="space-y-2.5">
+                    <div>
+                      <div class="admin-line border-t"></div>
+                      <div class="text-[10px] mt-1" style="color: var(--admin-text-subtle)">.admin-line · --admin-border</div>
+                    </div>
+                    <div>
+                      <div class="admin-line-soft border-t"></div>
+                      <div class="text-[10px] mt-1" style="color: var(--admin-text-subtle)">.admin-line-soft · --admin-divider</div>
+                    </div>
+                    <div>
+                      <div class="admin-line-strong border-t"></div>
+                      <div class="text-[10px] mt-1" style="color: var(--admin-text-subtle)">.admin-line-strong · --admin-border-strong</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="admin-kpi-label mb-2">Fläche &amp; Info-Badge</div>
+                  <div class="admin-card p-3 flex flex-wrap items-center gap-2">
+                    <div class="admin-surface-sub admin-line border rounded-lg px-3 py-1.5 text-[11px]" style="color: var(--admin-text-subtle)">
+                      .admin-surface-sub
+                    </div>
+                    <span class="admin-badge admin-badge-info"><span class="admin-dot"></span> Information</span>
+                  </div>
+                  <div class="text-[10px] mt-2 tnum" style="color: var(--admin-text-subtle)">
+                    #17416b auf #eef6fd · 9,6:1
+                  </div>
+                </div>
+              </div>
+              <div class="code-panel">
+                <button class="code-copy" @click="navigator.clipboard.writeText($refs.utilcode.innerText); copied='util'; setTimeout(() => copied='', 1400)" :class="copied === 'util' && 'is-done'" x-text="copied === 'util' ? 'kopiert' : 'kopieren'"></button>
+                <pre x-ref="utilcode">/* Token-Helfer: nur Verweise, keine eigenen Werte */
+.admin-text        { color: var(--admin-text); }
+.admin-text-muted  { color: var(--admin-text-muted); }
+.admin-text-subtle { color: var(--admin-text-subtle); }
+
+/* Linien setzen nur border-color – Breite und Stil kommen vom Element.
+   Deshalb immer zusammen mit border / border-t / border-b verwenden. */
+.admin-line        { border-color: var(--admin-border); }
+.admin-line-soft   { border-color: var(--admin-divider); }
+.admin-line-strong { border-color: var(--admin-border-strong); }
+
+.admin-surface-sub { background-color: var(--admin-surface-subtle); }
+.admin-badge-info  { background: var(--admin-info-bg); color: var(--admin-info-fg); }
+
+&lt;div class="admin-line-soft border-t"&gt;&lt;/div&gt;
+&lt;span class="admin-badge admin-badge-info"&gt;
+  &lt;span class="admin-dot"&gt;&lt;/span&gt; Information
+&lt;/span&gt;</pre>
+              </div>
             </div>
           </div>
 
@@ -1533,6 +1827,80 @@ html[data-theme="dark"] {
 /* .admin-btn-sm ist die Kompaktgröße für Tabellenzeilen.
    Primary trägt eine 1px-Schattenkante → hebt sich auch auf Weiß ab.
    .admin-btn-tertiary ist die flächenlose Gewichtung. */</pre>
+              </div>
+            </div>
+          </div>
+          <!-- Aliasse und Icon-Buttons auf farbigen Flächen -->
+          <div class="admin-card p-5 mt-4">
+            <h2 class="section-title mb-1">Aliasse &amp; Icon-Buttons auf farbigen Flächen</h2>
+            <p class="text-xs mb-4 leading-relaxed" style="color: var(--admin-text-subtle)">
+              Bestandsmarkup nutzt für die flächenlose Gewichtung den Namen
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-btn-ghost</code> —
+              er ist deckungsgleich mit <strong>Tertiary</strong>, damit zwei Namen nicht zu zwei Optiken werden.
+              Dazu der Fall, für den es bisher keine Klasse gab: ein Icon-Button auf einer
+              <em>farbigen</em> Fläche. Das neutrale
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-icon-btn</code>
+              wäre dort unsichtbar.
+            </p>
+            <div class="grid-2">
+              <div class="demo-surface space-y-4">
+                <div>
+                  <div class="admin-kpi-label mb-2">Aliasse</div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button class="admin-btn admin-btn-ghost">Verlauf ansehen</button>
+                    <button class="admin-btn admin-btn-tertiary">Verlauf ansehen</button>
+                    <button class="admin-btn admin-btn-danger-soft">Löschen</button>
+                    <button class="admin-btn admin-btn-danger-soft admin-btn-sm">Archivieren</button>
+                  </div>
+                  <div class="text-[11px] mt-2" style="color: var(--admin-text-subtle)">
+                    Ghost und Tertiary sind derselbe Button — gleiche Schriftfarbe, gleiche Fläche beim Hover.
+                  </div>
+                </div>
+                <div>
+                  <div class="admin-kpi-label mb-2">Auf farbiger Fläche (belegte Platzkarte)</div>
+                  <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg"
+                       style="background: var(--admin-primary); color: var(--admin-on-primary)">
+                    <span class="text-xs font-semibold">Platz 12 · M. Kramer</span>
+                    <span class="flex items-center gap-1.5">
+                      <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                        <button class="admin-icon-btn-on-color" aria-label="Belegung bearbeiten">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                        </button>
+                        <span x-show="t" x-cloak class="admin-tip-bubble">Belegung bearbeiten</span>
+                      </span>
+                      <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                        <button class="admin-icon-btn-on-color is-danger" aria-label="Belegung freigeben">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                        <span x-show="t" x-cloak class="admin-tip-bubble">Belegung freigeben</span>
+                      </span>
+                    </span>
+                  </div>
+                  <div class="text-[10px] mt-2" style="color: var(--admin-text-subtle)">
+                    Weiß auf Primary · 5,5:1. Die Danger-Variante ist ein Alpha-Wert auf der Fläche, kein eigener Token.
+                  </div>
+                </div>
+              </div>
+              <div class="code-panel">
+                <button class="code-copy" @click="navigator.clipboard.writeText($refs.aliascode.innerText); copied='alias'; setTimeout(() => copied='', 1400)" :class="copied === 'alias' && 'is-done'" x-text="copied === 'alias' ? 'kopiert' : 'kopieren'"></button>
+                <pre x-ref="aliascode">&lt;!-- Aliasse: derselbe Button unter zwei Namen --&gt;
+&lt;button class="admin-btn admin-btn-ghost"&gt;Verlauf ansehen&lt;/button&gt;
+&lt;button class="admin-btn admin-btn-tertiary"&gt;Verlauf ansehen&lt;/button&gt;
+&lt;button class="admin-btn admin-btn-danger-soft"&gt;Löschen&lt;/button&gt;
+
+/* Icon-Button auf einer farbigen Fläche */
+.admin-icon-btn-on-color {
+  width: 24px; height: 24px;
+  background: rgba(255, 255, 255, .20);
+  color: var(--admin-on-primary);
+}
+.admin-icon-btn-on-color:hover { background: rgba(255, 255, 255, .40); }
+.admin-icon-btn-on-color.is-danger { background: rgba(225, 29, 72, .30); }
+
+&lt;span class="admin-tip" x-data="{ t: false }"&gt;
+  &lt;button class="admin-icon-btn-on-color" aria-label="Belegung freigeben"&gt;…&lt;/button&gt;
+  &lt;span x-show="t" x-cloak class="admin-tip-bubble"&gt;Belegung freigeben&lt;/span&gt;
+&lt;/span&gt;</pre>
               </div>
             </div>
           </div>
@@ -1844,6 +2212,338 @@ html[data-theme="dark"] {
 
 /* Dichte über eine Token-Variable steuern:
    .admin-table-compact td { padding-block: var(--admin-row-pad-y-compact); } */</pre>
+            </div>
+          </div>
+          <!-- Zeilen-Aktionsmenü und Tooltip-Konvention -->
+          <div class="admin-card p-5">
+            <h2 class="section-title mb-1">Zeilen-Aktionsmenü &amp; Tooltip-Konvention</h2>
+            <p class="text-xs mb-4 leading-relaxed" style="color: var(--admin-text-subtle)">
+              Das Menü fährt als <strong>Slide-out aus der Zeile</strong> heraus, statt ein Modal zu öffnen:
+              die Zeile bleibt sichtbar, auf die sich die Aktion bezieht. Der Trigger ist ein Icon-Button —
+              damit gilt für ihn die Tooltip-Konvention unten. Beides zusammen braucht denselben
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">z-index: 30</code>,
+              sonst verschwindet es unter dem klebenden Tabellenkopf. Im Bearbeitungszustand nimmt derselbe
+              Container statt Trigger und Panel zwei Textbuttons auf (Speichern / Abbrechen) — die
+              Aktionsfläche einer Zeile bleibt damit immer an derselben Stelle.
+            </p>
+
+            <div class="rounded-xl border overflow-hidden" style="border-color: var(--admin-border)">
+              <div class="admin-scroll-y">
+                <table class="admin-table admin-table-sticky">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="width: 96px">ID</th>
+                      <th scope="col">Bezeichnung</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" class="text-right">Aktion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2001</td>
+                      <td>Stanzwerkzeug A2</td>
+                      <td><span class="admin-badge admin-badge-success"><span class="admin-dot"></span> Frei</span></td>
+                      <td>
+                        <div class="admin-row-actions" x-data="{ open: false }" :class="open && 'is-open'"
+                             @click.outside="open = false" @keydown.escape="open = false">
+                          <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                            <button class="admin-icon-btn admin-row-actions-trigger" aria-label="Aktionen für TS-2001"
+                                    aria-haspopup="menu" :aria-expanded="open" @click="open = true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <span x-show="t && !open" x-cloak class="admin-tip-bubble">Aktionen</span>
+                          </span>
+                          <div class="admin-row-actions-panel" role="menu" aria-label="Aktionen">
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Bearbeiten</span>
+                            </span>
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Löschen</span>
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2002</td>
+                      <td>Messmittel B1</td>
+                      <td><span class="admin-badge admin-badge-danger"><span class="admin-dot"></span> Ausgeliehen</span></td>
+                      <td>
+                        <div class="admin-row-actions" x-data="{ open: false }" :class="open && 'is-open'"
+                             @click.outside="open = false" @keydown.escape="open = false">
+                          <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                            <button class="admin-icon-btn admin-row-actions-trigger" aria-label="Aktionen für TS-2002"
+                                    aria-haspopup="menu" :aria-expanded="open" @click="open = true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <span x-show="t && !open" x-cloak class="admin-tip-bubble">Aktionen</span>
+                          </span>
+                          <div class="admin-row-actions-panel" role="menu" aria-label="Aktionen">
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Bearbeiten</span>
+                            </span>
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Löschen</span>
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2003</td>
+                      <td>Prüflehre C3</td>
+                      <td><span class="admin-badge admin-badge-warning"><span class="admin-dot"></span> Wartung</span></td>
+                      <td>
+                        <div class="admin-row-actions" x-data="{ open: false }" :class="open && 'is-open'"
+                             @click.outside="open = false" @keydown.escape="open = false">
+                          <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                            <button class="admin-icon-btn admin-row-actions-trigger" aria-label="Aktionen für TS-2003"
+                                    aria-haspopup="menu" :aria-expanded="open" @click="open = true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <span x-show="t && !open" x-cloak class="admin-tip-bubble">Aktionen</span>
+                          </span>
+                          <div class="admin-row-actions-panel" role="menu" aria-label="Aktionen">
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Bearbeiten</span>
+                            </span>
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Löschen</span>
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2004</td>
+                      <td>Drehmomentschlüssel D1</td>
+                      <td><span class="admin-badge admin-badge-success"><span class="admin-dot"></span> Frei</span></td>
+                      <td>
+                        <div class="admin-row-actions" x-data="{ open: false }" :class="open && 'is-open'"
+                             @click.outside="open = false" @keydown.escape="open = false">
+                          <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                            <button class="admin-icon-btn admin-row-actions-trigger" aria-label="Aktionen für TS-2004"
+                                    aria-haspopup="menu" :aria-expanded="open" @click="open = true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <span x-show="t && !open" x-cloak class="admin-tip-bubble">Aktionen</span>
+                          </span>
+                          <div class="admin-row-actions-panel" role="menu" aria-label="Aktionen">
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Bearbeiten</span>
+                            </span>
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Löschen</span>
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2005</td>
+                      <td>Höhenreißer E2</td>
+                      <td><span class="admin-badge admin-badge-neutral"><span class="admin-dot"></span> Archiviert</span></td>
+                      <td>
+                        <div class="admin-row-actions" x-data="{ open: false }" :class="open && 'is-open'"
+                             @click.outside="open = false" @keydown.escape="open = false">
+                          <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                            <button class="admin-icon-btn admin-row-actions-trigger" aria-label="Aktionen für TS-2005"
+                                    aria-haspopup="menu" :aria-expanded="open" @click="open = true">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            </button>
+                            <span x-show="t && !open" x-cloak class="admin-tip-bubble">Aktionen</span>
+                          </span>
+                          <div class="admin-row-actions-panel" role="menu" aria-label="Aktionen">
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Bearbeiten">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Bearbeiten</span>
+                            </span>
+                            <span class="admin-tip inline-flex" x-data="{ t: false }" @mouseenter="t = true" @mouseleave="t = false" @focusin="t = true" @focusout="t = false">
+                              <button class="admin-icon-btn" aria-label="Löschen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                              </button>
+                              <span x-show="t" x-cloak class="admin-tip-bubble">Löschen</span>
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="grid-2 mt-4">
+              <div class="demo-surface">
+                <div class="admin-kpi-label mb-2">Tooltip in der Zeile</div>
+                <div class="text-[11px] leading-relaxed" style="color: var(--admin-text-subtle)">
+                  Zeile <strong>1</strong> ist der kritische Fall: ihr Tooltip liegt über dem klebenden
+                  Tabellenkopf. Ohne <code class="px-1 rounded" style="background: var(--admin-surface-hover)">z-index: 30</code>
+                  verschwindet die Sprechblase genau dort. Über den Trigger öffnet sich das Menü —
+                  die Blase tritt dann zurück, weil der Trigger selbst zurücktritt. Geschlossen wird mit
+                  <kbd>Esc</kbd> oder einem Klick daneben, nicht beim Wegbewegen: ein Menü, das unter dem
+                  Zeiger zuklappt, ist nicht bedienbar.
+                </div>
+              </div>
+              <div class="code-panel">
+                <button class="code-copy" @click="navigator.clipboard.writeText($refs.rowactcode.innerText); copied='rowact'; setTimeout(() => copied='', 1400)" :class="copied === 'rowact' && 'is-done'" x-text="copied === 'rowact' ? 'kopiert' : 'kopieren'"></button>
+                <pre x-ref="rowactcode">&lt;!-- Slide-out-Menü in der Zeile: Trigger zu, Menü offen --&gt;
+&lt;div class="admin-row-actions is-open"&gt;
+  &lt;span class="admin-tip" x-data="{ t: false }"&gt;
+    &lt;button class="admin-icon-btn admin-row-actions-trigger"
+            aria-label="Aktionen für TS-2001" aria-haspopup="menu"
+            aria-expanded="true"&gt;…&lt;/button&gt;
+    &lt;span x-show="t &amp;&amp; !open" x-cloak class="admin-tip-bubble"&gt;Aktionen&lt;/span&gt;
+  &lt;/span&gt;
+  &lt;div class="admin-row-actions-panel" role="menu" aria-label="Aktionen"&gt;
+    &lt;span class="admin-tip"&gt;
+      &lt;button class="admin-icon-btn" aria-label="Bearbeiten"&gt;…&lt;/button&gt;
+      &lt;span x-cloak class="admin-tip-bubble"&gt;Bearbeiten&lt;/span&gt;
+    &lt;/span&gt;
+    &lt;span class="admin-tip"&gt;
+      &lt;button class="admin-icon-btn" aria-label="Löschen"&gt;…&lt;/button&gt;
+      &lt;span x-cloak class="admin-tip-bubble"&gt;Löschen&lt;/span&gt;
+    &lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+/* Schließen: Escape und Klick außerhalb – nicht per Hover */
+@click.outside="open = false"  @keydown.escape="open = false"
+
+/* Beide brauchen z-index: 30, weil der klebende Kopf auf 5 liegt.
+   Beim Panel kommt hinzu: das transform erzeugt einen eigenen
+   Stacking-Context – ohne z-index landet er unter &lt;th&gt;. */
+.admin-tip { position: relative; z-index: 30; }
+.admin-tip-bubble { z-index: 30; }
+.admin-row-actions-panel { position: absolute; z-index: 30; right: 0; top: 50%; }</pre>
+              </div>
+            </div>
+
+            <div class="admin-alert admin-alert-info mt-4">
+              <span aria-hidden="true">i</span>
+              <div><strong>Tooltip-Konvention:</strong> Ein Icon-Button ohne sichtbaren Text bekommt
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-tip</code> +
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-tip-bubble</code>,
+              die Beschriftung steht im <code class="px-1 rounded" style="background: var(--admin-surface-hover)">aria-label</code> —
+              <em>kein</em> <code class="px-1 rounded" style="background: var(--admin-surface-hover)">title</code>.
+              Dasselbe gilt für einen Button mit Text, der zusätzlich etwas erklären muss.
+              Nur abgeschnittener Text (<code class="px-1 rounded" style="background: var(--admin-surface-hover)">truncate</code>)
+              und mehrzeilige Container-Informationen nutzen das native
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">title</code>.
+              Grund: Hängen <code class="px-1 rounded" style="background: var(--admin-surface-hover)">title</code>
+              und Bubble am selben Element, zeigt der Browser <strong>beide</strong> Tooltips gleichzeitig —
+              eine über der anderen. Die Blase öffnet bei Hover <em>und</em> bei Tastaturfokus;
+              das Einzelbeispiel steht unter „Laden &amp; Leerzustände".</div>
+            </div>
+            <div class="admin-alert admin-alert-warning mt-3">
+              <span aria-hidden="true">!</span>
+              <div><strong>Die Falle mit dem Tabellenkopf:</strong> Der klebende Kopf
+              (<code class="px-1 rounded" style="background: var(--admin-surface-hover)">.admin-table-sticky thead th</code>)
+              liegt auf <code class="px-1 rounded" style="background: var(--admin-surface-hover)">z-index: 5</code>
+              und malt damit über alles, was keinen eigenen z-index hat. Ein Tooltip oder Menü ohne
+              <code class="px-1 rounded" style="background: var(--admin-surface-hover)">z-index: 30</code>
+              erscheint deshalb genau beim obersten sichtbaren Datensatz nicht — beim Rest der Tabelle schon.
+              Das erschwert die Fehlersuche, weil der Effekt beim Scrollen verschwindet.</div>
+            </div>
+          </div>
+
+          <!-- Aufklappzeile und Inline-Panels -->
+          <div class="admin-card p-5">
+            <h2 class="section-title mb-1">Aufklappzeile &amp; Inline-Panels</h2>
+            <p class="text-xs mb-4 leading-relaxed" style="color: var(--admin-text-subtle)">
+              Zeilenkopf und Panel gehören zusammen: der Kopf trägt die Zeilen-Hover-Fläche, das Panel darunter
+              liegt entweder zurückgesetzt auf <code class="px-1 rounded" style="background: var(--admin-surface-hover)">--admin-surface-subtle</code>
+              (Information) oder hervorgehoben auf <code class="px-1 rounded" style="background: var(--admin-surface-hover)">--admin-surface</code>
+              (bearbeitbar, z. B. eine Formularzeile innerhalb der Liste). So bleibt die Zeile eine Zeile,
+              ohne die Liste zu verlassen.
+            </p>
+            <div class="grid-2">
+              <div class="demo-surface" x-data="{ open: true }">
+                <div class="admin-card overflow-hidden">
+                  <button class="admin-rowhead w-full flex items-center justify-between gap-3 px-4 py-3 text-left border-b"
+                          style="border-color: var(--admin-divider)" @click="open = !open" :aria-expanded="open">
+                    <span class="flex items-center gap-2 min-w-0">
+                      <span class="font-mono font-semibold text-[12px]" style="color: var(--admin-text)">TS-2004</span>
+                      <span class="text-xs font-semibold" style="color: var(--admin-text)">Drehmomentschlüssel D1</span>
+                    </span>
+                    <span class="flex items-center gap-2 flex-shrink-0">
+                      <span class="admin-badge admin-badge-success"><span class="admin-dot"></span> Frei</span>
+                      <span class="inline-flex" style="color: var(--admin-text-subtle)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             :style="open ? '' : 'transform: rotate(-90deg)'"><path d="M6 9l6 6 6-6"/></svg>
+                      </span>
+                    </span>
+                  </button>
+                  <div x-show="open" x-cloak class="p-4 space-y-3">
+                    <div class="admin-inline-panel p-3">
+                      <div class="admin-kpi-label mb-1">Kalibrierung</div>
+                      <div class="admin-text-muted text-[11px]">Letzte Prüfung 12.06.2026 · nächste fällig 12.06.2027</div>
+                    </div>
+                    <div class="admin-inline-panel-solid p-3">
+                      <div class="admin-kpi-label mb-1">Rückgabe anpassen</div>
+                      <div class="admin-text-muted text-[11px]">Solid statt zurückgesetzt: die Fläche hebt sich von der Zeile ab und trägt allein durch Materialität „hier wird gearbeitet".</div>
+                    </div>
+                    <div class="admin-line-soft border-t"></div>
+                    <div class="flex justify-end gap-2">
+                      <button class="admin-btn admin-btn-secondary admin-btn-sm">Abbrechen</button>
+                      <button class="admin-btn admin-btn-primary admin-btn-sm">Speichern</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="code-panel">
+                <button class="code-copy" @click="navigator.clipboard.writeText($refs.inlinecode.innerText); copied='inline'; setTimeout(() => copied='', 1400)" :class="copied === 'inline' && 'is-done'" x-text="copied === 'inline' ? 'kopiert' : 'kopieren'"></button>
+                <pre x-ref="inlinecode">&lt;!-- Zeilenkopf trägt Hover, Panel trägt Inhalt --&gt;
+&lt;button class="admin-rowhead w-full flex items-center justify-between px-4 py-3 border-b"
+        aria-expanded="true"&gt;
+  TS-2004 · Drehmomentschlüssel D1
+&lt;/button&gt;
+
+&lt;div class="admin-inline-panel p-3"&gt;
+  &lt;div class="admin-kpi-label"&gt;Kalibrierung&lt;/div&gt;
+  &lt;div class="admin-text-muted"&gt;Letzte Prüfung 12.06.2026&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="admin-inline-panel-solid p-3"&gt;…bearbeitbar…&lt;/div&gt;
+
+/* Zurückgesetzt vs. hervorgehoben */
+.admin-inline-panel {
+  background: var(--admin-surface-subtle);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+}
+.admin-inline-panel-solid {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+}</pre>
+              </div>
             </div>
           </div>
         </section>

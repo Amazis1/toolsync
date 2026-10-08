@@ -241,6 +241,68 @@
     .ui-alert-warning { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.25); color: #92400e; }
     .ui-alert-error { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.22); color: #991b1b; }
 
+    /* Toasts – Aktions-Feedback nach dem Klick, gestapelt unten rechts */
+    .ui-toast-stack {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60;
+      display: flex; flex-direction: column; gap: .6rem;
+      width: min(23rem, calc(100vw - 3rem));
+      pointer-events: none;
+    }
+    @media (max-width: 640px) {
+      .ui-toast-stack { left: 1rem; right: 1rem; bottom: 1rem; width: auto; }
+    }
+    .ui-toast {
+      pointer-events: auto; position: relative; overflow: hidden;
+      display: flex; align-items: flex-start; gap: .7rem;
+      padding: .75rem .85rem;
+      border-radius: .9rem;
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(255,255,255,.85);
+      border-left: 3px solid #0f766e;
+      box-shadow: 0 18px 38px rgba(15,23,42,.18);
+      font-size: .72rem; color: #0f766e;
+      animation: ui-toast-in .22s ease-out;
+    }
+    .ui-toast-icon {
+      flex: 0 0 auto; width: 22px; height: 22px; border-radius: 999px;
+      display: grid; place-items: center;
+      background: #0f766e; color: #fff;
+      font-size: .65rem; font-weight: 800; line-height: 1;
+    }
+    .ui-toast-title { font-weight: 700; color: inherit; }
+    .ui-toast-msg { color: #475569; font-weight: 500; margin-top: .15rem; line-height: 1.5; }
+    .ui-toast-close {
+      flex: 0 0 auto; border: 0; background: transparent; cursor: pointer;
+      color: #94a3b8; font-size: .95rem; line-height: 1; padding: 0 .15rem;
+      transition: color .15s ease;
+    }
+    .ui-toast-close:hover { color: #0f172a; }
+    .ui-toast-life {
+      position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+      background: currentColor; opacity: .3;
+      animation-name: ui-toast-life; animation-timing-function: linear; animation-fill-mode: forwards;
+    }
+    .ui-toast-success { border-left-color: #0f766e; color: #0f766e; }
+    .ui-toast-error   { border-left-color: #e11d48; color: #9f1239; }
+    .ui-toast-warning { border-left-color: #f59e0b; color: #b45309; }
+    .ui-toast-info    { border-left-color: #3b82f6; color: #1d4ed8; }
+    .ui-toast-error .ui-toast-icon   { background: #e11d48; }
+    .ui-toast-warning .ui-toast-icon { background: #f59e0b; }
+    .ui-toast-info .ui-toast-icon    { background: #3b82f6; }
+    .ui-toast.is-leaving { animation: ui-toast-out .16s ease-in forwards; }
+    /* Im Styleguide stehen die Varianten auch statisch im Layout – dort ist das × nur
+       Anatomie und kein Klickziel, damit kein Hover-Cursor ins Leere führt. */
+    .demo-surface .ui-toast-close { cursor: default; pointer-events: none; }
+    @keyframes ui-toast-in {
+      from { opacity: 0; transform: translateY(10px) scale(.98); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes ui-toast-out {
+      from { opacity: 1; transform: none; }
+      to   { opacity: 0; transform: translateX(12px) scale(.98); }
+    }
+    @keyframes ui-toast-life { from { width: 100%; } to { width: 0; } }
+
     /* Tabs */
     .ui-tabs {
       display: flex; gap: .4rem; padding: .25rem; border-radius: .8rem;
@@ -326,7 +388,7 @@
     }
   </style>
 </head>
-<body class="text-slate-800 antialiased" x-data="{ activeTab: 'guide-overview', modalOpen: false, toastVisible: false }">
+<body class="text-slate-800 antialiased" x-data="appShell()">
 
   <div class="flex min-h-screen">
 
@@ -363,6 +425,9 @@
           <button @click="activeTab = 'guide-tooltips'" :class="activeTab === 'guide-tooltips' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
             <span class="w-2 h-2 rounded-full bg-teal-700"></span> Tooltips & Alerts
           </button>
+          <button @click="activeTab = 'guide-toasts'" :class="activeTab === 'guide-toasts' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Toasts
+          </button>
           <button @click="activeTab = 'guide-tables'" :class="activeTab === 'guide-tables' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
             <span class="w-2 h-2 rounded-full bg-teal-700"></span> Tabellen & Badges
           </button>
@@ -371,6 +436,18 @@
           </button>
           <button @click="activeTab = 'guide-feedback'" :class="activeTab === 'guide-feedback' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
             <span class="w-2 h-2 rounded-full bg-teal-700"></span> Feedback & Status
+          </button>
+          <button @click="activeTab = 'guide-kpi'" :class="activeTab === 'guide-kpi' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> KPI-Karten
+          </button>
+          <button @click="activeTab = 'guide-listen'" :class="activeTab === 'guide-listen' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Werkzeugliste
+          </button>
+          <button @click="activeTab = 'guide-cards'" :class="activeTab === 'guide-cards' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Kartenzeilen
+          </button>
+          <button @click="activeTab = 'guide-quick'" :class="activeTab === 'guide-quick' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-teal-700"></span> Schnellübersicht
           </button>
           <button @click="activeTab = 'guide-data'" :class="activeTab === 'guide-data' ? 'bg-teal-700/15 text-teal-900 font-bold border border-teal-700/30' : 'text-slate-600 hover:bg-white/30'" class="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-all">
             <span class="w-2 h-2 rounded-full bg-teal-700"></span> Loading & Pagination
@@ -416,8 +493,9 @@
           <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 mt-5">
             <template x-for="item in [
               ['Farben','guide-colors'],['Buttons','guide-buttons'],['Inputs','guide-forms'],
-              ['Checkbox/Switch','guide-controls'],['Dropdowns','guide-dropdowns'],['Tooltips','guide-tooltips'],
+              ['Checkbox/Switch','guide-controls'],['Dropdowns','guide-dropdowns'],['Tooltips','guide-tooltips'],['Toasts','guide-toasts'],
               ['Tabellen','guide-tables'],['Navigation','guide-navigation'],['Feedback','guide-feedback'],
+              ['KPI-Karten','guide-kpi'],['Werkzeugliste','guide-listen'],['Kartenzeilen','guide-cards'],['Schnellübersicht','guide-quick'],
               ['Loading','guide-data'],['Modals','guide-modals']
             ]">
               <button @click="activeTab = item[1]" class="text-left p-3 rounded-xl bg-white/25 hover:bg-white/45 border border-white/50 transition-all">
@@ -666,7 +744,7 @@
       <!-- ========== TOOLTIPS & ALERTS ========== -->
       <section x-show="activeTab === 'guide-tooltips'" x-cloak class="space-y-6">
         <div class="app-content-block rounded-2xl p-6 shadow-xs">
-          <h2 class="text-base font-bold text-slate-900 mb-4">Tooltips, Alerts & Toasts</h2>
+          <h2 class="text-base font-bold text-slate-900 mb-4">Tooltips & Alerts</h2>
           <div class="component-grid">
             <div class="demo-surface space-y-5">
               <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
@@ -684,9 +762,10 @@
                 <div class="ui-alert ui-alert-warning"><span>!</span><div><strong>Hinweis</strong><div class="mt-0.5 opacity-80">Sitzung läuft bald ab.</div></div></div>
                 <div class="ui-alert ui-alert-error"><span>×</span><div><strong>Fehler</strong><div class="mt-0.5 opacity-80">Verbindung fehlgeschlagen.</div></div></div>
               </div>
-              <button @click="toastVisible = true; setTimeout(() => toastVisible = false, 3000)" class="ui-btn ui-btn-primary">
-                Toast anzeigen
-              </button>
+              <p class="text-[11px] text-slate-600">
+                Alerts bleiben im Layout stehen. Kurzes Feedback <strong>nach</strong> einer Aktion läuft über die
+                <button @click="activeTab = 'guide-toasts'" class="font-bold text-teal-700 underline underline-offset-2">Toast-Komponente</button>.
+              </p>
             </div>
             <div class="code-panel"><pre><code>&lt;!-- Tooltip (Alpine) --&gt;
 &lt;div class="relative" x-data="{ open: false }"&gt;
@@ -699,6 +778,210 @@
 &lt;!-- Alerts --&gt;
 &lt;div class="ui-alert ui-alert-success"&gt;…&lt;/div&gt;
 &lt;div class="ui-alert ui-alert-error"&gt;…&lt;/div&gt;</code></pre></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== TOASTS ========== -->
+      <section x-show="activeTab === 'guide-toasts'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Toasts – Feedback nach der Aktion</h2>
+              <p class="text-xs text-slate-600 mt-1">Kurze Rückmeldung, dass etwas passiert ist. Erscheint unten rechts, stapelt sich und blendet sich selbst wieder aus.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">4 Varianten · Auto-Dismiss · manuell schließbar</span>
+          </div>
+
+          <div class="component-grid mt-5">
+            <div class="demo-surface space-y-5">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Live-Test – Button anklicken, Toast erscheint unten rechts</p>
+              <div class="flex flex-wrap gap-2">
+                <button @click="notifySuccess()" class="ui-btn ui-btn-primary">Erfolg</button>
+                <button @click="notifyError()" class="ui-btn ui-btn-danger">Fehler</button>
+                <button @click="notifyWarning()" class="ui-btn ui-btn-secondary">Warnung</button>
+                <button @click="notifyInfo()" class="ui-btn ui-btn-secondary">Info</button>
+                <button @click="notifyStack()" class="ui-btn ui-btn-ghost">Stapel (3 gleichzeitig)</button>
+                <button @click="clearToasts()" class="ui-btn ui-btn-ghost">Alle schließen</button>
+              </div>
+
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Aufbau & Varianten (statisch)</p>
+              <div class="space-y-2" aria-hidden="true">
+                <div class="ui-toast ui-toast-success">
+                  <span class="ui-toast-icon">✓</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="ui-toast-title">Gespeichert</p>
+                    <p class="ui-toast-msg">Werkzeug TS-1004 wurde aktualisiert.</p>
+                  </div>
+                  <span class="ui-toast-close">×</span>
+                </div>
+                <div class="ui-toast ui-toast-error">
+                  <span class="ui-toast-icon">×</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="ui-toast-title">Speichern fehlgeschlagen</p>
+                    <p class="ui-toast-msg">Keine Verbindung zum Server. Bitte erneut versuchen.</p>
+                  </div>
+                  <span class="ui-toast-close">×</span>
+                </div>
+                <div class="ui-toast ui-toast-warning">
+                  <span class="ui-toast-icon">!</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="ui-toast-title">Wartung fällig</p>
+                    <p class="ui-toast-msg">TS-1004 ist seit 3 Tagen über der Wartungsfrist.</p>
+                  </div>
+                  <span class="ui-toast-close">×</span>
+                </div>
+                <div class="ui-toast ui-toast-info">
+                  <span class="ui-toast-icon">i</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="ui-toast-title">Synchronisiert</p>
+                    <p class="ui-toast-msg">24 Werkzeuge vom Server übernommen.</p>
+                  </div>
+                  <span class="ui-toast-close">×</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500">Die Beispiele oben stehen im Layout, damit man das Aussehen ohne Klick sieht. In der App schweben sie als Overlay unten rechts und haben statt des ×-Zeichens einen echten Schließen-Button.</p>
+
+              <div class="glass-preview-card p-4 overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                      <th class="pb-2 px-2">Variante</th>
+                      <th class="pb-2 px-2">Einsatz</th>
+                      <th class="pb-2 px-2">Dauer</th>
+                      <th class="pb-2 px-2 text-right">Auto-Dismiss</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-2.5 px-2"><span class="ui-badge ui-badge-success">Erfolg</span></td>
+                      <td class="py-2.5 px-2">Speichern, Ausleihe oder Rückgabe hat geklappt</td>
+                      <td class="py-2.5 px-2">4 s</td>
+                      <td class="py-2.5 px-2 text-right">ja</td>
+                    </tr>
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-2.5 px-2"><span class="ui-badge ui-badge-danger">Fehler</span></td>
+                      <td class="py-2.5 px-2">Aktion fehlgeschlagen, der Nutzer muss etwas tun</td>
+                      <td class="py-2.5 px-2">bleibt stehen</td>
+                      <td class="py-2.5 px-2 text-right">nein, nur manuell</td>
+                    </tr>
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-2.5 px-2"><span class="ui-badge ui-badge-warning">Warnung</span></td>
+                      <td class="py-2.5 px-2">Hat geklappt, aber ein Zustand braucht Aufmerksamkeit (Wartung, Frist)</td>
+                      <td class="py-2.5 px-2">6 s</td>
+                      <td class="py-2.5 px-2 text-right">ja</td>
+                    </tr>
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-2.5 px-2"><span class="ui-badge ui-badge-info">Info</span></td>
+                      <td class="py-2.5 px-2">Ergebnis im Hintergrund (Sync, Import, Export)</td>
+                      <td class="py-2.5 px-2">4 s</td>
+                      <td class="py-2.5 px-2 text-right">ja</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="ui-alert ui-alert-success">
+                  <span>✓</span>
+                  <div>
+                    <strong>So einsetzen</strong>
+                    <ul class="mt-1 list-disc pl-4 opacity-80 space-y-0.5">
+                      <li>Aktion und Toast zur selben Zeit, Text in der Vergangenheit: „Gespeichert“.</li>
+                      <li>Höchstens 3 gleichzeitig, sonst wird die Seite verdeckt.</li>
+                      <li>Immer Symbol und Text, nie nur die Farbe.</li>
+                      <li>Der Fehlertext sagt, was jetzt zu tun ist.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="ui-alert ui-alert-error">
+                  <span>×</span>
+                  <div>
+                    <strong>Nicht so</strong>
+                    <ul class="mt-1 list-disc pl-4 opacity-80 space-y-0.5">
+                      <li>Nicht als Rückfrage vor der Aktion, dafür ist das Modal da.</li>
+                      <li>Nicht für Dinge, die man in der Tabelle ohnehin schon sieht.</li>
+                      <li>Fehler-Toast nicht automatisch ausblenden, wenn er eine Handlung verlangt.</li>
+                      <li>Keine langen Sätze und keine technischen Fehlercodes.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="code-panel"><pre><code>&lt;!-- 1) Toast-Stack: einmal pro Seite, ganz unten im &lt;body&gt;.
+     Wichtig: NICHT in .app-content-block legen – das hat
+     transform/contain und würde position:fixed umlenken. --&gt;
+&lt;div class="ui-toast-stack" aria-live="polite"&gt;
+  &lt;template x-for="t in toasts" :key="t.id"&gt;
+    &lt;div class="ui-toast"
+         :class="'ui-toast-' + t.type + (t.leaving ? ' is-leaving' : '')"
+         role="status"&gt;
+      &lt;span class="ui-toast-icon" aria-hidden="true" x-text="t.icon"&gt;&lt;/span&gt;
+      &lt;div class="min-w-0 flex-1"&gt;
+        &lt;p class="ui-toast-title" x-text="t.title"&gt;&lt;/p&gt;
+        &lt;p class="ui-toast-msg" x-text="t.message"&gt;&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;button class="ui-toast-close" @click="dismissToast(t.id)"
+              aria-label="Toast schließen"&gt;&amp;times;&lt;/button&gt;
+      &lt;span class="ui-toast-life" x-show="t.duration &gt; 0"
+            :style="'animation-duration:' + t.duration + 'ms'"&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;
+
+// 2) Toast-Objekt + Auslösen
+const TOAST_ICON = { success: '✓', error: '×', warning: '!', info: 'i' };
+
+pushToast(type, title, message, duration = 4000) {
+  const id = ++this.toastSeq;
+  this.toasts.push({
+    id, type, icon: TOAST_ICON[type] || 'i',
+    title, message, duration, leaving: false
+  });
+  if (duration &gt; 0) setTimeout(() =&gt; this.dismissToast(id), duration);
+}
+
+pushToast('success', 'Gespeichert', 'Werkzeug TS-1004 wurde aktualisiert.');
+pushToast('error', 'Speichern fehlgeschlagen',
+          'Keine Verbindung zum Server. Bitte erneut versuchen.', 0);
+// duration = 0  →  Toast bleibt stehen, bis er geschlossen wird
+
+// zweiphasig: erst Austritts-Animation (.is-leaving), dann entfernen
+dismissToast(id) {
+  const toast = this.toasts.find(t =&gt; t.id === id);
+  if (!toast || toast.leaving) return;
+  toast.leaving = true;
+  setTimeout(() =&gt; {
+    this.toasts = this.toasts.filter(t =&gt; t.id !== id);
+  }, 160);
+}
+
+/* 3) CSS-Kern */
+.ui-toast-stack {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60;
+  display: flex; flex-direction: column; gap: .6rem;
+}
+.ui-toast {
+  display: flex; align-items: flex-start; gap: .7rem;
+  padding: .75rem .85rem; border-radius: .9rem;
+  border-left: 3px solid #0f766e;          /* Variante: rose / amber / sky */
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 18px 38px rgba(15,23,42,.18);
+  font-size: .72rem; animation: ui-toast-in .22s ease-out;
+}
+
+/* Abgrenzung: .admin-toast (frontend/src/admin.css) gehört ausschließlich zum
+   AdminPanel und hat dort bewusst ein eigenes Look-and-feel. Alle übrigen
+   Bereiche nutzen diese Toast-Komponente – die beiden nicht vermischen. */</code></pre></div>
+          </div>
+
+          <div class="ui-alert ui-alert-info mt-5">
+            <span>ℹ</span>
+            <div>
+              <strong>Abgrenzung: nicht das Admin-Toast</strong>
+              <div class="mt-0.5 opacity-80">Diese Komponente ist der Standard im ToolSync-Frontend. Das AdminPanel hat mit <code class="font-mono">.admin-toast</code> (frontend/src/admin.css) ein eigenes Toast-Styling und bleibt bewusst getrennt – hier nichts davon ableiten oder zusammenführen.</div>
+            </div>
           </div>
         </div>
       </section>
@@ -951,6 +1234,927 @@
         </div>
       </section>
 
+      <!-- ========== KPI / STAT-CARDS (DASHBOARD) ========== -->
+      <section x-show="activeTab === 'guide-kpi'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">KPI- &amp; Statistik-Karten (Dashboard)</h2>
+              <p class="text-xs text-slate-600 mt-1">Kachelraster für Kennzahlen im Dashboard-Kopf. Eine Karte = eine Zahl, ein Icon, ein Status. Raster: <strong>1 Spalte mobil · 2 ab sm · 4 ab xl</strong>.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">Dashboard-Kennzahlen</span>
+          </div>
+
+          <div class="mt-5 space-y-5">
+
+            <!-- Kachelraster -->
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Vorschau – Kachelraster (4 Spalten)</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+                <!-- 1 · Primär (Teal) – Fußzeile: Fortschritt -->
+                <article class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                  <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-teal-400/25 blur-3xl"></div>
+                  <div class="relative flex items-start justify-between">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700 ring-1 ring-teal-500/20">
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                      </svg>
+                    </div>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+                      </svg>
+                      +12 %
+                    </span>
+                  </div>
+                  <div class="relative mt-4">
+                    <p class="text-3xl font-bold tracking-tight text-slate-800">24</p>
+                    <p class="mt-1 text-sm font-medium text-slate-500">Aktive Ausleihen</p>
+                  </div>
+                  <div class="relative mt-4 border-t border-white/50 pt-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                      <span class="font-medium text-slate-500">Auslastung</span>
+                      <span class="font-semibold text-slate-700">80 %</span>
+                    </div>
+                    <div class="ui-progress"><span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"></span></div>
+                  </div>
+                </article>
+
+                <!-- 2 · Positiv (Emerald) – Fußzeile: Meta-Zeile + Fortschritt -->
+                <article class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                  <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-emerald-400/25 blur-3xl"></div>
+                  <div class="relative flex items-start justify-between">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/20">
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                      </svg>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                      Verfügbar
+                    </span>
+                  </div>
+                  <div class="relative mt-4">
+                    <p class="text-3xl font-bold tracking-tight text-slate-800">156</p>
+                    <p class="mt-1 text-sm font-medium text-slate-500">Verfügbare Werkzeuge</p>
+                  </div>
+                  <div class="relative mt-4 border-t border-white/50 pt-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                      <span class="font-medium text-slate-500">von 210 insgesamt</span>
+                      <span class="font-semibold text-slate-700">74 %</span>
+                    </div>
+                    <div class="ui-progress"><span class="bg-gradient-to-r from-emerald-600 to-teal-400" style="width:74%"></span></div>
+                  </div>
+                </article>
+
+                <!-- 3 · Warnung (Amber) – Fußzeile: Meta-Paar -->
+                <article class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                  <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-amber-400/25 blur-3xl"></div>
+                  <div class="relative flex items-start justify-between">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/20">
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                      </svg>
+                    </div>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/20">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                      </svg>
+                      23 unter Mindestbestand
+                    </span>
+                  </div>
+                  <div class="relative mt-4">
+                    <p class="text-3xl font-bold tracking-tight text-slate-800">2.340</p>
+                    <p class="mt-1 text-sm font-medium text-slate-500">Lagerbestand (Positionen)</p>
+                  </div>
+                  <div class="relative mt-4 flex items-center justify-between border-t border-white/50 pt-3 text-xs">
+                    <span class="font-medium text-slate-500">4 Werke</span>
+                    <span class="font-medium text-slate-500">37 Lagerorte</span>
+                  </div>
+                </article>
+
+                <!-- 4 · Kritisch (Rose) – Fußzeile: Status + Aktion -->
+                <article class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                  <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-rose-400/25 blur-3xl"></div>
+                  <div class="relative flex items-start justify-between">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500/15 text-rose-700 ring-1 ring-rose-500/20">
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </div>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-500/20">
+                      <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500"></span>
+                      Achtung
+                    </span>
+                  </div>
+                  <div class="relative mt-4">
+                    <p class="text-3xl font-bold tracking-tight text-slate-800">5</p>
+                    <p class="mt-1 text-sm font-medium text-slate-500">Überfällige Ausleihen</p>
+                  </div>
+                  <div class="relative mt-4 border-t border-white/50 pt-3">
+                    <div class="flex items-center justify-between text-xs mb-3">
+                      <span class="font-medium text-slate-500">Älteste Rückgabe</span>
+                      <span class="font-semibold text-rose-700">vor 12 Tagen</span>
+                    </div>
+                    <button class="ui-btn ui-btn-danger-soft w-full">Alle anzeigen</button>
+                  </div>
+                </article>
+
+              </div>
+            </div>
+
+            <!-- Farbrollen + Fußzeilen-Varianten -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div class="glass-preview-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Farbrollen der Kacheln</p>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                        <th class="pb-2 px-2">Rolle</th>
+                        <th class="pb-2 px-2">Icon-Kachel · Glow</th>
+                        <th class="pb-2 px-2">Beispiel-Kennzahl</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Primär</td>
+                        <td class="py-2 px-2 font-mono text-[10px]">teal-500/15 · text-teal-700 · teal-400/25</td>
+                        <td class="py-2 px-2">Aktive Ausleihen</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Positiv</td>
+                        <td class="py-2 px-2 font-mono text-[10px]">emerald-500/15 · text-emerald-700 · emerald-400/25</td>
+                        <td class="py-2 px-2">Verfügbare Werkzeuge</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Warnung</td>
+                        <td class="py-2 px-2 font-mono text-[10px]">amber-500/15 · text-amber-700 · amber-400/25</td>
+                        <td class="py-2 px-2">Mindestbestand, Wartung</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Kritisch</td>
+                        <td class="py-2 px-2 font-mono text-[10px]">rose-500/15 · text-rose-700 · rose-400/25</td>
+                        <td class="py-2 px-2">Überfällige Ausleihen</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Info</td>
+                        <td class="py-2 px-2 font-mono text-[10px]">blue-500/15 · text-blue-700 · blue-400/25</td>
+                        <td class="py-2 px-2">Serienartikel, Lagerorte</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="glass-preview-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Fußzeilen-Varianten</p>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                        <th class="pb-2 px-2">Variante</th>
+                        <th class="pb-2 px-2">Einsatz</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Fortschritt (<code class="font-mono text-[10px]">.ui-progress</code>)</td>
+                        <td class="py-2 px-2">Anteil sichtbar: Auslastung 80 %, 74 % von 210</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Meta-Paar</td>
+                        <td class="py-2 px-2">Zwei ruhige Nebenwerte ohne Balken: 4 Werke · 37 Lagerorte</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Doppelkennzahl</td>
+                        <td class="py-2 px-2">Zwei zusammengehörige Zahlen mit Trennlinie: 4 Werke / 37 Lagerorte</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Status + Aktion</td>
+                        <td class="py-2 px-2">Handlungsbedarf: älteste Rückgabe + „Alle anzeigen“</td>
+                      </tr>
+                      <tr>
+                        <td class="py-2 px-2 font-semibold text-slate-800">Ohne Fußzeile</td>
+                        <td class="py-2 px-2">Reine Zahl ohne Zusatzinfo (kurze Kachelreihe)</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Konvention -->
+            <div class="ui-alert ui-alert-info">
+              <span>ℹ</span>
+              <div>
+                <strong>Konvention</strong>
+                <div class="mt-0.5 opacity-80">Basis ist <code>.stat-card</code> – in <code>frontend/src/index.css</code> real umgesetzt als rgba(255,255,255,.50) mit blur(12px); dort existiert zusätzlich <code>.app-stat-card</code> (rgba(255,255,255,.40), blur(10px)) als leichtere Variante. Kennzahlen: <code>text-3xl</code> in großen Kacheln, <code>text-2xl</code> in kompakten Spaltenkarten. Status-Pills in Kacheln bleiben Ring-Pills wie in „Stat-Cards, Quick-Cards &amp; Progress“; Status-Badges in Tabellen bleiben <code>.ui-badge</code>. Der Farb-Glow ist rein dekorativ und trägt <code>pointer-events-none</code>. Icons sind ausschließlich lokale Inline-SVGs (siehe <code>frontend/src/components/icons.tsx</code>) – keine Icon-Fonts, keine CDN-Icons, keine externen Bild-URLs.</div>
+              </div>
+            </div>
+
+            <div class="code-panel"><pre><code>&lt;!-- KPI-Kachel · Raster: 1 / 2 / 4 Spalten --&gt;
+&lt;div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"&gt;
+
+  &lt;article class="stat-card group relative overflow-hidden rounded-2xl p-5 shadow-lg
+                  transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"&gt;
+    &lt;!-- Dekorativer Farb-Glow --&gt;
+    &lt;div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-teal-400/25 blur-3xl"&gt;&lt;/div&gt;
+
+    &lt;!-- Kopf: Icon-Kachel + Status-/Trend-Pill --&gt;
+    &lt;div class="relative flex items-start justify-between"&gt;
+      &lt;div class="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700 ring-1 ring-teal-500/20"&gt;
+        &lt;svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"&gt;
+          &lt;path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5" /&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+      &lt;span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20"&gt;
+        +12 %
+      &lt;/span&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Kennzahl + Label --&gt;
+    &lt;div class="relative mt-4"&gt;
+      &lt;p class="text-3xl font-bold tracking-tight text-slate-800"&gt;24&lt;/p&gt;
+      &lt;p class="mt-1 text-sm font-medium text-slate-500"&gt;Aktive Ausleihen&lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;!-- Fußzeile A: Fortschritt --&gt;
+    &lt;div class="relative mt-4 border-t border-white/50 pt-3"&gt;
+      &lt;div class="flex items-center justify-between text-xs mb-1"&gt;
+        &lt;span class="font-medium text-slate-500"&gt;Auslastung&lt;/span&gt;
+        &lt;span class="font-semibold text-slate-700"&gt;80 %&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class="ui-progress"&gt;&lt;span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"&gt;&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/article&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Fußzeile B: Meta-Paar (zwei Nebenwerte, kein Balken) --&gt;
+&lt;div class="relative mt-4 flex items-center justify-between border-t border-white/50 pt-3 text-xs"&gt;
+  &lt;span class="font-medium text-slate-500"&gt;4 Werke&lt;/span&gt;
+  &lt;span class="font-medium text-slate-500"&gt;37 Lagerorte&lt;/span&gt;
+&lt;/div&gt;
+
+&lt;!-- Fußzeile C: Doppelkennzahl --&gt;
+&lt;div class="relative mt-4 flex items-end gap-4"&gt;
+  &lt;div&gt;
+    &lt;p class="text-3xl font-bold tracking-tight text-slate-800"&gt;4&lt;/p&gt;
+    &lt;p class="mt-1 text-sm font-medium text-slate-500"&gt;Werke&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class="mb-1 border-l border-white/50 pl-4"&gt;
+    &lt;p class="text-2xl font-bold tracking-tight text-slate-800"&gt;37&lt;/p&gt;
+    &lt;p class="text-sm font-medium text-slate-500"&gt;Lagerorte&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Fußzeile D: Status + Aktion --&gt;
+&lt;div class="relative mt-4 border-t border-white/50 pt-3"&gt;
+  &lt;div class="flex items-center justify-between text-xs mb-3"&gt;
+    &lt;span class="font-medium text-slate-500"&gt;Älteste Rückgabe&lt;/span&gt;
+    &lt;span class="font-semibold text-rose-700"&gt;vor 12 Tagen&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;button class="ui-btn ui-btn-danger-soft w-full"&gt;Alle anzeigen&lt;/button&gt;
+&lt;/div&gt;
+
+/* CSS (frontend/src/index.css) */
+.stat-card      { background: rgba(255,255,255,.50); border: 1px solid rgba(255,255,255,.60); backdrop-filter: blur(12px); }
+.app-stat-card  { background: rgba(255,255,255,.40); border: 1px solid rgba(255,255,255,.70); backdrop-filter: blur(10px); }
+.ui-progress    { height: 6px; border-radius: 999px; background: rgba(148,163,184,.28); overflow: hidden; }
+.ui-progress &gt; span { display: block; height: 100%; border-radius: inherit; background: #0f766e; }</code></pre></div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== WERKZEUGLISTE / KOMPAKTE TABELLE ========== -->
+      <section x-show="activeTab === 'guide-listen'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Werkzeugübersicht – kompakte Tabelle</h2>
+              <p class="text-xs text-slate-600 mt-1">Dichte Betriebsliste für viele Zeilen: Filterzeile, Statusspalte, Aktionsspalte. Für Datensätze mit Specs, Standort-Hierarchie und Entleiher gilt weiterhin „Tabellen &amp; Status Badges“.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">Listen-/Tabellenansicht</span>
+          </div>
+
+          <div class="mt-5 space-y-5">
+
+            <!-- Filterzeile + Variante 1 -->
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Variante 1 – kompakte Liste (eine Zeile = ein Werkzeug)</p>
+              <div class="glass-preview-card p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">Eindeutige Werkzeugübersicht</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Zuordnung nach ID, Kategorie, Standort und Status</p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <select class="select-bordered text-xs w-auto">
+                      <option>Alle Kategorien</option>
+                      <option>Messmittel</option>
+                      <option>Stanzwerkzeuge</option>
+                      <option>Biegewerkzeuge</option>
+                    </select>
+                    <select class="select-bordered text-xs w-auto">
+                      <option>Alle Status</option>
+                      <option>Verfügbar</option>
+                      <option>Ausgeliehen</option>
+                      <option>Wartung fällig</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead>
+                      <tr class="border-b border-slate-300/50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                        <th class="py-2 px-3">Werkzeug-ID</th>
+                        <th class="py-2 px-3">Bezeichnung</th>
+                        <th class="py-2 px-3">Kategorie</th>
+                        <th class="py-2 px-3">Standort</th>
+                        <th class="py-2 px-3">Status</th>
+                        <th class="py-2 px-3 text-right">Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                      <tr class="hover:bg-white/60 transition-colors">
+                        <td class="py-2 px-3"><code class="font-mono font-bold text-slate-900">TS-1004</code></td>
+                        <td class="py-2 px-3 font-semibold text-slate-900">Mikrometerschraube 0–25 mm</td>
+                        <td class="py-2 px-3"><span class="ui-badge ui-badge-neutral">Messmittel</span></td>
+                        <td class="py-2 px-3 font-medium text-slate-800">Halle 2 / S-01</td>
+                        <td class="py-2 px-3">
+                          <span class="ui-badge ui-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-teal-600"></span> Verfügbar</span>
+                        </td>
+                        <td class="py-2 px-3 text-right">
+                          <button class="ui-btn ui-btn-ghost ui-btn-sm">Details →</button>
+                        </td>
+                      </tr>
+                      <tr class="hover:bg-white/60 transition-colors">
+                        <td class="py-2 px-3"><code class="font-mono font-bold text-slate-900">TS-1002-C</code></td>
+                        <td class="py-2 px-3 font-semibold text-slate-900">Rundstempel Ø 12 mm</td>
+                        <td class="py-2 px-3"><span class="ui-badge ui-badge-neutral">Stanzwerkzeug</span></td>
+                        <td class="py-2 px-3 font-medium text-slate-800">Linie 4 / ST-02</td>
+                        <td class="py-2 px-3">
+                          <span class="ui-badge ui-badge-info"><span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span> Ausgeliehen</span>
+                        </td>
+                        <td class="py-2 px-3 text-right">
+                          <button class="ui-btn ui-btn-secondary ui-btn-sm">Rückgabe</button>
+                        </td>
+                      </tr>
+                      <tr class="bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+                        <td class="py-2 px-3"><code class="font-mono font-bold text-slate-900">TS-1003-B</code></td>
+                        <td class="py-2 px-3 font-semibold text-slate-900">Quadratstempel 20 × 20</td>
+                        <td class="py-2 px-3"><span class="ui-badge ui-badge-neutral">Biegewerkzeug</span></td>
+                        <td class="py-2 px-3 font-medium text-slate-800">Werkstatt B</td>
+                        <td class="py-2 px-3">
+                          <span class="ui-badge ui-badge-warning"><span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span> Wartung fällig</span>
+                        </td>
+                        <td class="py-2 px-3 text-right">
+                          <button class="ui-btn ui-btn-secondary ui-btn-sm">Prüfen</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variante 2 -->
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Variante 2 – Wartungsspalte mit Ampel-Unterzeile</p>
+              <div class="glass-preview-card p-4 overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-300/50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th class="py-2 px-3">Werkzeug-ID / Typ</th>
+                      <th class="py-2 px-3">Bezeichnung &amp; Specs</th>
+                      <th class="py-2 px-3">Standort / Platz</th>
+                      <th class="py-2 px-3">Status / Entleiher</th>
+                      <th class="py-2 px-3">Nächste Wartung</th>
+                      <th class="py-2 px-3 text-right">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-3 px-3">
+                        <div class="flex items-center gap-2">
+                          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-teal-700 font-bold text-[10px]">M</span>
+                          <div>
+                            <code class="font-mono font-bold text-slate-900">TS-1001-A</code>
+                            <p class="text-[10px] text-slate-500">Messmittel</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3 px-3">
+                        <p class="font-semibold text-slate-900">Drehmomentschlüssel V2</p>
+                        <p class="text-[11px] text-slate-500">20–100 Nm · kalibriert</p>
+                      </td>
+                      <td class="py-3 px-3">
+                        <span class="font-medium text-slate-800">Halle 1</span>
+                        <p class="text-[11px] text-slate-500">Schrank A → Fach 03</p>
+                      </td>
+                      <td class="py-3 px-3">
+                        <span class="ui-badge ui-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-teal-600"></span> Verfügbar</span>
+                      </td>
+                      <td class="py-3 px-3">
+                        <p class="font-medium text-slate-800">15.10.2026</p>
+                        <p class="text-[10px] font-semibold text-teal-700">i. O. (in 2 Monaten)</p>
+                      </td>
+                      <td class="py-3 px-3 text-right">
+                        <button class="ui-btn ui-btn-primary ui-btn-sm">Ausleihen</button>
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+                      <td class="py-3 px-3">
+                        <div class="flex items-center gap-2">
+                          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700 font-bold text-[10px]">W</span>
+                          <div>
+                            <code class="font-mono font-bold text-slate-900">TS-1003-B</code>
+                            <p class="text-[10px] text-slate-500">Biegewerkzeug</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3 px-3">
+                        <p class="font-semibold text-slate-900">Quadratstempel 20 × 20</p>
+                        <p class="text-[11px] text-slate-500">R2.0 · gehärtet</p>
+                      </td>
+                      <td class="py-3 px-3">
+                        <span class="font-medium text-slate-800">Wartung</span>
+                        <p class="text-[11px] text-slate-500">Werkstatt B</p>
+                      </td>
+                      <td class="py-3 px-3">
+                        <span class="ui-badge ui-badge-warning"><span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span> Wartung fällig</span>
+                      </td>
+                      <td class="py-3 px-3">
+                        <p class="font-bold text-amber-700">Gestern</p>
+                        <p class="text-[10px] font-semibold text-amber-700">Prüfung überfällig</p>
+                      </td>
+                      <td class="py-3 px-3 text-right">
+                        <button class="ui-btn ui-btn-secondary ui-btn-sm">Prüfen</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Variante 3 -->
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Variante 3 – Fortschrittsspalte (Standzeit / Abnutzung)</p>
+              <div class="glass-preview-card p-4 overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-300/50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <th class="py-2 px-3">Werkzeug-Bezeichnung</th>
+                      <th class="py-2 px-3">Standzeit / Abnutzung</th>
+                      <th class="py-2 px-3">Letzte Prüfung</th>
+                      <th class="py-2 px-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                    <tr class="hover:bg-white/40 transition-colors">
+                      <td class="py-3 px-3">
+                        <p class="font-semibold text-slate-800">Stanzstempel Ø 8 mm</p>
+                        <p class="text-[10px] text-slate-500">Biegewerkzeug Typ C</p>
+                      </td>
+                      <td class="py-3 px-3 w-48">
+                        <div class="flex items-center gap-2">
+                          <div class="ui-progress flex-1"><span class="bg-amber-500" style="width:75%"></span></div>
+                          <span class="text-[10px] font-bold text-slate-600">75 %</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-3 text-slate-600">12.08.2026</td>
+                      <td class="py-3 px-3 text-right">
+                        <span class="ui-badge ui-badge-warning">Wartung bald</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Klassen-Mapping -->
+            <div class="glass-preview-card p-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Klassen-Mapping – Entwurfs-Vokabular → Guide</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                      <th class="pb-2 px-2">Entwurf</th>
+                      <th class="pb-2 px-2">Guide</th>
+                      <th class="pb-2 px-2">Anmerkung</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.badge-success / -warning / -info</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">.ui-badge .ui-badge-success / -warning / -info</td>
+                      <td class="py-2 px-2">Statusspalte inklusive Farbpunkt</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.btn-primary / -secondary / -ghost</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">.ui-btn .ui-btn-primary / -secondary / -ghost</td>
+                      <td class="py-2 px-2">Aktionsspalten, in dichten Listen mit <code class="font-mono text-[10px]">.ui-btn-sm</code></td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.btn-warning</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">.ui-btn .ui-btn-secondary <span class="text-slate-500">(Prüfen)</span></td>
+                      <td class="py-2 px-2">Der Guide hat keinen eigenen Warn-Button – Warnung trägt das Badge, nicht der Button</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.table-wrapper</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">.glass-preview-card + overflow-x-auto</td>
+                      <td class="py-2 px-2">Rahmen, Radius und Glasfläche kommen aus dem Guide</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.table-main / -head / -row / -cell</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">Tailwind-Utilities wie oben</td>
+                      <td class="py-2 px-2">Es gibt keine eigene Tabellenklasse – Zellmaße bleiben inline sichtbar</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">.glass-card-hover</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">.glass-card + hover:bg-white/60</td>
+                      <td class="py-2 px-2">Hover-Zustand direkt am Element</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-mono text-[10px]">brand-500 / -600 / -700</td>
+                      <td class="py-2 px-2 font-mono text-[10px]">teal-500 / -600 / teal-700 bzw. var(--primary)</td>
+                      <td class="py-2 px-2">Im Projekt ist Deep Teal der Primärton (<code class="font-mono text-[10px]">#0f766e</code>)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Konvention -->
+            <div class="ui-alert ui-alert-info">
+              <span>ℹ</span>
+              <div>
+                <strong>Konvention</strong>
+                <div class="mt-0.5 opacity-80">Zellmaße: <code>py-2 px-3</code> für dichte Listen, <code>py-3.5 px-2</code> für Detailzeilen. Statusfarbe ist nie das einzige Signal – jede Statusspalte trägt Punkt <em>und</em> Text, die Warnzeile (<code>bg-amber-500/5</code>) ist Zusatzsignal, kein Ersatz. Listen mit vielen Zeilen laufen über <code>whitespace-nowrap</code> und <code>overflow-x-auto</code>; die Filterzeile sitzt im selben Glasblock wie die Tabelle.</div>
+              </div>
+            </div>
+
+            <div class="code-panel"><pre><code>&lt;!-- Variante 1: kompakte Liste · eine Zeile = ein Werkzeug --&gt;
+&lt;div class="glass-preview-card p-4"&gt;
+  &lt;div class="flex flex-wrap items-center justify-between gap-3 mb-4"&gt;
+    &lt;div&gt;
+      &lt;p class="text-xs font-bold text-slate-800"&gt;Eindeutige Werkzeugübersicht&lt;/p&gt;
+      &lt;p class="text-[11px] text-slate-500 mt-0.5"&gt;Zuordnung nach ID, Kategorie, Standort und Status&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;select class="select-bordered text-xs w-auto"&gt;…&lt;/select&gt;
+    &lt;select class="select-bordered text-xs w-auto"&gt;…&lt;/select&gt;
+  &lt;/div&gt;
+
+  &lt;div class="overflow-x-auto"&gt;
+    &lt;table class="w-full text-left text-xs whitespace-nowrap"&gt;
+      &lt;tbody class="divide-y divide-slate-200/50 text-slate-700"&gt;
+        &lt;tr class="hover:bg-white/60 transition-colors"&gt;
+          &lt;td class="py-2 px-3"&gt;&lt;code class="font-mono font-bold text-slate-900"&gt;TS-1004&lt;/code&gt;&lt;/td&gt;
+          &lt;td class="py-2 px-3 font-semibold text-slate-900"&gt;Mikrometerschraube 0–25 mm&lt;/td&gt;
+          &lt;td class="py-2 px-3"&gt;&lt;span class="ui-badge ui-badge-neutral"&gt;Messmittel&lt;/span&gt;&lt;/td&gt;
+          &lt;td class="py-2 px-3"&gt;
+            &lt;span class="ui-badge ui-badge-success"&gt;&lt;span class="h-1.5 w-1.5 rounded-full bg-teal-600"&gt;&lt;/span&gt; Verfügbar&lt;/span&gt;
+          &lt;/td&gt;
+          &lt;td class="py-2 px-3 text-right"&gt;&lt;button class="ui-btn ui-btn-ghost ui-btn-sm"&gt;Details&lt;/button&gt;&lt;/td&gt;
+        &lt;/tr&gt;
+
+        &lt;!-- Warnzeile: Wartung fällig --&gt;
+        &lt;tr class="bg-amber-500/5 hover:bg-amber-500/10 transition-colors"&gt;
+          &lt;td class="py-2 px-3"&gt;…&lt;/td&gt;
+          &lt;td class="py-2 px-3"&gt;
+            &lt;span class="ui-badge ui-badge-warning"&gt;&lt;span class="h-1.5 w-1.5 rounded-full bg-amber-600"&gt;&lt;/span&gt; Wartung fällig&lt;/span&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Variante 2: Wartungsspalte mit Ampel-Unterzeile --&gt;
+&lt;td class="py-3 px-3"&gt;
+  &lt;p class="font-medium text-slate-800"&gt;15.10.2026&lt;/p&gt;
+  &lt;p class="text-[10px] font-semibold text-teal-700"&gt;i. O. (in 2 Monaten)&lt;/p&gt;
+&lt;/td&gt;
+&lt;!-- überfällig --&gt;
+&lt;td class="py-3 px-3"&gt;
+  &lt;p class="font-bold text-amber-700"&gt;Gestern&lt;/p&gt;
+  &lt;p class="text-[10px] font-semibold text-amber-700"&gt;Prüfung überfällig&lt;/p&gt;
+&lt;/td&gt;
+
+&lt;!-- Variante 3: Fortschrittsspalte (Standzeit / Abnutzung) --&gt;
+&lt;td class="py-3 px-3 w-48"&gt;
+  &lt;div class="flex items-center gap-2"&gt;
+    &lt;div class="ui-progress flex-1"&gt;&lt;span class="bg-amber-500" style="width:75%"&gt;&lt;/span&gt;&lt;/div&gt;
+    &lt;span class="text-[10px] font-bold text-slate-600"&gt;75 %&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/td&gt;</code></pre></div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== KARTENZEILEN ========== -->
+      <section x-show="activeTab === 'guide-cards'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Kartenzeilen – Listenzeilen als Glass-Karten</h2>
+              <p class="text-xs text-slate-600 mt-1">Alternative zur Tabelle, wenn jede Zeile als eigenständiger Datensatz gelesen wird: Arbeitsvorrat, „meine Werkzeuge“, offene Rückgaben. Technik: <strong>border-separate border-spacing-y-2</strong> – jede Zeile wird zur eigenen Karte mit eigener Rundung.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">Mobile-taugliche Liste</span>
+          </div>
+
+          <div class="mt-5 space-y-5">
+
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Vorschau – Zeile als Karte</p>
+              <div class="glass-preview-card p-4">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border-separate border-spacing-y-2">
+                    <thead>
+                      <tr class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider">
+                        <th class="px-4 pb-1">Werkzeug</th>
+                        <th class="px-4 pb-1">Lagerort</th>
+                        <th class="px-4 pb-1">Zustand</th>
+                        <th class="px-4 pb-1 text-right">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="bg-white/60 hover:bg-white transition-all rounded-xl shadow-sm border border-white/80">
+                        <td class="py-3 px-4 rounded-l-xl">
+                          <div class="text-sm font-bold text-slate-900">Akkuschrauber 18 V</div>
+                          <div class="text-[10px] font-mono text-slate-500">SN: 99482-B</div>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-700">Regal A · Fach 12</td>
+                        <td class="py-3 px-4">
+                          <span class="ui-badge ui-badge-info"><span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span> Im Einsatz</span>
+                        </td>
+                        <td class="py-3 px-4 rounded-r-xl text-right">
+                          <button class="ui-btn ui-btn-primary ui-btn-sm">Verwalten</button>
+                        </td>
+                      </tr>
+                      <tr class="bg-white/60 hover:bg-white transition-all rounded-xl shadow-sm border border-white/80">
+                        <td class="py-3 px-4 rounded-l-xl">
+                          <div class="text-sm font-bold text-slate-900">Mikrometerschraube 0–25 mm</div>
+                          <div class="text-[10px] font-mono text-slate-500">TS-1004</div>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-700">Halle 2 · S-01</td>
+                        <td class="py-3 px-4">
+                          <span class="ui-badge ui-badge-success"><span class="h-1.5 w-1.5 rounded-full bg-teal-600"></span> Verfügbar</span>
+                        </td>
+                        <td class="py-3 px-4 rounded-r-xl text-right">
+                          <button class="ui-btn ui-btn-secondary ui-btn-sm">Ausleihen</button>
+                        </td>
+                      </tr>
+                      <tr class="bg-amber-500/5 hover:bg-amber-500/10 transition-all rounded-xl shadow-sm border border-amber-500/20">
+                        <td class="py-3 px-4 rounded-l-xl">
+                          <div class="text-sm font-bold text-slate-900">Winkelschleifer 125 mm</div>
+                          <div class="text-[10px] font-mono text-slate-500">TS-1010-D</div>
+                        </td>
+                        <td class="py-3 px-4 font-medium text-slate-700">Wartung · Werkstatt B</td>
+                        <td class="py-3 px-4">
+                          <span class="ui-badge ui-badge-warning"><span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span> Wartung fällig</span>
+                        </td>
+                        <td class="py-3 px-4 rounded-r-xl text-right">
+                          <button class="ui-btn ui-btn-secondary ui-btn-sm">Prüfen</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-preview-card p-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Wann Tabelle, wann Kartenzeilen?</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-300/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                      <th class="pb-2 px-2">Kriterium</th>
+                      <th class="pb-2 px-2">Kompakte Tabelle</th>
+                      <th class="pb-2 px-2">Kartenzeilen</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200/50 text-slate-700">
+                    <tr>
+                      <td class="py-2 px-2 font-semibold text-slate-800">Zeilen pro Bildschirm</td>
+                      <td class="py-2 px-2">hoch – Bestandslisten, Suchen</td>
+                      <td class="py-2 px-2">mittel – Arbeitsvorrat, Rückgaben</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-semibold text-slate-800">Spalten</td>
+                      <td class="py-2 px-2">5–7, inkl. Filterzeile</td>
+                      <td class="py-2 px-2">3–4, pro Zeile eine Hauptaktion</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-2 font-semibold text-slate-800">Schmaler Bildschirm</td>
+                      <td class="py-2 px-2">horizontales Scrollen (<code class="font-mono text-[10px]">whitespace-nowrap</code>)</td>
+                      <td class="py-2 px-2">Zeilen bleiben lesbar, kein Nebeneinander von fremden Werten</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="ui-alert ui-alert-info">
+              <span>ℹ</span>
+              <div>
+                <strong>Konvention</strong>
+                <div class="mt-0.5 opacity-80">Rundung liegt an der Zeile (<code>rounded-xl</code>) und an der ersten bzw. letzten Zelle (<code>rounded-l-xl</code> / <code>rounded-r-xl</code>) – das funktioniert nur mit <code>border-separate</code>. Zeilen tragen <code>bg-white/60</code> <em>ohne</em> <code>backdrop-filter</code>: bei langen Listen ist der Blur pro Zeile teuer, über dem hellen Hintergrund bringt er optisch kaum etwas (gleiche Regel wie bei Inputs). Warnzeilen behalten <code>bg-amber-500/5</code> plus Badge.</div>
+              </div>
+            </div>
+
+            <div class="code-panel"><pre><code>&lt;!-- Kartenzeilen: Zeile = eigenständige Glass-Karte --&gt;
+&lt;div class="glass-preview-card p-4"&gt;
+  &lt;div class="overflow-x-auto"&gt;
+    &lt;table class="w-full text-left text-xs border-separate border-spacing-y-2"&gt;
+      &lt;thead&gt;
+        &lt;tr class="text-slate-500 font-semibold text-[10px] uppercase tracking-wider"&gt;
+          &lt;th class="px-4 pb-1"&gt;Werkzeug&lt;/th&gt;
+          &lt;th class="px-4 pb-1"&gt;Lagerort&lt;/th&gt;
+          &lt;th class="px-4 pb-1"&gt;Zustand&lt;/th&gt;
+          &lt;th class="px-4 pb-1 text-right"&gt;Aktionen&lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        &lt;tr class="bg-white/60 hover:bg-white transition-all rounded-xl shadow-sm border border-white/80"&gt;
+          &lt;td class="py-3 px-4 rounded-l-xl"&gt;
+            &lt;div class="text-sm font-bold text-slate-900"&gt;Akkuschrauber 18 V&lt;/div&gt;
+            &lt;div class="text-[10px] font-mono text-slate-500"&gt;SN: 99482-B&lt;/div&gt;
+          &lt;/td&gt;
+          &lt;td class="py-3 px-4 font-medium text-slate-700"&gt;Regal A · Fach 12&lt;/td&gt;
+          &lt;td class="py-3 px-4"&gt;
+            &lt;span class="ui-badge ui-badge-info"&gt;&lt;span class="h-1.5 w-1.5 rounded-full bg-blue-600"&gt;&lt;/span&gt; Im Einsatz&lt;/span&gt;
+          &lt;/td&gt;
+          &lt;td class="py-3 px-4 rounded-r-xl text-right"&gt;
+            &lt;button class="ui-btn ui-btn-primary ui-btn-sm"&gt;Verwalten&lt;/button&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+
+        &lt;!-- Warnzeile innerhalb der Kartenliste --&gt;
+        &lt;tr class="bg-amber-500/5 hover:bg-amber-500/10 transition-all rounded-xl shadow-sm border border-amber-500/20"&gt;
+          …
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+/* Rundung der Zeile */
+tr        { border-radius: .75rem; }        /* rounded-xl */
+td:first-child { border-top-left-radius:.75rem; border-bottom-left-radius:.75rem; }
+td:last-child  { border-top-right-radius:.75rem; border-bottom-right-radius:.75rem; }</code></pre></div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== SCHNELLÜBERSICHT (SEITENSPALTE) ========== -->
+      <section x-show="activeTab === 'guide-quick'" x-cloak class="space-y-6">
+        <div class="app-content-block rounded-2xl p-6 shadow-xs">
+          <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Schnellübersicht – Statuskarten in der Seitenspalte</h2>
+              <p class="text-xs text-slate-600 mt-1">Schmale Karten für die rechte Spalte des Dashboards: dieselben Kennzahlen wie im Kachelraster, aber kompakter – mit Icon, Zahl und einer Zusatzaussage. Immer unter einer Abschnittsüberschrift.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full bg-teal-500/10 border border-teal-600/20 px-2.5 py-1 text-[10px] font-bold text-teal-800">Seitenspalte</span>
+          </div>
+
+          <div class="component-grid mt-5">
+            <div class="demo-surface space-y-4">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vorschau</p>
+
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Schnellübersicht</p>
+                  <span class="text-[11px] font-semibold text-teal-700">Live-Status</span>
+                </div>
+
+                <!-- Variante A: mit Icon, Delta-Pill und Fortschrittslinie -->
+                <div class="glass-card relative overflow-hidden rounded-xl p-4 transition-all hover:bg-white/60">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700 ring-1 ring-teal-500/20">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-medium text-slate-500">Aktive Ausleihen</p>
+                        <p class="text-2xl font-extrabold tracking-tight text-slate-900">24</p>
+                      </div>
+                    </div>
+                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20">+12 %</span>
+                  </div>
+                  <div class="ui-progress mt-3"><span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"></span></div>
+                </div>
+
+                <!-- Variante B: mit Icon und Nebenwert als Text -->
+                <div class="glass-card relative overflow-hidden rounded-xl p-4 transition-all hover:bg-white/60">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/20">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-medium text-slate-500">Verfügbare Werkzeuge</p>
+                        <p class="text-2xl font-extrabold tracking-tight text-slate-900">156</p>
+                      </div>
+                    </div>
+                    <span class="shrink-0 text-xs font-semibold text-slate-600">von 210</span>
+                  </div>
+                </div>
+
+                <!-- Variante C: mit Icon und Warn-Pill -->
+                <div class="glass-card relative overflow-hidden rounded-xl p-4 transition-all hover:bg-white/60">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/20">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-medium text-slate-500">Kritischer Lagerbestand</p>
+                        <p class="text-2xl font-extrabold tracking-tight text-slate-900">23</p>
+                      </div>
+                    </div>
+                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/20">Warnung</span>
+                  </div>
+                </div>
+
+                <!-- Variante D: ohne Icon (Label und Zusatz in einer Zeile) -->
+                <div class="glass-card relative overflow-hidden rounded-xl p-4 transition-all hover:bg-white/60">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-xs font-medium text-slate-500">Serienartikel (PDF)</p>
+                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-500/20">3 neu</span>
+                  </div>
+                  <p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">87</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="code-panel"><pre><code>&lt;!-- Abschnittsüberschrift der Spalte --&gt;
+&lt;div class="flex items-center justify-between"&gt;
+  &lt;p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"&gt;Schnellübersicht&lt;/p&gt;
+  &lt;span class="text-[11px] font-semibold text-teal-700"&gt;Live-Status&lt;/span&gt;
+&lt;/div&gt;
+
+&lt;!-- Variante A: Icon + Zahl + Fortschrittslinie --&gt;
+&lt;div class="glass-card rounded-xl p-4 transition-all hover:bg-white/60"&gt;
+  &lt;div class="flex items-center justify-between gap-3"&gt;
+    &lt;div class="flex min-w-0 items-center gap-3"&gt;
+      &lt;div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700 ring-1 ring-teal-500/20"&gt;
+        &lt;svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"&gt;
+          &lt;path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5" /&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+      &lt;div class="min-w-0"&gt;
+        &lt;p class="text-xs font-medium text-slate-500"&gt;Aktive Ausleihen&lt;/p&gt;
+        &lt;p class="text-2xl font-extrabold tracking-tight text-slate-900"&gt;24&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-500/20"&gt;+12 %&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class="ui-progress mt-3"&gt;&lt;span class="bg-gradient-to-r from-teal-600 to-cyan-400" style="width:80%"&gt;&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Variante D: ohne Icon, Zahl unter der Zeile --&gt;
+&lt;div class="glass-card rounded-xl p-4 transition-all hover:bg-white/60"&gt;
+  &lt;div class="flex items-center justify-between gap-3"&gt;
+    &lt;p class="text-xs font-medium text-slate-500"&gt;Serienartikel (PDF)&lt;/p&gt;
+    &lt;span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-500/20"&gt;3 neu&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900"&gt;87&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;!-- Einordnung: Dashboard-Raster, Tabelle/Kartenzeilen links, Schnellübersicht rechts --&gt;
+&lt;div class="grid grid-cols-12 gap-6"&gt;
+  &lt;main class="col-span-12 lg:col-span-8 space-y-6"&gt;…&lt;/main&gt;
+  &lt;aside class="col-span-12 lg:col-span-4 space-y-3"&gt;…&lt;/aside&gt;
+&lt;/div&gt;
+
+/* CSS: .glass-card aus dem Guide */
+.glass-card { background: rgba(255,255,255,.40); border: 1px solid rgba(255,255,255,.65); backdrop-filter: blur(10px); }</code></pre></div>
+          </div>
+
+          <div class="ui-alert ui-alert-info mt-5">
+            <span>ℹ</span>
+            <div>
+              <strong>Konvention</strong>
+              <div class="mt-0.5 opacity-80">Die Spalte sitzt im Dashboard-Raster <code>grid grid-cols-12 gap-6</code>: Hauptbereich <code>col-span-12 lg:col-span-8</code>, Spalte <code>col-span-12 lg:col-span-4</code>. Kennzahl <code>text-2xl font-extrabold</code> (kleiner als die KPI-Kachel mit <code>text-3xl</code>), Icon-Kachel <code>h-10 w-10 rounded-lg</code> (KPI-Kachel: <code>h-11 w-11 rounded-xl</code>). Für die Statuslinie die vorhandene <code>.ui-progress</code> verwenden – keine eigene dünne Balkenklasse. Pro Spalte höchstens vier Karten, damit die Spalte den Hauptbereich nicht überragt.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ========== DATA / LOADING ========== -->
       <section x-show="activeTab === 'guide-data'" x-cloak class="space-y-6">
         <div class="app-content-block rounded-2xl p-6 shadow-xs">
@@ -1054,13 +2258,78 @@
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION DEMO -->
-  <div x-show="toastVisible" x-cloak x-transition class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-3">
-    <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
-    Aktion erfolgreich ausgeführt!
+  <!-- TOAST STACK (Live-Demo, unten rechts) -->
+  <div class="ui-toast-stack" aria-live="polite">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="ui-toast" :class="'ui-toast-' + t.type + (t.leaving ? ' is-leaving' : '')" role="status">
+        <span class="ui-toast-icon" aria-hidden="true" x-text="t.icon"></span>
+        <div class="min-w-0 flex-1">
+          <p class="ui-toast-title" x-text="t.title"></p>
+          <p class="ui-toast-msg" x-text="t.message"></p>
+        </div>
+        <button class="ui-toast-close" @click="dismissToast(t.id)" aria-label="Toast schließen">&times;</button>
+        <span class="ui-toast-life" x-show="t.duration > 0" :style="'animation-duration:' + t.duration + 'ms'"></span>
+      </div>
+    </template>
   </div>
 
   <script>
+    // Zentrale Demo-State für Styleguide (Alpine root scope)
+    function appShell() {
+      // Symbol je Toast-Variante (Farbe kommt aus der CSS-Klasse .ui-toast-<type>)
+      const TOAST_ICON = { success: '✓', error: '×', warning: '!', info: 'i' };
+
+      return {
+        activeTab: 'guide-overview',
+        modalOpen: false,
+
+        /* ---- Toast-System ---- */
+        toasts: [],
+        toastSeq: 0,
+
+        // type: success | error | warning | info
+        // duration in ms, 0 = bleibt stehen bis manuell geschlossen
+        pushToast(type, title, message, duration = 4000) {
+          const id = ++this.toastSeq;
+          this.toasts.push({ id, type, icon: TOAST_ICON[type] || 'i', title, message, duration, leaving: false });
+          if (duration > 0) {
+            setTimeout(() => this.dismissToast(id), duration);
+          }
+          return id;
+        },
+        // zweiphasig: erst Austritts-Animation, dann aus dem Stapel entfernen
+        dismissToast(id) {
+          const toast = this.toasts.find((t) => t.id === id);
+          if (!toast || toast.leaving) return;
+          toast.leaving = true;
+          setTimeout(() => {
+            this.toasts = this.toasts.filter((t) => t.id !== id);
+          }, 160);
+        },
+        clearToasts() {
+          this.toasts = [];
+        },
+
+        notifySuccess() {
+          this.pushToast('success', 'Gespeichert', 'Werkzeug TS-1004 wurde aktualisiert.');
+        },
+        notifyError() {
+          this.pushToast('error', 'Speichern fehlgeschlagen', 'Keine Verbindung zum Server. Bitte erneut versuchen.', 0);
+        },
+        notifyWarning() {
+          this.pushToast('warning', 'Wartung fällig', 'TS-1004 ist seit 3 Tagen über der Wartungsfrist.', 6000);
+        },
+        notifyInfo() {
+          this.pushToast('info', 'Synchronisiert', '24 Werkzeuge vom Server übernommen.');
+        },
+        notifyStack() {
+          this.pushToast('info', 'Import gestartet', 'Werkzeugliste wird eingelesen …');
+          this.pushToast('success', 'Ausleihe erfasst', 'TS-1002 ist jetzt bei M. Keller.');
+          this.pushToast('warning', 'Wartung fällig', 'TS-1004 ist seit 3 Tagen über der Wartungsfrist.', 6000);
+        }
+      };
+    }
+
     // Low-end / no backdrop-filter support fallback
     (function () {
       try {

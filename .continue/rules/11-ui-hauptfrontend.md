@@ -1,6 +1,6 @@
 ---
 name: UI Haupt-Frontend (Glas)
-globs: ["**/components/{auth,tools,movements,storage,serial-articles}/**", "**/index.css", "**/App.tsx"]
+globs: ["**/components/{auth,tools,movements,spare-parts,data-sheets,serial-articles}/**", "**/index.css", "**/App.tsx"]
 description: Glas-Design-System für das Haupt-Frontend – verbindliche Klassen und Werte
 ---
 
@@ -96,7 +96,15 @@ werden alle `backdrop-filter` deaktiviert und der Hintergrund auf `rgba(255,255,
 ## Weitere Klassen
 
 - `.ui-switch`: `42x24px` · `border-radius 999px` · `background #cbd5e1` · `.is-on` → `background #0f766e`
-- `.ui-pagination`: Links `30x30px` · `border-radius .6rem` · `.active` → `background #0f766e` · `color #fff`
+- `.ui-pagination`: Links `30x30px` · `border-radius .6rem` · `.active` bzw. `[aria-current="page"]` → `background #0f766e` · `color #fff` · **Ergänzung:** `:disabled` → `opacity .35` + `cursor not-allowed`, `:focus-visible` → 2px Teal-Rahmen (die Vorlage hatte keinen deaktivierten Zustand; am ersten/letzten Blatt sind die Randknöpfe wirkungslos)
+- `.ui-segments` (**Ergänzung**): segmentierte Filtergruppe, gleiche Maße wie `.ui-tabs`; `label` + verstecktes natives `input` als Fläche (nicht `sr-only` – sonst fängt das Label die Klicks ab), aktiv über `label:has(input:checked)` → weiße Fläche, `#115e59`, Tab-Schatten; Schrift `.8rem` (Guide §1.8: 12px Untergrenze)
+- `.ui-menu-left` (**Ergänzung**): Einfahrt von rechts nach links für Menüs, deren rechte Kante auf dem auslösenden Knopf liegt (`translateX(10px)` → 0, `.14s`, nur bei `prefers-reduced-motion: no-preference`)
+- `.ui-toast-stack` / `.ui-toast` (**Nachtrag aus der Vorlage**, war nicht umgesetzt): Stapel unten rechts, `z-index 60`, Fläche `rgba(255,255,255,.94)` mit farbiger linker Kante, `.ui-toast-life` als Fortschrittsbalken; `role="status"` + `aria-live="polite"` am Stapel. Varianten: `-success` `#0f766e` · `-error` `#9f1239` · `-warning` `#b45309` · `-info` `#1d4ed8`. Abweichungen: Schrift `.8rem` (§1.8), Schließen als Icon statt „×“, und `pointer-events: none` auf `.ui-toast` (nur der Schließen-Knopf fängt Klicks — ein blockierender Toast liegt sonst über dem Speichern-Knopf)
+
+## Zwei Fallen im Glas-System
+
+1. **`backdrop-filter` bricht `position: fixed`.** Ein Element mit `backdrop-filter` (`.app-content-block`, `.glass-card`, `backdrop-blur-*`) wird zum Bezugsrahmen für fixierte Nachfahren — Menüs und Toasts landen dann am Block statt am Fenster (gemessen ~290 px daneben bzw. außerhalb des Bildes). Solche Überlagerungen **immer** in einem Portal an `<body>` rendern.
+2. **`sr-only` auf einer Eingabe macht sie unklickbar.** Bei 1×1 px liegt das umschließende Label darüber und fängt die Klicks ab. Eingaben in segmentierten Gruppen deshalb als transparente Fläche (`absolute inset-0 opacity-0`) auslegen — gleiche Semantik, aber die Eingabe ist selbst das Klickziel.
 - `.ui-progress`: `height 6px` · `border-radius 999px` · `background rgba(148,163,184,.28)` · Balken `#0f766e`
 - `.ui-spinner`: `20x20px` · `border 2px rgba(15,118,110,.18)` · `border-top #0f766e` · Rotation `.8s linear infinite`
 - `.ui-skeleton`: Gradient-Shimmer (`.15` → `.7` → `.15`) · `animation 1.4s ease-in-out infinite`
