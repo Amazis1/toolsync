@@ -57,7 +57,7 @@ invalidiert **nichts** serverseitig.
 |---|---|
 | Algorithmus | `HS256` (`settings.jwt_algorithm`) |
 | Secret | `settings.jwt_secret_key` |
-| Lebensdauer | `settings.jwt_access_token_expire_minutes` = **30 Minuten** |
+| Lebensdauer | `settings.jwt_access_token_expire_minutes` = **30 Minuten** (rollierend, siehe Abschnitt 2a) |
 | Payload | `sub` (Personalnummer), `is_admin`, `exp` |
 | Übertragung | `Authorization: Bearer <token>` |
 | Schema | `OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)` |
@@ -200,8 +200,9 @@ und `exp`. Jede Rechteentscheidung holt den Benutzer aus der Datenbank.
    Aufrufer sie vergessen kann?
 4. **Rollen** — werden `Role`/`Permission` genutzt oder nicht? Wenn nicht: entfernen.
    Derzeit ist `is_admin` die einzige wirksame Stufe.
-5. **Token-Lebensdauer 30 Minuten** — für einen Werkstattbetrieb an einem Terminal
-   möglicherweise zu kurz oder zu lang. Fachliche Klärung nötig.
+5. **Token-Lebensdauer 30 Minuten** — durch die rollierende Sitzung (Abschnitt 2a)
+   verlängert sich die Sitzung bei Aktivität automatisch; ohne Aktivität endet sie
+   nach 30 Minuten. Ein absolutes Maximum gibt es bewusst nicht.
 6. **CORS** — fest auf `localhost:5173` und `localhost:3000` verdrahtet. Für
    Serverbetrieb im internen Netzwerk konfigurierbar machen.
 7. **`DATABASE_URL`** — zeigt aktuell auf SQLite (`sqlite+aiosqlite`), nicht auf

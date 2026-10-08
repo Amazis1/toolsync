@@ -22,6 +22,20 @@ CSS-Dateien umgesetzt:
 | Glas | 36 | **36 von 36** |
 | Split-Tone | 94 | **94 von 94** |
 
+> **Zusätzlich (nicht aus der Vorlage):** `index.css` enthält fünf Ergänzungen, die
+> erst im Betrieb gebraucht wurden und hier in §1.6 dokumentiert sind — die
+> deaktivierten und fokussierten Zustände von `.ui-pagination`, `.ui-segments`
+> (segmentierte Filtergruppe aus nativen Kontrollkästchen/Radios), `.ui-menu-left`
+> (Menü-Einfahrt von rechts nach links) und `.table-row-glass` (schwacher
+> Glasverlauf für Tabellenzeilen, abgeleitet aus dem Verlauf von `.glass-card`).
+> Die Zahlen oben zählen weiterhin nur die Klassen der Vorlage.
+>
+> **Nachtrag:** Die Toast-Klassen der Vorlage (`.ui-toast-stack`, `.ui-toast`,
+> `-success/-error/-warning/-info`, `.ui-toast-life`) sind jetzt ebenfalls
+> umgesetzt — sie fehlten bis dahin in `index.css`. Zwei Werte weichen bewusst
+> ab: Schriftgröße `.8rem` statt `.72rem` (§1.8) und der Schließen-Knopf ist ein
+> Icon statt des „×"-Zeichens (Audit A-10).
+
 > **Wichtig:** Die beiden Systeme dürfen **nicht vermischt** werden. Eine Komponente
 > benutzt entweder `.ui-*` **oder** `.admin-*`. Niemals beide.
 
@@ -115,6 +129,11 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 .ui-badge-danger  { background:rgba(225,29,72,.12);   color:#9f1239; border-color:rgba(225,29,72,.25); }
 .ui-badge-info    { background:rgba(59,130,246,.12);  color:#1e40af; border-color:rgba(59,130,246,.25); }
 .ui-badge-neutral { background:rgba(148,163,184,.18); color:#475569; border-color:rgba(148,163,184,.3); }
+/* Größere Ausführung: für Abzeichen, die ALLEIN stehen (z. B. Tastenhinweis
+   „Esc"), nicht als Beisatz zu einem Text. Die Icon-Größe kommt aus der Klasse
+   (1.05rem), nicht aus `h-3.5 w-3.5` im Markup – sonst gewinnt die Utility. */
+.ui-badge-lg { gap:.45rem; padding:.3rem .85rem; font-size:.78rem; }
+.ui-badge-lg > svg { width:1.05rem; height:1.05rem; }
 ```
 
 ### 1.6 Weitere Klassen
@@ -122,7 +141,13 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 | Klasse | Beschreibung |
 |---|---|
 | `.ui-switch` | 42×24px Toggle, `.is-on` → `#0f766e` |
-| `.ui-pagination` | 30×30px Links, `.active` → `#0f766e` |
+| `.ui-pagination` | 30×30px Links, `.active` / `[aria-current="page"]` → `#0f766e`; **Ergänzung:** `:disabled` (Deckkraft .35, `not-allowed`) und `:focus-visible` (2px Teal-Rahmen) – die Vorlage kannte keinen deaktivierten Zustand, am ersten und letzten Blatt sind die Randknöpfe aber wirkungslos |
+| `.ui-segments` | **Ergänzung:** segmentierte Filtergruppe über der Liste – gleiche Maße wie `.ui-tabs`, aber `label` mit verstecktem nativem `input` (Kontrollkästchen/Radio als Fläche über dem Segment). Aktiv: `:has(input:checked)` → weiße Fläche, `#115e59`, Tab-Schatten. Schriftgröße `.8rem` (12,8px) statt `.72rem`, weil Guide §1.8 12px als Untergrenze setzt |
+| `.ui-menu-left` | **Ergänzung:** Einfahrt eines Menüs von rechts nach links (`translateX(10px)` → 0, `.14s`), für Menüs deren rechte Kante auf dem auslösenden Knopf liegt; Animation über `prefers-reduced-motion: no-preference` geschützt |
+| `.ui-toast-stack` / `.ui-toast` | **Nachtrag (aus der Vorlage, war nicht umgesetzt):** Stapel unten rechts (`min(23rem, 100vw - 3rem)`, `z-index 60`), Toast `rgba(255,255,255,.94)` mit farbiger linker Kante je Variante, `.ui-toast-life` als Fortschrittsbalken (`currentColor`, 2 px), Animationen `ui-toast-in` / `ui-toast-out` nur bei `no-preference`. `role="status"` + `aria-live="polite"` am Stapel; Schließen-Knopf als Icon (§A-10). **Abweichung:** `pointer-events: none` auf `.ui-toast` (nur der Schließen-Knopf fängt Klicks) — sonst liegt der Toast nach dem Speichern über dem Speichern-Knopf und schluckt den nächsten Klick |
+| `.ui-toast-*` | `-success` `#0f766e` · `-error` `#9f1239` · `-warning` `#b45309` · `-info` `#1d4ed8`; das Icon übernimmt die Variantfarbe |
+| `.table-row-glass` | **Ergänzung:** schwacher diagonaler Glasverlauf für Tabellenzeilen (`linear-gradient(135deg, rgba(255,255,255,.30), rgba(220,220,220,.14))`) — dieselbe Richtung und Farbfamilie wie `.glass-card`, aber nur etwa halb so stark. Als `background-image` liegt er über `background-color` (Zebra, Hover, Statusfarben), die dadurch sichtbar bleiben |
+| `.ui-segments` in der Kopfzeile | Einsatz: Kategorie (Kontrollkästchen), Werk (Radio), Favoriten (Umschalter) in der Zeile mit der Überschrift „Werkzeuge“, mit Trennstrichen (`bg-white/70`, 1×24 px) zwischen den Gruppen ab `lg` |
 | `.ui-progress` | 6px Höhe, Balken `#0f766e` |
 | `.ui-spinner` | 20×20px, Border-Top `#0f766e`, Rotation `.8s linear infinite` |
 | `.ui-skeleton` | Gradient-Shimmer, Animation `1.4s ease-in-out infinite` |
@@ -134,15 +159,73 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 
 ### 1.7 Icons
 
-Ausschließlich **Lucide-Icons als Inline-SVG** — kein CDN, keine Icon-Font, damit die
-Anwendung 100 % offline-fähig bleibt.
+Ausschließlich **Lucide** — kein CDN, keine Icon-Font, damit die Anwendung 100 %
+offline-fähig bleibt.
 
-Pflichtattribute: `xmlns` · `width="24"` · `height="24"` · `viewBox="0 0 24 24"` ·
-`fill="none"` · `stroke="currentColor"` · `stroke-width="2"` · `stroke-linecap="round"` ·
-`stroke-linejoin="round"`.
+**Bezug über npm, nicht über kopierte Pfade.** Die Icons kommen aus dem Paket
+`lucide-react` (`package.json`, eine Zeile): nach **einem** `npm install` mit Internet
+liegen sie in `node_modules` und werden beim Bauen Teil des JavaScript-Bundles — wie jeder
+andere Programmtext. Danach läuft `npm run build` ohne Netz. Ohne `node_modules` baut
+nichts; das gilt für React genauso. Ein `<script>`-Tag auf eine fremde URL ist **nie**
+zulässig — damit hinge die Oberfläche am Netz.
+
+**Was das Paket liefert:** `lucide-react` rendert echtes **Inline-SVG** (ein `<svg>` im
+DOM, kein Bild, keine Schrift) und setzt die Pflichtattribute selbst. Prüfbar am
+Quelltext: die Dateien unter `src/` enthalten keine einzige externe URL; die beiden
+`fetch`-Aufrufe (`lib/session.ts`, `lib/transport.ts`) gehen an das eigene Backend.
+
+Pflichtattribute (Rendervorgabe, im Wrapper einmal nachgehalten): `width="24"` ·
+`height="24"` · `viewBox="0 0 24 24"` · `fill="none"` · `stroke="currentColor"` ·
+`stroke-width="2"` · `stroke-linecap="round"` · `stroke-linejoin="round"`.
 
 `viewBox` niemals ändern. Größe nur über CSS-Klassen (`w-4 h-4` = 16px, `w-5 h-5` = 20px,
 `w-6 h-6` = 24px).
+
+**Ablage und Benennung (Haupt-Frontend):**
+
+| Datei | Inhalt |
+|---|---|
+| `frontend/src/components/iconBase.tsx` | `fromLucideBody` (setzt die Pflichtattribute, `aria-hidden`, `focusable`) und der Typ `IconProps` |
+| `frontend/src/components/icons.tsx` | **nur** Komponenten — je Zeichen eine Funktionsdeklaration `export function XIcon(props)` |
+
+Name = Lucide-Name in PascalCase plus `Icon`: `check` → `CheckIcon`, `circle-x` →
+`CircleXIcon`, `trash` → `TrashIcon`.
+
+> **Warum der Umweg über `fromLucideBody` statt direkt `lucide-react` zu re-exportieren:**
+> Ein Re-Export (`export { Check as CheckIcon }`) gäbe die Hoheit über die Attribute aus
+> dem Projekt. So stehen sie an **einer** Stelle, und `aria-hidden` (die Zeichen begleiten
+> hier immer sichtbaren Text) kann nicht vergessen werden.
+>
+> **Warum keine Sammlung `export const XIcon = fromLucide(X)`:** ESLint beanstandet das zu
+> Recht (`react-refresh/only-export-components`): eine Konstante mit Funktionsaufruf ist
+> für das Plugin keine Komponente, und die schnelle Aktualisierung im Entwicklungsmodus
+> fällt aus. Deshalb Funktionsdeklarationen plus Helfer in eigener Datei.
+
+**Eigenbauten** liegen in derselben Datei und tragen die Pflichtattribute selbst. Es sind
+**vier** Fachsymbole dieser Anwendung, für die es in Lucide kein Zeichen gibt:
+`ToolIcon` (Werkzeug), `SerialIcon` (Klemmbrett mit Zeilen), `WarehouseIcon` (Lagerhaus),
+`ArchiveIcon` (Archivkiste).
+
+> **Nachgezogen (Audit):** Die Datei enthielt 38 handgeschriebene SVG-Komponenten mit
+> `stroke-width="1.5"` und nachgebauten Pfaden (Zahnrad, Papierkorb, Stift, Maßarbeit bei
+> Haken und Kreuz); 13 davon waren Kopien aus dem Lucide-Repository und wären bei jedem
+> Update abgedriftet. Jetzt sind 33 Zeichen Wrapper um `lucide-react` und nur die vier
+> genannten Eigenbauten handgeschrieben.
+
+> **Werkzeug zum Nachprüfen:** `node scripts/verify-icons.mjs` (im Verzeichnis
+> `frontend/`, versioniert). Es rendert jedes Zeichen mit **genau den Props des Wrappers**
+> und prüft am erzeugten SVG die Pflichtattribute, `class`, `aria-hidden` und `focusable`;
+> zusätzlich, dass jeder Lucide-Import existiert, dass alle in der App importierten Namen
+> exportiert sind und dass die Eigenbauten die Pflichtattribute tragen. Braucht **kein**
+> Internet (liest `node_modules`). Stand: `33/33 Lucide-Zeichen gerendert`, `35 Namen
+> importiert, alle exportiert`, `4 Eigenbauten geprüft`.
+
+**Ausnahme:** Das AdminPanel (System B) führt seine Icons weiter lokal in den Seiten und
+nutzt `stroke-width` 1.75–2. Das ist der zweite, dunkle Systemstil; ein Umzug in die
+Hauptdatei würde die beiden Systeme vermischen. `MoreVerticalIcon`, `PencilIcon`,
+`TrashIcon` (AdminStammdaten), `PlusIcon`, `TrashIcon`, `PencilIcon`, `XIcon`
+(AdminStorageLocations) und `SearchIcon` (AdminDashboard) sind dort **doppelt** vorhanden
+und offene Kandidaten für einen eigenen Aufräumschritt.
 
 ### 1.8 Textskala und Kontrast (verbindlich)
 
@@ -226,8 +309,48 @@ ohne eigene Fläche, ohne Farbe, ohne Trennlinie.
 2. **Feste Label-Breite `7.5rem`**, damit alle Eingabekanten untereinander fluchten.
    Zu lange Beschriftungen werden an der Kante abgeschnitten – die Beschriftung ist dann
    zu kürzen (z. B. „Ort / Lagerplatz" → „Lagerplatz"), nicht die Breite aufzuweichen.
-3. Pflichtfelder bekommen ein `*` im Label (`aria-hidden`) plus `required` am Feld;
-   der ausführliche Hinweis „(Pflicht)" entfällt im Label.
+3. Pflichtfelder bekommen ein `*` **neben** dem Label plus `required` am Feld;
+   der ausführliche Hinweis „(Pflicht)" entfällt im Label. **Beides kommt aus einer
+   Komponente** — `frontend/src/components/Field.tsx`, `FieldLabel`:
+
+   ```tsx
+   <div className="ui-field">
+     <FieldLabel htmlFor="tool-plant" required>Werk</FieldLabel>
+     <select id="tool-plant" required aria-required>…</select>
+   </div>
+   ```
+
+   Ein `required` steuert Sternchen **und** die Aussage am Feld; beides kann nicht
+   mehr auseinanderlaufen. `standalone` ist für Labels **außerhalb** eines
+   `.ui-field` (Regel 8 und 11). Die Meldung unter einem Feld kommt aus
+   `FieldMessage` (`hint` / `error` / `success`), Fehler tragen `role="alert"`;
+   ihre Schriftfarbe steht in einem `Record` und nicht mehr in jedem Formular
+   einzeln.
+
+   > **Warum das Sternchen NICHT ins `<label>` gehört** (gemessen in den
+   > Browser-Tests): Als Label-Kind wird der **zugängliche Name** des Feldes zu
+   > „Werk\*" statt „Werk". Jeder Locator, der ein Feld über seinen Namen sucht –
+   > `getByLabel('Werk', { exact: true })` –, findet dann **0** Elemente und
+   > läuft in den Timeout, und ein Screenreader liest das Sternchen mit vor. Die
+   > Pflicht trägt ohnehin `required` am Feld; der Stern ist reine Sehhilfe.
+   > `FieldLabel` gibt deshalb ein Fragment zurück: `<label>` plus Stern als
+   > **Geschwister**. Wer ein Pflichtfeld umbenennt oder einen Locator darauf
+   > setzt, findet den sauberen Namen.
+
+   **Welche Felder Pflicht sind, entscheidet das Formular — und zwar je Bereich
+   unterschiedlich.** Das ist Absicht (die Fachregeln sind verschieden), nur die
+   Darstellung ist eine. Der Server ist die Wahrheit:
+
+   | Reiter/Bereich | Pflicht |
+   |---|---|
+   | Werkzeug | Werkzeug-ID **nur bei Stempel** (DEC-055), Werkzeug-Typ, Maß A, Werk, Lagerplatz (außer „In Ablage legen") |
+   | Serienartikel | Artikelnummer, Werk |
+   | Datenblatt | Werk (Werkzeug-ID, Name und Maschine sind freiwillig) |
+   | Ersatzteil | Artikelnummer, Werk |
+
+   Maß A wird seit dem Audit **auch serverseitig** verlangt
+   (`assert_tool_identity` in `backend/app/services/tool_service.py`): vorher
+   galt die Regel nur im Formular, die API nahm ein Werkzeug ohne Maß an.
 4. Der Fehler-/Erfolgszustand liegt **auf dem Wrapper** (`.is-error` / `.is-ok`).
 5. **Beschriftung in Satzschreibung** („Werkzeug-ID"), nicht in Großbuchstaben –
    §1.8 und die übrige Oberfläche schreiben Satzschreibung.
@@ -264,12 +387,35 @@ ohne eigene Fläche, ohne Farbe, ohne Trennlinie.
 11. **Ausnahme 3-spaltige Reihe:** Im Lagerplatz-Block (Schrank/Schublade/Platz) blieben
    dem Select neben dem 7,5-rem-Label nur 65 px (bei 1280 px Breite 33 px), während
    „Bitte zuerst Schrank wählen" 142 px braucht → diese drei Felder behalten das Label
-   darüber.
+   darüber (`<FieldLabel … standalone>`).
 12. **Keine Hilfstexte im Formular:** Der Blockkopf trägt kein Zusatz-Badge („nur freie
    Plätze"), und unter einem Feld steht kein erklärender Hinweissatz. Die Abhängigkeit
    steckt im Optionstext des Feldes selbst (`Bitte zuerst Schrank wählen`) und in der
    `disabled`-Darstellung. Tooltips (`title=`) sind im Formular nicht erlaubt – die
    Beschriftung trägt die Information.
+
+    **Offene Abweichung:** Der Reiter „Werkzeug" (Hinweis zur Werkzeug-ID, Block
+    „Kommt beim Speichern dazu") und der Reiter „Ersatzteil" („Der Platz gilt dann als
+    belegt") verletzen diese Regel bewusst: dort erklärt der Satz eine **fachliche**
+    Folge, die kein Optionstext tragen kann. Ein Tooltip ist an keiner Stelle mehr im
+    Einsatz (im Ersatzteil- und Datenblatt-Formular entfernt); die `title=`-Attribute
+    an den Icon-Knöpfen der Dateizeilen sind Beschriftungen dieser Knöpfe und keine
+    Feld-Hilfen.
+
+13. **Gruppen gehören in `FormSection`.** Zusammengehörige Felder stehen in einer
+    Glasfläche mit Kopfzeile (`frontend/src/components/Field.tsx`):
+
+    ```tsx
+    <FormSection title="Lagerplatz" action={<label>… In Ablage legen …</label>}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">…</div>
+    </FormSection>
+    ```
+
+    `optional` hängt ein leises „(optional)" an den Titel, `action` nimmt das
+    Kontrollkästchen rechts in der Kopfzeile. Vorher stand dieselbe
+    Klassenzeichenkette dreimal wörtlich im Markup, und im Ersatzteil-Formular
+    fehlte die Gruppe für dieselbe Sache („Lagerort") ganz — daraus entstand der
+    Eindruck „im Werkzeug aufgeteilt, im Ersatzteil nicht".
 
 > **Herkunft:** Zwei Entwürfe des Auftraggebers (`input_test.html`). Von deren Farbgebung
 > blieb nichts übrig (`#0284c7`/`#2563eb` Fokus, `#0f172a` Tag) – drei Anläufe wurden vom

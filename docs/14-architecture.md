@@ -91,7 +91,8 @@ Alle unter dem Präfix `/api`:
 | `/api/locations` | `locations.py` | Werke, Schränke, Schubladen, Plätze, Ablage |
 | `/api/movements` | `movements.py` | Bewegungen, Ausleihe, Rückgabe |
 | `/api/serial-articles` | `serial_articles.py` | Serienartikel und PDFs |
-| `/api/storage` | `storage_items.py` | Lager- und Ersatzobjekte |
+| `/api/spare-parts` | `spare_parts.py` | Ersatzteile (DEC-064) |
+| `/api/data-sheets` | `data_sheets.py` | Datenblätter – Einstellwerte je Werkzeug und Maschine (DEC-065) |
 | `/api` | `master_data.py` | Kunden, Maschinen, Werke |
 | `/health` | `main.py` | Healthcheck |
 
@@ -120,7 +121,8 @@ Modelle in `backend/app/models/`:
 | `tool.py` | `Tool`, `ToolType` |
 | `master_data.py` | `Plant`, `Customer`, `Machine` |
 | `storage.py` | `Cabinet`, `Drawer`, `Position` |
-| `storage_item.py` | Lager- und Ersatzobjekte |
+| `spare_part.py` | Ersatzteile (DEC-064) |
+| `data_sheet.py` | Datenblätter (DEC-065) |
 | `movement.py` | `ToolMovement` |
 | `serial_article.py` | `SerialArticle` |
 | `enums.py` | Aufzählungen |
@@ -215,9 +217,9 @@ Später ausschließlich über einen getrennten Integration Layer mit Adapter.
 
 | Thema | Befund |
 |---|---|
-| **Auth-Lücke `serial_articles`** | `POST /` und `DELETE /{id}` prüfen nur `require_active`. Jeder aktive Benutzer darf PDFs hochladen und löschen. Alle anderen Router nutzen für Schreibzugriffe `require_admin`. |
+| ~~**Auth-Lücke `serial_articles`**~~ | **Behoben (DEC-056, TASK-016):** `POST`, `PUT` und `DELETE` prüfen jetzt `require_admin`; Lesen bleibt bei `require_active`. Früher durfte jeder aktive Benutzer PDFs hochladen und löschen. |
 | **`user_id` aus dem Body** | `POST /api/movements` nimmt `user_id` aus dem Request-Body statt aus dem Token. `LendModal.tsx` sendet `null` und schreibt die Personalnummer als Klartext in `note`. |
-| **`storage_items` ohne Migration** | Tabelle existiert in keiner Alembic-Revision; sie entsteht nur über `create_all`. Eine frisch migrierte Datenbank hat sie nicht. |
+| ~~**`storage_items` ohne Migration**~~ | **Erledigt (DEC-064, TASK-024):** Die Tabelle ist entfernt; Ersatzteile liegen in `spare_parts` und haben die Revision `a8f4c2d6e130`. Die Revision ist **idempotent** (`create_all` beim Start kann Tabellen vorwegnehmen). |
 | **`create_all` beim Start** | kann Migrationen verschleiern — siehe oben |
 | **Doppelte Platzführung** | `Position.tool_id` und `Tool.position_id` führen dieselbe Beziehung. `insert_at` synchronisiert nicht in jedem Fall. |
 | **Kein DB-Constraint für ID-Eindeutigkeit** | `tools.tool_id` hat keinen Unique-Index; geprüft wird nur im Service. |

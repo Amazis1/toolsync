@@ -48,3 +48,6 @@ frontend/test-results/
 # Pruefartefakte des UI-Audits: Skripte, Logs und Screenshots.
 # Der Befundbericht selbst liegt versioniert in docs/19-frontend-ui-audit.md.
 .audit/
+# pytest legt bei abgebrochenen Laeufen Cache-Verzeichnisse im Projekt an.
+pytest-cache-files-*
+

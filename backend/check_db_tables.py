@@ -12,7 +12,7 @@ for t in tables:
     print(f"  {t[0]}")
 
 print("\n=== Spalten der relevanten Tabellen ===")
-for tbl in ["cabinets", "drawers", "positions", "tools", "storage_items"]:
+for tbl in ["cabinets", "drawers", "positions", "tools", "spare_parts"]:
     try:
         cur.execute(f"PRAGMA table_info({tbl})")
         cols = cur.fetchall()

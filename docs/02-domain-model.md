@@ -24,7 +24,9 @@
 | `ToolMovement` | `tool_movements` | `models/movement.py` | Bewegung / Historie |
 | `User` / `Role` / `Permission` | `users` / `roles` / `permissions` | `models/user.py` | Benutzer, Rollen, Rechte |
 | `SerialArticle` | `serial_articles` | `models/serial_article.py` | Serienartikel (PDF-Einrichteplan) |
-| `StorageItem` | `storage_items` | `models/storage_item.py` | Lager-/Ersatzobjekt (paralleler Ansatz) |
+| `StorageItem` | `storage_items` | ~~`models/storage_item.py`~~ | Lager-/Ersatzobjekt – **entfernt (DEC-064)**; Nachfolger ist `SparePart` |
+| `SparePart` | `spare_parts` | `models/spare_part.py` | Ersatzteil: Artikelnummer + Menge (DEC-064) |
+| `DataSheet` | `data_sheets` | `models/data_sheet.py` | Datenblatt: Einstellwerte eines Werkzeugs (DEC-065) |
 
 Alle Tabellen erben von `Base` (`models/base.py`) und – außer `ToolMovement` – von
 `AuditMixin` (`created_at` / `updated_at`, `DateTime(timezone=True)`,
@@ -39,7 +41,7 @@ Alle Tabellen erben von `Base` (`models/base.py`) und – außer `ToolMovement` 
 | Feld | Typ | Nullable | Constraint / Hinweis |
 |---|---|---|---|
 | `id` | `Integer` | nein | Primärschlüssel (intern) |
-| `tool_id` | `String(50)` | nein | fachliche Werkzeug-ID, z. B. `1075000` |
+| `tool_id` | `String(50)` | **ja** | fachliche Werkzeug-ID, z. B. `1075000`; `NULL` = „ohne ID" – Pflicht nur beim Stempel (DEC-055) |
 | `category` | `ToolCategory` | nein | `native_enum=False`, `length=20` |
 | `status` | `ToolStatus` | **ja** | Default `NULL` – nicht `available` |
 | `is_storage` / `allow_duplicate_id` | `Boolean` | nein | Default je `False`; `is_storage=True` = Lager/Ersatz |
@@ -131,10 +133,12 @@ Fachlicher Schlüssel: `tool_id + category + plant_id + is_storage`.
 |---|---|---|---|
 | `Plant` | `id`, `name` (`String(100)`) | `name` `unique=True` | `machines`, `cabinets`, `tools` |
 | `Customer` | `id`, `name` (`String(100)`), `color` (`String(7)`) | `name` `unique=True`; `color` nullable, `#RRGGBB`, `None` = keine Farbe | – (werkunabhängig) |
-| `Machine` | `id`, `name` (`String(100)`), `plant_id` | `plant_id` FK → `plants.id`, nullable, `SET NULL`; `name` **nicht** unique | `plant`, `tools` |
+| `Machine` | `id`, `name` (`String(100)`), `plant_id`, `color` (`String(7)`) | `plant_id` FK → `plants.id`, nullable, `SET NULL`; `name` **nicht** unique; `color` nullable, `#RRGGBB`, `None` = keine Farbe (DEC-067) | `plant`, `tools` |
 
 `customers.color` wurde mit Migration `d1a4f6b2c9e3` (`add_color_to_customers`,
-`down_revision = 'c7d9e2f3a1b8'`) ergänzt.
+`down_revision = 'c7d9e2f3a1b8'`) ergänzt; `machines.color` mit `e7d1b9c34a52`
+(DEC-067) – dieselbe Idee: ein Farbpunkt aus den Stammdaten macht Kunden bzw.
+Maschinen in den Listen auf einen Blick unterscheidbar.
 
 > **Offen:** `Machine.name` ist nicht eindeutig – gleichnamige Maschinen sind möglich.
 > Ob das fachlich gewollt ist, ist nicht dokumentiert.
@@ -243,24 +247,52 @@ Beziehungen: `Role.permissions` ↔ `Permission.roles` (`secondary=role_permissi
 |---|---|---|---|
 | `id` | `Integer` | nein | Primärschlüssel |
 | `article_number` | `String(100)` | nein | `unique=True` |
+| `name` | `String(200)` | ja | – |
 | `description` | `String(500)` | ja | – |
-| `pdf_path` | `String(500)` | ja | Pfad zur PDF |
-| `extra_metadata` | `JSON` | ja | freies JSON |
+| `pdf_path` | `String(500)` | ja | relativer Pfad im Artikelordner (DEC-057) |
+| `plant_id` | FK → `plants.id` | **nein** | `ondelete="RESTRICT"` – Werk ist Pflicht |
+| `customer_id` | FK → `customers.id` | ja | `ondelete="SET NULL"` |
+| `machine_id` | FK → `machines.id` | ja | `ondelete="SET NULL"` |
+| `is_favorite` | `Boolean` | nein | Default `false`; **globaler** Favorit, nicht pro Benutzer (DEC-063) |
 
-Erbt von `AuditMixin`.
+Erbt von `AuditMixin`; die Beziehungen `plant`, `customer` und `machine` sind
+`lazy="joined"` (sie stehen als Spalten in der Liste).
 
 > **Wichtig:** Ein Serienartikel ist ein **PDF-basierter Einrichteplan**. Die im PDF
 > enthaltenen Angaben (Programmname, Bearbeitungszeit, benötigte Werkzeug-IDs,
-> Anzahl der Hübe, Material, Maschine) sind **keine** strukturierten Spalten und
+> Anzahl der Hübe, Material) sind **keine** strukturierten Spalten und
 > werden nicht automatisch extrahiert (`docs/01-requirements.md` Abschnitt 6.3).
 
-> **Wichtig:** Das Feld heißt `extra_metadata`, **nicht** `metadata` – `metadata` ist
-> in SQLAlchemy reserviert (Kommentar im Modell).
+> **Wichtig (DEC-056):** Serienartikel sind ein **eigener** Bereich ohne Bezug zu
+> Werkzeugen; die Artikelnummer ist eine eigene Nummer. Strukturiert geführt
+> werden nur die Auffang-Angaben Artikelnummer, Werk, Name, Kunde, Maschine und
+> Beschreibung – Kunde, Maschine und Werk als **Stammdatenverknüpfung**, nicht als
+> Freitext.
 
-> **Offen:** Es gibt **keine** FK-Verknüpfung zu `Machine`, `Tool` oder `Plant`;
-> `extra_metadata` ist freies JSON ohne dokumentiertes Schema.
+> **Wichtig:** Das frühere Reservefeld `extra_metadata` wurde mit Migration
+> `a7c3e19f4b21` **entfernt**; ein Ersatz ist nicht vorgesehen. (`metadata` selbst
+> bleibt in SQLAlchemy reserviert – das war der Grund für den früheren Namen.)
 
-## 11. Lager-/Ersatzobjekt (`StorageItem`) – konkurrierender Ansatz
+> **Offen:** Es gibt **keine** FK-Verknüpfung zu `Tool`; die frühere Frage nach
+> einer Zuordnung von Einrichteplänen zu Werkzeugen ist mit DEC-056 verneint.
+
+## 11. Lager-/Ersatzobjekt (`StorageItem`) – abgelöst (DEC-064)
+
+> **Entschieden am 2026-10-04 – DEC-064:** `StorageItem` wird **entfernt**.
+> An seine Stelle treten **zwei** getrennte Gegenstände:
+>
+> | Gegenstand | Entität | Tabelle | Verbindlich |
+> |---|---|---|---|
+> | Ersatz**werkzeug** (Ersatzstempel, Ersatzmatrize) | `Tool` mit `is_storage = true` | `tools` | DEC-052, unverändert – in der Werkzeugliste |
+> | Ersatz**teil** (Dichtung, Sensor, Normteil) | **`SparePart`** | `spare_parts` | DEC-064 – eigener Tab „Ersatzteile" |
+>
+> **Gemessener Grund:** `storage_items` enthält **0 Zeilen** (`backend/toolsync.db`,
+> nur lesend geprüft) – der Tab „Lager/Ersatz" war deshalb dauerhaft leer, während
+> die echten Lager/Ersatz-Objekte als `tools` in der Werkzeugliste lagen.
+>
+> Das folgende Feldmodell beschreibt den **abgelösten** Stand und bleibt bis zur
+> Umsetzung (TASK-024) als Ist-Stand stehen. Das verbindliche Modell von
+> `SparePart` steht in **DEC-064**.
 
 | Feld | Typ | Nullable | Hinweis |
 |---|---|---|---|
@@ -273,15 +305,63 @@ Erbt von `AuditMixin`.
 | `description` | `Text` | ja | – |
 | `allow_duplicate_id` | `Boolean` | nein | Default `False` |
 
-> **Wichtig – offener Widerspruch im Datenmodell:** Für Lager/Ersatz existieren
-> **zwei** Ansätze parallel: (1) `Tool` mit `is_storage = True` – verbindlich nach
-> DEC-052 inkl. Ausleihlogik pro Exemplar; (2) `StorageItem` mit eigener Tabelle und
-> eigenem `/api/storage`-Backend. Der Docstring in `models/storage_item.py` benennt
-> den Konflikt selbst und verweist auf `docs/07-stock-replacement.md`.
+> **Wichtig – aufgelöster Widerspruch:** Für Lager/Ersatz existierten **zwei**
+> Ansätze parallel: (1) `Tool` mit `is_storage = True` – verbindlich nach DEC-052
+> inkl. Ausleihlogik pro Exemplar; (2) `StorageItem` mit eigener Tabelle und eigenem
+> `/api/storage`-Backend. Der Docstring in `models/storage_item.py` benannte den
+> Konflikt selbst. **DEC-064** löst ihn: `Tool.is_storage` bleibt für
+> Ersatz**werkzeuge**, `StorageItem` wird durch `SparePart` für Ersatz**teile**
+> ersetzt.
 
-> **Offen:** `machine_id` und `location_id` sind bewusst FK-los, verwaiste Verweise
-> also möglich. Eine Alembic-Revision für `storage_items` wurde in den gesichteten
-> Migrationen **nicht** gefunden.
+> **Offen (entfällt mit der Umsetzung):** `machine_id` und `location_id` sind
+> bewusst FK-los, verwaiste Verweise also möglich. Eine Alembic-Revision für
+> `storage_items` wurde in den gesichteten Migrationen **nicht** gefunden – `SparePart`
+> erhält eine eigene Revision (DEC-064 Punkt 9).
+
+## 11.1 Ersatzteil (`SparePart`) – umgesetzt (DEC-064)
+
+| Feld | Typ | Nullable | Hinweis |
+|---|---|---|---|
+| `id` | `Integer` | nein | Primärschlüssel |
+| `article_number` | `String(100)` | **nein** | die Identität, `index=True` |
+| `name` | `String(200)` | ja | Bezeichnung |
+| `type` | `String(100)` | ja | Dichtung, Sensor, Normteil … |
+| `plant_id` | FK → `plants.id`, `RESTRICT` | **nein** | Werk (Pflicht) |
+| `quantity` | `Integer` | nein | Default `1` – Mengenbestand |
+| `unit` | `String(20)` | ja | Stk, m, kg … |
+| `machine_id` | FK → `machines.id`, `SET NULL` | ja | – |
+| `storage_place` | `String(50)` | ja | Freitext (Schütten, Fächer) |
+| `position_id` | FK → `positions.id`, `SET NULL` | ja | Matrix-Platz, `index=True`; gilt als **belegt** (Nachtrag zu DEC-064) |
+| `description` | `Text` | ja | – |
+
+Kein `status`, keine Ausleihe, kein `allow_duplicate_id`. Verbindlich: **DEC-064**
+(mit Nachtrag: Matrix-Platz).
+
+> **Wichtig – ein Platz kann Werkzeug **oder** Ersatzteil halten:** Belegt heißt
+> `positions.tool_id IS NOT NULL` **oder** ein Ersatzteil zeigt darauf. Die
+> Belegungsprüfungen in `LocationService` (Verschieben, Ablegen, Einreihen) und
+> `ToolService` (anlegen, ändern) fragen beides ab; `PositionRead.spare_part`
+> liefert das Ersatzteil für die Matrix-Anzeige (`Position.spare_part`,
+> `lazy="joined"`).
+
+## 11.2 Datenblatt (`DataSheet`) – umgesetzt (DEC-065)
+
+| Feld | Typ | Nullable | Hinweis |
+|---|---|---|---|
+| `id` | `Integer` | nein | Primärschlüssel; zugleich Ordnername der Ablage |
+| `tool_id` | `String(50)` | ja | **Werkzeug-ID**, `index=True`; empfohlen, nicht Pflicht (DEC-055) |
+| `plant_id` | FK → `plants.id`, `RESTRICT` | **nein** | Werk (Pflicht) |
+| `machine_id` | FK → `machines.id`, `SET NULL` | ja | die Maschine der Einstellwerte |
+| `name` | `String(200)` | ja | Bezeichnung des Datenblatts |
+| `description` | `String(500)` | ja | – |
+| `pdf_path` | `String(500)` | ja | relativ, z. B. `uploads/data_sheets/7/plan.pdf` |
+| `is_favorite` | `Boolean` | nein | Default `false`, global (DEC-063) |
+
+> **Wichtig:** **Kein** Fremdschlüssel auf `tools.id` – eine Werkzeug-ID darf
+> mehrfach vorkommen (DEC-052) und leer sein (DEC-055); ein Datenblatt gilt für die
+> **ID**, nicht für ein Exemplar. Das Datenblatt hat **keine** Artikelnummer und
+> **keinen** Kunden. Verbindlich: **DEC-065**, Bereichsbeschreibung in
+> `docs/20-datenblatt.md`.
 
 ## 12. Beziehungen
 
@@ -289,7 +369,13 @@ Erbt von `AuditMixin`.
 Plant ─1:n─ Cabinet ─1:n─ Drawer ─1:n─ Position ─0/1─ Tool ─1:n─ ToolMovement ─n:1─ User ─n:1─ Role
   ├─1:n─ Machine ─0:n─ Tool                              (ToolType ─1:n─ Tool)         n:m Permission
   └─1:n─ Tool                          Customer ─0:n─ Tool
-SerialArticle (isoliert, article_number unique)   StorageItem (isoliert, FK-lose Referenzen)
+SerialArticle (eigener Bereich; plant Pflicht, customer/machine optional;
+kein Bezug zu Tool)
+DataSheet (eigener Bereich; plant Pflicht, machine optional; tool_id als Text,
+kein FK zu Tool – DEC-065)
+SparePart (eigener Bereich; article_number als Identität, plant Pflicht,
+machine optional; kein Bezug zu Tool – DEC-064)
+StorageItem (abgelöst – wird entfernt, DEC-064)
 ```
 
 > **Wichtig:** `Position` ↔ `Tool` ist beidseitig abgebildet (`Position.tool_id` und
@@ -320,10 +406,16 @@ SerialArticle (isoliert, article_number unique)   StorageItem (isoliert, FK-lose
 | `f5b7b5192461` | Initialmigration – **inklusive** `storage_locations` und `tools.storage_location_id` |
 | `c7d9e2f3a1b8` | `remove_storage_location_add_grid`: Tabelle entfernt, `drawers.cols` / `drawers.rows`, `positions.x` / `positions.y`, `tools.position_id` (FK `SET NULL`) |
 | `d1a4f6b2c9e3` | `add_color_to_customers`: `customers.color String(7)` |
+| `a7c3e19f4b21` | `serial_articles_stammdaten` (DEC-056/057): `name`, `plant_id` (NOT NULL, `RESTRICT`), `customer_id`, `machine_id` (`SET NULL`); `extra_metadata` entfernt |
+| `b6f2c8d41a77` | `add_is_favorite_to_serial_articles` (DEC-063): `serial_articles.is_favorite Boolean NOT NULL DEFAULT false` |
+| `a8f4c2d6e130` | `spare_parts` (DEC-064): neue Tabelle `spare_parts` (Artikelnummer, Werk Pflicht, `quantity`/`unit`, Maschine, `storage_place`), **idempotent** (hält `create_all` aus); `storage_items` entfällt |
+| `c4b9e7a15f28` | `data_sheets` (DEC-065): neue Tabelle `data_sheets` (`tool_id` als Text, Werk Pflicht, Maschine, `pdf_path`, `is_favorite`), **idempotent** |
+| `e7d1b9c34a52` | `machines.color` (DEC-067): `String(7)`, nullable, **idempotent** – Maschinenfarbe für den Farbpunkt in den Listen |
+| `f2a6c8d15b74` | `spare_parts.position_id` (Nachtrag zu DEC-064): FK → `positions.id`, `SET NULL`, Index, **idempotent** – Matrix-Platz für Ersatzteile |
 
 ## Offene Fragen
 
-1. **`StorageItem` vs. `Tool.is_storage`** – welcher Ansatz ist verbindlich? Beide existieren parallel; DEC-052 beschreibt nur den `Tool`-Weg (`docs/07-stock-replacement.md`).
+1. ~~**`StorageItem` vs. `Tool.is_storage`** – welcher Ansatz ist verbindlich?~~ **Entschieden (DEC-064):** `Tool.is_storage` für Ersatz**werkzeuge**, `SparePart` (`spare_parts`) für Ersatz**teile**; `storage_items` wird entfernt.
 2. **Werkzeug-ID-Struktur** – wird `tool_id` aus `ToolType` abgeleitet oder bleibt es ein freies Feld ohne Validierung?
 3. **Typ-Code-Format** – wird `ToolType.name` (z. B. `010 Rund`) validiert (Muster, Präfix `•`, führende Nullen)?
 4. **Status-Default** – mit welchem `Tool.status` wird ein Werkzeug angelegt? Aktuell `NULL`, was Ausleihe und Rückgabe blockiert.
@@ -333,5 +425,7 @@ SerialArticle (isoliert, article_number unique)   StorageItem (isoliert, FK-lose
 8. **`Machine.name`** – soll ein werkweiter Unique-Constraint gelten?
 9. **`status_change`** – wann erhält `ToolMovement` ein echtes Feld `new_status` statt der Auswertung von `note`?
 10. **`from_location` / `to_location`** – bleiben sie Freitext oder werden sie auf `Position` verlinkt?
-11. **`storage_items`-Migration** – fehlt die Alembic-Revision?
+11. ~~**`storage_items`-Migration** – fehlt die Alembic-Revision?~~ **Entschieden (DEC-064):** Die Tabelle entfällt; `spare_parts` und `data_sheets` erhalten jeweils eine eigene Revision.
 12. **Rollenmodell** – reicht eine Rolle pro Benutzer (`User.role_id`) dauerhaft?
+13. **`DataSheet.tool_id`** – bleibt die Werkzeug-ID ein freies Textfeld, oder kommt eine Prüfung gegen `tools.tool_id` (Live-Hinweis „zu dieser ID gibt es noch kein Datenblatt")?
+14. **`SparePart.article_number`** – bleibt die Nummer ein freies Feld, oder wird sie gegen die Artikelnummer der Serienartikel geprüft? (Heute keine Verbindung vorgesehen, DEC-064/065.)

@@ -182,12 +182,62 @@ Belegt außerdem: alle 8 Tags exakt 120 px breit, kein Tag-Text abgeschnitten, j
 
 **Noch offen für kleinere Laptops** (auf Wunsch nicht umgesetzt, Bedarf jetzt 94–126 px): 3-spaltiges Raster für die Feldreihen (≈110 px), „Zuordnung (Kunde/Maschine)" in das Haupt-Raster statt eigener Block (≈44 px), Block-Innenabstände `p-3`→`p-2.5` und `space-y-4`→`space-y-3` (≈34 px) — zusammen ≈188 px, womit auch 1280×800 und 1366×768 ohne Scrollen auskämen. Auf dem Telefon bleibt Scrollen bei 13 Feldern unvermeidbar.
 
+### 1.7 Umsetzungsstand: Werkzeugliste neu gebaut (TASK-014)
+
+Die Werkzeugliste wurde vollständig ersetzt (Suche, Filter, Sortierung, Favoriten, Pagination; Details in `docs/05-tools.md` §6/§7). Tabelle und Kopfzeile folgen den beiden Tabellen-Varianten des Styleguides („Tabellen & Status Badges" und „Werkzeugübersicht – Variante 2": zweizeilige Zellen, Ampel-Unterzeile, `.glass-preview-card` als Rahmen, Aktionsspalte mit `…`-Menü) sowie nativem Kopfzeilenfilter (Kategorie als Kontrollkästchen, Werk als Radio, Favoriten). Damit sind fünf Befunde dieses Audits erledigt:
+
+| Nr | Befund | Lösung | Beleg |
+|---|---|---|---|
+| **A-16** | Handgebaute Inline-SVGs ohne Pflichtattribute; `SearchIcon` ungenutzt | Das Suchfeld nutzt `SearchIcon` aus `components/icons.tsx`; für Sortierung, Favoriten, Chips, Pagination und Filter kamen **11 neue Icons** im selben Modul dazu (vollständiger Attributsatz nach Guide §1.7) | `components/icons.tsx`, `ToolFilterBar.tsx`, `ToolTable.tsx`, `ToolPagination.tsx` |
+| **A-24** | Kein Hinweis auf den seitlichen Scroll; „Aktionen" unsichtbar | Der Überlauf wird per `ResizeObserver` **gemessen**; nur wenn die Tabelle wirklich überläuft, erscheint „Tabelle seitlich scrollbar …". Umgesetzt nach der Empfehlung dieses Audits (Hinweis auf den Scrollbereich) – **keine** fixierte Spalte: sie lag über den übrigen Zellen und brauchte eine deckende weiße Fläche, die aus der Glasliste herausfiel. Nach dem Spaltenumbau passt die Tabelle bei 1440×900 ohne Scrollen (gemessen 815 px Platz bei 660 px Mindestbreite) | `.audit/shots/wt-10-telefon.png`, `wt-09-1440.png`, `ToolTable.tsx` |
+| **A-25** | 8 px zwischen „Bearbeiten" und „Löschen" | Aktionsgruppe mit `gap-2` (12 px) | `ToolTable.tsx` |
+| **A-28** | Leerzustand ohne Suchbegriff und ohne Ausweg | Drei getrennte Zustände: keine Daten („Noch keine Werkzeuge vorhanden" + Knopf „Werkzeug anlegen"), keine Treffer („Keine Treffer für „xyz"" + „Alle Filter zurücksetzen"), leere Seite („Diese Seite ist leer" + „Zur ersten Seite"). Zusätzlich zeigt eine Chip-Zeile jeden gesetzten Filter mit Einzel-Entfernen | `.audit/shots/wt-04-kein-treffer.png`, `ToolList.tsx`, `ToolFilterBar.tsx` |
+| **A-33** | `tracking-wider` fehlte in zwei von drei Tabellenköpfen | Die neue Werkzeugtabelle setzt es in allen sortierbaren Köpfen (die anderen beiden Tabellen bleiben offen) | `ToolTable.tsx` |
+
+Zusätzlich adressiert: Der Fokus bleibt auf den 30-px-Knöpfen der Blätterleiste sichtbar (`.ui-pagination :focus-visible`), und die Blätterleiste bekam einen deaktivierten Zustand — der Guide kannte keinen (dort nachgetragen, §1.6).
+
+**Nachtrag (nach der Sichtprüfung durch den Auftraggeber):** Die Tabelle wurde nach den beiden Tabellen-Varianten des Guides neu aufgebaut (zweizeilige Zellen, Glasrahmen, `…`-Menü, das nach links ausfährt) und die Statusspalte entfiel — sie stand fast immer auf „Ohne Status“ und wiederholte bei ausgeliehenen Werkzeugen nur das Badge. Aktions-Rückmeldungen laufen jetzt als **Toast** (`.ui-toast-stack`, Guide „Feedback“), nicht mehr als Meldung im Block.
+
+> **Zwei Fallen, die dabei aufgefallen sind (beide betreffen das Glas-System):**
+>
+> 1. **`backdrop-filter` bricht `position: fixed`.** Ein Element mit `backdrop-filter`
+>    wird zum Bezugsrahmen für absolut/fixiert positionierte Nachfahren. Das
+>    Zeilenmenü saß dadurch verschoben in der Tabellenzelle (gemessen ~290 px
+>    daneben), der Toast landete unten rechts im *Block* statt im Fenster — also
+>    außerhalb des Bildes. Beide hängen jetzt in einem Portal an `<body>`.
+> 2. **`sr-only` auf einer Eingabe macht sie unklickbar.** Schrumpft die Eingabe
+>    auf 1×1 px, liegt das umschließende Label darüber und fängt jeden Klick ab
+>    (Klick-Automatisierung scheitert mit „label intercepts pointer events“).
+>    Die segmentierten Filter nutzen deshalb eine transparente Fläche
+>    (`absolute inset-0 opacity-0`) als Klickziel bei gleicher Semantik.
+>
+> Beide Prüfungen sind als Test festgehalten (Position des Menüs und des Toasts
+> werden im Browser **gemessen**), damit sie nicht zurückkommen.
+
+> **Nachtrag 2 (Kunde/Maschine):** `Tool.machine` war nicht eager geladen —
+> ein Zugriff auf `tool.machine` hätte pro Zeile eine eigene Abfrage ausgelöst.
+> Die Beziehung ist jetzt `lazy="joined"` (n:1, keine doppelten Zeilen), Kunde
+> und Maschine stehen als Spalte in der Liste und sind sortier- und suchbar.
+> Der frühere offene Punkt „Farbanzeige aus `tool.customer.color`" ist damit
+> umgesetzt — der Punkt vor dem Kundennamen kommt aus den Stammdaten.
+
+> **Zur Sichtprüfung:** Der Agent konnte die Screenshots in `.audit/shots/`
+> nicht selbst ansehen (das Modell nimmt keine Bilder entgegen). Belegt sind
+> **gerenderte Kennzahlen** aus dem Browser: Spaltenbreiten und Überlauf,
+> berechnete Schriftgrößen und Farben (ID-Markierung 14 px mit
+> `teal-700/30`-Kante, Kategorie-Chip dreifach unterschiedlich gefärbt,
+> Kundenpunkt `rgb(2, 242, 222)`), Positionen von Menü und Toast. Die optische
+> Abnahme bleibt beim Auftraggeber.
+
+**Zwischenzeitlich erledigt (TASK-016):** Der Serienartikel-Bereich nutzt die neuen Bausteine jetzt – Suche über Artikelnummer, Name, Beschreibung, Werk, Kunde und Maschine (serverseitig), Sortierung über die Spaltenköpfe mit `aria-sort`, Blätterleiste (`ToolPagination`, dafür um Beschriftungen erweitert) mit Gesamtzahl, Leerzustände mit „Filter zurücksetzen" und Aktions-Rückmeldungen als Toast. Damit sind die Serienartikel-Anteile von **A-25** (Aktionsabstand), **A-28** (Leerzustand mit Suchbegriff und Ausweg), **A-33** (`tracking-wider` im Tabellenkopf) und **A-38** („PDF ansehen", „Andere PDF wählen") erledigt; **A-17** (Unicode-Glyphen `✕`/`×` statt Icons) bleibt offen, weil die Entscheidung K-04/K-05 zum Icon-Satz weiter fehlt. Die Löschbestätigung liegt jetzt in einem **Portal an `<body>`** (`.app-content-block` mit `backdrop-filter` war Bezugsrahmen für `position: fixed`). **„Lager/Ersatz"** hat weiterhin Suchfeld und Filterung im Browser ohne Pagination; die Bausteine sind dafür ausgelegt, die Umstellung ist eine eigene Aufgabe.
+
+
 
 ---
 
 ## 2. Befunde Haupt-Frontend (System A „Glas“)
 
-> Die Tabellen unten sind der **Befundstand des Audits**. Was davon bereits behoben ist, steht in §1.1 (Paket 1), §1.2 (Paket 2), §1.3 (Paket 3), §1.4 (Paket 4) und §1.5 (Paket 5): A-01 bis A-09, A-10, A-11 bis A-14, A-18, A-19, A-21 bis A-23, A-28 (Teil), A-30.
+> Die Tabellen unten sind der **Befundstand des Audits**. Was davon bereits behoben ist, steht in §1.1 (Paket 1), §1.2 (Paket 2), §1.3 (Paket 3), §1.4 (Paket 4), §1.5 (Paket 5) und §1.7 (Werkzeugliste, TASK-014): A-01 bis A-09, A-10, A-11 bis A-14, A-16, A-18, A-19, A-21 bis A-23, A-24, A-25, A-28, A-30, A-33.
 
 ### 2.1 HIGH — blockiert Nutzer oder führt sie in die Irre
 

@@ -221,7 +221,6 @@ Die PDFs können beispielsweise Informationen enthalten über:
 - benötigte Werkzeug-IDs
 - Anzahl der Hübe
 - Material
-- Maschine
 - weitere Einrichtinformationen
 
 Diese Informationen sind zunächst Bestandteil des PDF-Dokuments.
@@ -229,6 +228,13 @@ Diese Informationen sind zunächst Bestandteil des PDF-Dokuments.
 Sie werden nicht automatisch als separate strukturierte Datenfelder des Serienartikels in der Datenbank modelliert.
 
 Die PDF ist die eigentliche Informationsquelle.
+
+Zusätzlich trägt jeder Serienartikel die Angaben, über die er gefunden wird:
+Artikelnummer und Werk sind Pflicht, Name, Kunde, Maschine und Beschreibung
+freiwillig. Kunde, Maschine und Werk stammen aus den Stammdaten des
+Admin-Bereichs. Das Verwalten (Anlegen, Bearbeiten, Ersetzen, Löschen) ist
+Administratoren vorbehalten; suchen, ansehen und herunterladen darf jeder aktive
+Benutzer. Verbindlich: `docs/13-decisions.md` → **DEC-056**.
 
 Die Anwendung verwaltet zunächst die Dokumente und ermöglicht deren Suche und Anzeige.
 

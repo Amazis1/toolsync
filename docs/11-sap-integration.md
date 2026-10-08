@@ -42,7 +42,7 @@ Lagerorte, Bestand, Ausleihe, Rückgabe, Serienartikel sein."
 | Benutzerverwaltung | ja | ja | ja — `routers/users.py` |
 | Rollen und Berechtigungen | (15) | ja | ja — `routers/roles.py` |
 | Werkzeugverwaltung / Werkzeugtypen | ja | ja | ja — `routers/tools.py` |
-| Lager / Lagerorte | ja | ja | ja — `routers/storage_items.py`, `routers/locations.py` |
+| Lager / Lagerorte | ja | ja | ja — `routers/spare_parts.py` (Ersatzteile, DEC-064), `routers/locations.py` |
 | Bestand | ja | ja | ja — Teil der Werkzeug-/Positionsmodelle |
 | Ausleihe / Rückgabe / Bewegungen | ja | ja | ja — `routers/movements.py` (`lend`, `return`), `services/movement_service.py` |
 | Serienartikel | ja | ja | ja — `routers/serial_articles.py` |
@@ -65,7 +65,7 @@ Lagerorte, Bestand, Ausleihe, Rückgabe, Serienartikel sein."
 Abgeleitete Architekturregeln: (1) Der Integration Layer ist eine **eigene
 Schicht**; die Kern-Router in `backend/app/main.py` (`/api/auth`, `/api/users`,
 `/api/tools`, `/api/locations`, `/api/movements`, `/api/serial-articles`,
-`/api/storage`, `/api`, `/api/roles`) dürfen **keinen** direkten SAP-Aufruf
+`/api/spare-parts`, `/api`, `/api/roles`) dürfen **keinen** direkten SAP-Aufruf
 enthalten. (2) SAP-Zugriffe gehören in ein eigenes Modul (z. B.
 `backend/app/integration/`), nicht in `services/tool_service.py` oder
 `services/location_service.py`. (3) Einbahnstraße: Integration → Core über
@@ -138,7 +138,7 @@ kein SAP-Feld, kein SAP-Endpunkt.**
 |---|---|---|
 | `backend/` (ganzer Baum) | `(?i)sap`, `integration_layer`, `adapter`, `external` | **0 Treffer** |
 | `backend/app/routers/` | alle 69 Routendekoratoren | kein SAP-Endpunkt |
-| `backend/app/main.py` | vollständig gelesen | 9 Router registriert, **kein** Integration-Router (`/api/auth`, `/api/users`, `/api/tools`, `/api/locations`, `/api/movements`, `/api/serial-articles`, `/api/storage`, `/api`, `/api/roles`) |
+| `backend/app/main.py` | vollständig gelesen | 9 Router registriert, **kein** Integration-Router (`/api/auth`, `/api/users`, `/api/tools`, `/api/locations`, `/api/movements`, `/api/serial-articles`, `/api/spare-parts`, `/api`, `/api/roles`) |
 | `backend/app/models/enums.py` | vollständig gelesen | nur `ToolCategory`, `ToolStatus`, `MovementType`, `MovementStatus` — keine SAP-Werte |
 | `backend/app/services/` | `movement_service.py`, `location_service.py`, `tool_service.py` | kein Adapter, kein externer Aufruf |
 | `backend/requirements.txt`, `backend/.env` | vorhandene Dateien | keine SAP-Bibliothek, keine Konfiguration (kein `SAP_URL`, `SAP_CLIENT`, `SAP_MANDANT`) |

@@ -196,13 +196,47 @@ Der Serienartikel-Bereich ist ein eigener Bereich bzw. Block innerhalb der Anwen
 
 ## 6.1 Funktionen
 
-Benutzer sollen Serienartikel über eine Suchleiste suchen können.
+Serienartikel sind ein eigener Bereich und haben keine Beziehung zu Werkzeugen
+(Stempel, Abstreifer, Matrize).
+
+Ein Serienartikel besitzt folgende Felder:
+
+- Artikelnummer (Pflicht)
+- Werk (Pflicht)
+- Name (freiwillig)
+- Kunde (freiwillig)
+- Maschine (freiwillig)
+- Beschreibung (freiwillig)
+- PDF-Einrichteplan (freiwillig)
+- Bilder zum Plan (freiwillig, mehrere)
+
+Kunde, Maschine und Werk sind Stammdaten aus dem Admin-Bereich, kein Freitext.
+
+Zu einem Serienartikel können **Bilder** hochgeladen werden – beim Anlegen und
+beim Bearbeiten, mehrere auf einmal. Sie liegen im Artikelordner neben dem
+Einrichteplan und werden nur authentifiziert ausgeliefert (DEC-058).
+
+Benutzer sollen Serienartikel über eine Suchleiste suchen können – über
+Artikelnummer, Name, Beschreibung, Kunde, Maschine und Werk.
 
 Die Anwendung soll vorhandene Serienartikel-PDFs auflisten.
 
 Ein Benutzer soll eine PDF auswählen und öffnen bzw. anzeigen können.
 
-Je nach Berechtigung können PDFs hochgeladen, ersetzt oder gelöscht werden.
+Das Verwalten ist Administratoren vorbehalten: Anlegen, Bearbeiten, Ersetzen und
+Löschen prüfen serverseitig die Administratorrechte. Suchen, Anzeigen und
+Herunterladen darf jeder aktive Benutzer.
+
+Angelegt und bearbeitet wird sowohl im Serienartikel-Bereich als auch im
+Sub-Reiter „Serienartikel" des Anlegeformulars für Werkzeuge. Die beiden
+Speichervorgänge sind voneinander unabhängig.
+
+Die verbindliche Ausgestaltung steht in `docs/13-decisions.md` → **DEC-056**.
+
+> **Verwandter Bereich:** Das **Datenblatt** (Abschnitt 23) ist der Zwilling des
+> Serienartikels – der Einrichteplan beschreibt, **was** ein Auftrag braucht, das
+> Datenblatt, **wie** ein Werkzeug eingerichtet wird. Beide Bereiche bleiben
+> getrennt und ohne automatische Verknüpfung (DEC-065).
 
 ## 6.2 Inhalt der PDF
 
@@ -213,14 +247,18 @@ Ein Einrichteplan kann beispielsweise enthalten:
 - benötigte Werkzeug-IDs
 - Anzahl der Hübe
 - Material
-- Maschine
 - weitere Einrichtinformationen
 
-Diese Informationen sind zunächst Bestandteil des PDF-Dokuments.
+Diese Informationen sind Bestandteil des PDF-Dokuments.
 
-Sie müssen nicht automatisch als strukturierte Datenfelder in der Datenbank gespeichert werden.
+Sie müssen nicht automatisch als strukturierte Datenfelder in der Datenbank
+gespeichert werden.
 
 Die PDF ist die primäre Informationsquelle.
+
+Kunde, Maschine und Werk werden zusätzlich als strukturierte Felder am
+Serienartikel geführt, damit Pläne auffindbar sind (DEC-056); die übrigen
+Angaben bleiben ausschließlich im Dokument.
 
 ## 6.3 Keine automatische Strukturierung
 
@@ -244,6 +282,20 @@ Dort können beispielsweise verwaltet werden:
 - Ersatzteile
 - weitere Lagerobjekte
 
+## 7.0 Abgrenzung Ersatzwerkzeug ↔ Ersatzteil (entschieden 2026-10-04, DEC-064/DEC-066)
+
+**Ersatzwerkzeuge** (Ersatzstempel, Ersatzmatrize, Abstreifer) sind Werkzeuge mit
+Lagermarkierung und stehen in der **Werkzeugliste** – dort künftig mit dem Filter
+„Ersatz". Der frühere Tab „Lager/Ersatz" ist nicht mehr ihre Heimat.
+
+**Ersatzteile** (Dichtungen, Sensoren, Normteile) haben **keine Werkzeug-ID**,
+sondern eine **Artikelnummer**, und erhalten einen **eigenen Bereich „Ersatzteile"**.
+
+Gründe: die beiden Gegenstände haben keine gemeinsame Pflichtfeld-Menge (Kategorie
+und Maß A/B passen auf kein Ersatzteil, eine Ausleihlogik ebenso wenig), und eine
+gemeinsame Liste müsste Suche, Sortierung und Blättern über zwei Entitäten
+zusammenführen. Verbindlich: `docs/13-decisions.md` → **DEC-064**.
+
 ## 7.1 ID-Regel
 
 Beim Anlegen eines Lager-/Ersatzobjekts soll eine Option vorhanden sein:
@@ -265,6 +317,29 @@ Die Regel muss sowohl im Backend als auch im Datenmodell korrekt berücksichtigt
 Ein konkreter Lagerplatz darf nicht gleichzeitig mehrfach belegt sein, sofern dies fachlich ausgeschlossen ist.
 
 Die Lagerplatzlogik muss eindeutig definiert und serverseitig abgesichert werden.
+
+Gilt für **Werkzeuge** einschließlich Ersatzwerkzeugen (Platz-Matrix, DEC-048).
+**Ersatzteile** liegen nicht auf Matrix-Plätzen, sondern tragen einen freien
+Lagerort-Text (z. B. „Regal B3 / Fach 2").
+
+## 7.3 Ersatzteile (entschieden 2026-10-04, DEC-064)
+
+Ein Ersatzteil besitzt folgende Angaben:
+
+- Artikelnummer (Pflicht) – die Identität des Teils
+- Werk (Pflicht) – ohne Werk ist nicht bestimmbar, in welchem Werk das Teil an
+  welchem Platz liegt
+- Name, Typ (z. B. Dichtung, Sensor, Normteil), Beschreibung (freiwillig)
+- Menge und Einheit (Mengenbestand, Anforderung 8)
+- Maschine (freiwillig)
+- Lagerort als Freitext (freiwillig)
+
+Ein Ersatzteil hat **keinen** Status, **keine** Ausleihe und **keine** Werkzeug-ID.
+Mehrere Zeilen mit derselben Artikelnummer sind der Normalfall (mehrere Lagerorte,
+mehrere Chargen). Ein Mindestbestand ist nicht gefordert.
+
+Rechte: Lesen, Anlegen und Ändern darf jeder aktive Benutzer; Löschen ist
+Administratoren vorbehalten.
 
 ---
 
@@ -367,6 +442,7 @@ Relevante Bereiche sollen eine Suchfunktion besitzen.
 Insbesondere:
 
 - Serienartikel
+- Datenblätter
 - Lager / Ersatz
 - Werkzeuge
 
@@ -482,7 +558,9 @@ Insbesondere:
 - Werkzeuge
 - Bestände
 - Lager-/Ersatzobjekte
+- Ersatzteile
 - Serienartikel-Dokumente
+- Datenblätter
 - Ausleihen
 - Rückgaben
 - Bewegungen
@@ -503,6 +581,8 @@ Mindestens relevant:
 
 - Werkzeuge
 - Serienartikel
+- Datenblätter
+- Ersatzteile
 - Lager / Ersatz
 - Ausleihe
 - Rückgabe
@@ -558,3 +638,49 @@ Das Ergebnis der Requirements- und Altsystemanalyse soll eine belastbare Grundla
 8. spätere Migration
 
 Die Entwicklung darf erst auf dieser Grundlage systematisch beginnen.
+
+---
+
+# 23. Datenblatt (entschieden 2026-10-04, nachgetragen)
+
+> **Hinweis zur Nummerierung:** Dieser Abschnitt wurde nachträglich ergänzt und
+> deshalb hinter die Abschnitte 20–22 gestellt – die Nummern 1–22 sind an vielen
+> Stellen im Projekt zitiert und bleiben unverändert. Bei der geplanten
+> Zusammenführung von Vision und Requirements (`HANDOFF-toolsync.md`, Abschnitt 5.3)
+> erhält er seinen Platz bei den fachlichen Bereichen.
+
+Ein **Datenblatt** ist ein PDF-basiertes Dokument mit den **Einstellwerten eines
+Werkzeugs für eine Maschine** – die Werte, mit denen das Werkzeug in der Maschine
+eingerichtet wird. Es ist ein eigener Bereich bzw. Block der Anwendung mit eigenem
+Tab „Datenblätter".
+
+Ein Datenblatt besitzt folgende Felder:
+
+- Werkzeug-ID (freiwillig – empfohlen; Abstreifer und Matrize dürfen laut DEC-055
+  ohne ID existieren)
+- Werk (Pflicht)
+- Maschine (freiwillig)
+- Name (freiwillig)
+- Datenblätter als PDF (freiwillig, mehrere)
+- Bilder (freiwillig, mehrere)
+
+Benutzer sollen Datenblätter über eine Suchleiste suchen können – über Werkzeug-ID,
+Name, Beschreibung, Werk und Maschine.
+
+Werk und Maschine sind Stammdaten aus dem Admin-Bereich, kein Freitext.
+
+Das Verwalten (Anlegen, Bearbeiten, Dateien hinzufügen und entfernen, Löschen) ist
+Administratoren vorbehalten. Suchen, Anzeigen und Herunterladen darf jeder aktive
+Benutzer.
+
+Angelegt und bearbeitet wird im Sub-Reiter „Datenblatt" des Anlegeformulars sowie
+aus dem Bereich selbst. Zusätzlich führt eine Zeilenaktion **„Datenblatt"** in der
+Werkzeugliste direkt zu den Datenblättern dieser Werkzeug-ID.
+
+Der **Inhalt** der PDF wird nicht analysiert und nicht in Datenbankfelder überführt
+(Abschnitt 6.3 gilt sinngemäß); die PDF ist die primäre Informationsquelle.
+
+Das Datenblatt hat **keine** Beziehung zum Serienartikel und **keine** Artikelnummer.
+
+Die verbindliche Ausgestaltung steht in `docs/13-decisions.md` → **DEC-065**;
+die Beschreibung des Bereichs in `docs/20-datenblatt.md`.
