@@ -472,7 +472,8 @@ async def delete_position(
 ):
     """Platz löschen (nur Admin).
 
-    Ein belegter Platz kann nicht gelöscht werden.
+    Ein belegter Platz kann nicht gelöscht werden – belegt heißt: ein Werkzeug
+    **oder** ein Ersatzteil liegt darauf (DEC-064).
     """
     position = await db.get(Position, id)
     if not position:
@@ -481,6 +482,15 @@ async def delete_position(
         raise HTTPException(
             status_code=400,
             detail="Platz ist belegt und kann nicht gelöscht werden.",
+        )
+    if position.spare_part is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Platz ist mit dem Ersatzteil "
+                f"„{position.spare_part.article_number}“ belegt und kann nicht "
+                "gelöscht werden."
+            ),
         )
     await db.delete(position)
     await db.commit()

@@ -116,7 +116,7 @@ async def create_machine(
     admin_user: User = Depends(require_admin),
 ):
     """Maschine anlegen (nur Admin)."""
-    machine = Machine(name=data.name, plant_id=data.plant_id)
+    machine = Machine(name=data.name, plant_id=data.plant_id, color=data.color)
     db.add(machine)
     await db.commit()
     await db.refresh(machine)
@@ -136,6 +136,7 @@ async def update_machine(
         raise HTTPException(status_code=404, detail="Maschine nicht gefunden")
     machine.name = data.name
     machine.plant_id = data.plant_id
+    machine.color = data.color
     await db.commit()
     await db.refresh(machine)
     return machine

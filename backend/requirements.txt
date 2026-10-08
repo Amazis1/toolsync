@@ -24,6 +24,7 @@ pycparser==3.0
 pydantic==2.9.0
 pydantic-settings==2.5.0
 pydantic_core==2.23.2
+Pillow==12.2.0
 python-dotenv==1.0.0
 python-jose==3.3.0
 python-multipart==0.0.9

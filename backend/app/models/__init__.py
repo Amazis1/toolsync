@@ -6,7 +6,8 @@ from .tool import Tool
 from .movement import ToolMovement
 from .user import User, Role, Permission, role_permissions
 from .serial_article import SerialArticle  # <- Import stimmt
-from .storage_item import StorageItem
+from .data_sheet import DataSheet
+from .spare_part import SparePart
 
 __all__ = [
     "Base",
@@ -29,5 +30,6 @@ __all__ = [
     "Permission",
     "role_permissions",
     "SerialArticle",
-    "StorageItem",
+    "DataSheet",
+    "SparePart",
 ]

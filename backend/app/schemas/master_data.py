@@ -59,6 +59,9 @@ class CustomerRead(CustomerBase):
 class MachineBase(BaseModel):
     name: str
     plant_id: Optional[int] = None
+    # Optionale Farbe aus den Stammdaten (#RRGGBB) – die Listen zeigen daraus
+    # einen Farbpunkt neben dem Maschinennamen, wie beim Kunden.
+    color: Optional[str] = None
 
 
 class MachineCreate(MachineBase):

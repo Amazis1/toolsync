@@ -32,4 +32,17 @@ class Position(Base, AuditMixin):
     drawer: Mapped["Drawer"] = relationship(back_populates="positions")
     tool_id: Mapped[int | None] = mapped_column(ForeignKey("tools.id", ondelete="SET NULL"), nullable=True)
     tool: Mapped["Tool | None"] = relationship(foreign_keys=[tool_id])
+    # Ein Platz kann **statt** eines Werkzeugs auch ein Ersatzteil halten (DEC-064,
+    # Nachtrag: Matrix-Platz für Ersatzteile). Ein Platz ist damit belegt, wenn
+    # `tool_id` **oder** dieser Verweis gesetzt ist – die Belegungsprüfungen in
+    # `LocationService` und `ToolService` fragen beide ab.
+    # Als String-Referenz ohne Import: die Klasse wird beim Mapper-Aufbau über
+    # `models/__init__.py` aufgelöst (kein Zirkelimport storage ↔ spare_part).
+    # `lazy="joined"`: Jede Platz-Abfrage liefert das Ersatzteil gleich mit. Ohne
+    # das würde die Antwort (`PositionRead.spare_part`) im Async-Kontext nachladen
+    # und fehlschlagen – und die Matrix soll den Platz ohnehin sofort als belegt
+    # zeigen.
+    spare_part: Mapped["SparePart | None"] = relationship(
+        "SparePart", back_populates="position", uselist=False, lazy="joined"
+    )
     __table_args__ = (UniqueConstraint("drawer_id", "name"),)

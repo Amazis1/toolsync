@@ -57,9 +57,24 @@ class DrawerRead(DrawerBase):
 # Tool-Light-Infos für Positionen (Anzeige: Werkzeug-ID + Tooltip + Status)
 class ToolLiteRead(BaseModel):
     id: int
-    tool_id: str
+    # None = Werkzeug ohne ID (Abstreifer/Matrize, DEC-055). Ohne Optional
+    # würde die Antwortprüfung an einem solchen Datensatz scheitern und die
+    # Lagerplatz-Seite mit HTTP 500 leer bleiben.
+    tool_id: Optional[str] = None
     description: Optional[str] = None
     status: Optional[ToolStatus] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Ersatzteil-Light-Infos für Positionen: Ein Platz kann **statt** eines Werkzeugs
+# ein Ersatzteil halten. Die Matrix zeigt es damit als belegt an, und die
+# Platzauswahl im Formular erkennt den Platz als nicht frei (DEC-064).
+class SparePartLiteRead(BaseModel):
+    id: int
+    article_number: str
+    name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -106,6 +121,9 @@ class PositionRead(PositionBase):
     updated_at: datetime
     # Tool-Infos für die Anzeige (Platz zeigt Werkzeug-ID + Tooltip mit Beschreibung)
     tool: Optional[ToolLiteRead] = None
+    # Ersatzteil auf diesem Platz (statt eines Werkzeugs). Ein Platz ist belegt,
+    # wenn `tool_id` **oder** `spare_part` gesetzt ist.
+    spare_part: Optional[SparePartLiteRead] = None
 
     class Config:
         from_attributes = True

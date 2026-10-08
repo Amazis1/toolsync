@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
@@ -6,10 +6,17 @@ from typing import Optional, List
 from app.dependencies.permissions import require_active, require_admin
 from app.models.user import User
 from app.utils.database import get_db
-from ..schemas.tool import ToolCreate, ToolUpdate, ToolRead
+from ..crud.crud_tool import ToolSortKey, ToolSortOrder
+from ..schemas.tool import (
+    ToolCreate,
+    ToolFavoriteUpdate,
+    ToolPage,
+    ToolRead,
+    ToolUpdate,
+)
 from ..schemas.master_data import ToolTypeCreate, ToolTypeUpdate, ToolTypeRead
 from ..models.master_data import ToolType
-from ..models.enums import ToolCategory
+from ..models.enums import ToolCategory, ToolStatus
 from ..services.tool_service import ToolService
 
 router = APIRouter()
@@ -90,26 +97,80 @@ async def delete_tool_type(
     return None
 
 
-@router.get("/", response_model=List[ToolRead])
+@router.get("/", response_model=ToolPage)
 async def get_tools(
-    tool_id: Optional[str] = None,
-    category: Optional[str] = None,
-    plant_id: Optional[int] = None,
-    is_storage: Optional[bool] = None,
-    skip: int = 0,
-    limit: int = 100,
+    q: Optional[str] = Query(
+        None,
+        description="Freitextsuche über Werkzeug-ID, Bezeichnung, Werkzeugtyp und Werk.",
+    ),
+    category: Optional[List[ToolCategory]] = Query(
+        None, description="Kategorien; mehrfach angebbar."
+    ),
+    status: Optional[List[ToolStatus]] = Query(
+        None, description="Status; mehrfach angebbar."
+    ),
+    plant_id: Optional[int] = Query(None, description="Werk."),
+    tool_type_id: Optional[int] = Query(None, description="Werkzeugtyp."),
+    is_storage: Optional[bool] = Query(
+        None, description="true = nur Lager/Ersatz, false = nur normale Werkzeuge."
+    ),
+    has_place: Optional[bool] = Query(
+        None, description="true = nur mit Lagerplatz, false = nur Ablage."
+    ),
+    favorites_only: bool = Query(False, description="Nur Favoriten."),
+    sort: ToolSortKey = Query("tool_id", description="Sortierspalte."),
+    order: ToolSortOrder = Query("asc", description="Sortierrichtung."),
+    skip: int = Query(0, ge=0, description="Übersprungene Datensätze (Offset)."),
+    limit: int = Query(
+        25,
+        ge=1,
+        le=200,
+        description="Seitengröße. Der Deckel verhindert, dass eine Anfrage die ganze Tabelle zieht.",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_active),
 ):
+    """Gefilterte, sortierte und seitenweise Werkzeugliste samt Gesamtzahl.
+
+    Filter, Sortierung und Ausschnitt passieren in der Datenbank. `sort` und
+    `order` werden über Literal-Typen geprüft: ein unbekannter Spaltenname
+    ergibt HTTP 422 statt einer Abfrage mit beliebigem Spaltennamen.
+    """
     service = ToolService(db)
     return await service.get_tools(
-        tool_id=tool_id,
-        category=category,
+        q=q,
+        categories=category,
+        statuses=status,
         plant_id=plant_id,
+        tool_type_id=tool_type_id,
         is_storage=is_storage,
+        has_place=has_place,
+        favorites_only=favorites_only,
+        sort=sort,
+        order=order,
         skip=skip,
         limit=limit,
     )
+
+
+@router.put("/{id}/favorite", response_model=ToolRead)
+async def set_tool_favorite(
+    id: int,
+    data: ToolFavoriteUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active),
+):
+    """Favoriten-Markierung setzen (global, für alle Benutzer sichtbar).
+
+    Bewusst ein eigener Endpunkt: das Bearbeiten eines Werkzeugs (PUT /{id})
+    darf die Markierung nicht zurücksetzen. Kein Admin-Recht nötig - im
+    Gegensatz zum Löschen ändert ein Favorit nichts am Bestand.
+    """
+    service = ToolService(db)
+    tool = await service.set_favorite(id, data.is_favorite)
+    if not tool:
+        raise HTTPException(status_code=404, detail="Werkzeug nicht gefunden")
+    return await service.get_tool_read(id)
 
 
 @router.get("/check-id")
@@ -142,7 +203,8 @@ async def get_tool(
     current_user: User = Depends(require_active),
 ):
     service = ToolService(db)
-    tool = await service.get_tool(id)
+    # get_tool_read liefert zusätzlich den Lagerplatz-Code ("01-A-25" / Ablage).
+    tool = await service.get_tool_read(id)
     if not tool:
         raise HTTPException(status_code=404, detail="Werkzeug nicht gefunden")
     return tool

@@ -24,6 +24,10 @@ class Machine(Base, AuditMixin):
     __tablename__ = "machines"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Optionale Maschinenfarbe als Hex-Code, z. B. "#0f766e" (String(7) = #RRGGBB).
+    # Dieselbe Idee wie `Customer.color`: die Liste zeigt den Farbpunkt aus den
+    # Stammdaten, damit Maschinen auf einen Blick unterscheidbar sind.
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     plant_id: Mapped[int | None] = mapped_column(
         ForeignKey("plants.id", ondelete="SET NULL"), nullable=True
     )

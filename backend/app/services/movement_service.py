@@ -70,7 +70,7 @@ class MovementService:
             if tool.status != ToolStatus.AVAILABLE:
                 current = tool.status.value if tool.status else "unbekannt"
                 raise ValueError(
-                    f"Werkzeug {tool.tool_id} ist nicht verfügbar "
+                    f"Werkzeug {tool.tool_id or 'ohne ID'} ist nicht verfügbar "
                     f"(aktueller Status: {current})."
                 )
             tool.status = ToolStatus.LENT
@@ -79,7 +79,7 @@ class MovementService:
             if tool.status != ToolStatus.LENT:
                 current = tool.status.value if tool.status else "unbekannt"
                 raise ValueError(
-                    f"Werkzeug {tool.tool_id} hat nicht den Status 'lent' "
+                    f"Werkzeug {tool.tool_id or 'ohne ID'} hat nicht den Status 'lent' "
                     f"(aktueller Status: {current}) und kann nicht zurückgegeben werden."
                 )
             tool.status = ToolStatus.AVAILABLE

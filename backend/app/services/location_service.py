@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from typing import List, Set
+from typing import List, Optional, Set
 
 from ..models.storage import Cabinet, Drawer, Position
 from ..models.tool import Tool
@@ -53,6 +53,11 @@ class LocationService:
             raise ValueError("Quelle oder Ziel existiert nicht.")
         if source.tool_id is None:
             raise ValueError("Die Quelle ist nicht belegt.")
+        if target.spare_part is not None:
+            raise ValueError(
+                f"Auf Platz {target.name} liegt ein Ersatzteil "
+                f"({target.spare_part.article_number}). Bitte zuerst entfernen."
+            )
         if target.tool_id is not None:
             raise ValueError(
                 "Das Ziel ist belegt. Bitte die Aktion als 'Tausch' ausführen."
@@ -152,6 +157,18 @@ class LocationService:
         inserted_tool = await self.db.get(Tool, source.tool_id)
         if inserted_tool is None:
             raise ValueError(f"Werkzeug {source.tool_id} existiert nicht.")
+
+        # Ein Platz mit Ersatzteil blockiert das Einreihen: die Schublade wird
+        # beim Einreihen komplett neu belegt (jeder Platz bekommt eine Werkzeug-ID),
+        # ein Ersatzteil würde dabei überschrieben. Deshalb vorher abbrechen.
+        belegt_durch_ersatzteil = await self._spare_part_position_in(target.drawer_id)
+        if belegt_durch_ersatzteil is not None:
+            raise ValueError(
+                f"Einreihen nicht möglich: Auf Platz {belegt_durch_ersatzteil.name} "
+                f"liegt ein Ersatzteil "
+                f"({belegt_durch_ersatzteil.spare_part.article_number}). "
+                "Bitte den Platz zuerst freigeben."
+            )
 
         # Ziel frei => einfaches Move, kein Shift.
         if target.tool_id is None:
@@ -349,6 +366,17 @@ class LocationService:
         from_code = "Ablage"
         to_code = await self._position_code(target)
 
+        # Ein Platz mit Ersatzteil blockiert das Ablegen/Einreihen aus demselben
+        # Grund wie oben: die Schublade würde komplett neu belegt.
+        belegt_durch_ersatzteil = await self._spare_part_position_in(target.drawer_id)
+        if belegt_durch_ersatzteil is not None:
+            raise ValueError(
+                f"Einreihen nicht möglich: Auf Platz {belegt_durch_ersatzteil.name} "
+                f"liegt ein Ersatzteil "
+                f"({belegt_durch_ersatzteil.spare_part.article_number}). "
+                "Bitte den Platz zuerst freigeben."
+            )
+
         # Ziel frei: einfach ablegen.
         if target.tool_id is None:
             target.tool_id = tool.id
@@ -459,6 +487,22 @@ class LocationService:
         for drawer_id in drawer_ids:
             positions.extend(await self._get_ordered_positions(drawer_id))
         return positions
+
+    async def _spare_part_position_in(self, drawer_id: int) -> Optional[Position]:
+        """Ersten Platz einer Schublade finden, auf dem ein **Ersatzteil** liegt.
+
+        Ersatzteile können seit dem Nachtrag zu DEC-064 einen Matrix-Platz
+        belegen. Beim Einreihen wird die ganze Schublade neu belegt – ein
+        Ersatzteil würde dabei überschrieben, deshalb blockieren die
+        Einreih-Pfade vorher.
+
+        `Position.spare_part` wird über `lazy="joined"` mitgeladen, es kostet
+        also keine zusätzliche Abfrage.
+        """
+        for position in await self._get_ordered_positions(drawer_id):
+            if position.spare_part is not None:
+                return position
+        return None
 
     async def _position_code(self, position: Position) -> str:
         """Platz-Code wie '03-C-02' erzeugen."""
