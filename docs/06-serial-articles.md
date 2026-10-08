@@ -251,10 +251,17 @@ Ablauf „Anlegen/Bearbeiten aus dem Serienartikel-Bereich“: „+ Anlegen“ o
 | Backend | `backend/tests/test_serial_articles.py` | 66 Tests: Felder und Pflichtwerte, Stammdatenprüfung, Suche über alle Felder, Filter, Sortierung mit NULLS LAST, stabile Pagination, Nummernprüfung, Ordnernamen und -bereinigung, Anlegen/Umbenennen/Löschen des Ordners, **mehrere Einrichtepläne** (hinzufügen statt ersetzen, Nummerierung, `pdf_path`-Nachführung, letzter Plan löscht `has_pdf`), Pfadauflösung ohne Ausbruch aus der Ablage, **Bilder** und **Vorschaubilder** |
 | Browser | `frontend/tests/serial-articles.spec.ts` | 16 Tests: Liste mit Gesamtzahl und Blätterleiste, **Layout-Prüfung bei 1440 × 900**, Anlegen mit PDF **und zwei Bildern in einem Schritt**, vergebene Nummer beim Tippen, Pflichtfeld Werk, Bearbeiten ohne eigenes Fenster, Löschen über den Bestätigungsdialog, Suche über Kunde/Maschine/Beschreibung und **Werk-Filter als Segmente**, **Favoriten setzen und filtern**, Sortierung mit `aria-sort`, zweite Seite, normale Benutzer ohne Verwaltungs-Aktionen, Vorschau per Zeilenklick, Split-Screen mit Zoom/Drehen, mehrere Pläne verwalten, Sub-Reiter im Werkzeugformular mit Vorbelegung |
 
-Voraussetzung der Browser-Tests: Backend auf `127.0.0.1:8000`, Dev-Server auf `127.0.0.1:5173`; Admin-Konto `admin1/123` und der normale Benutzer `1233` müssen existieren, sonst wird die Spec übersprungen.
+Voraussetzung der Browser-Tests: Backend auf `127.0.0.1:8000`, Dev-Server auf `127.0.0.1:5173` und ein Admin-Konto `admin1/123`. **Weiteres** legen die Specs selbst an und räumen es wieder weg (Testdaten mit eigenem Nummernkreis, den normalen Benutzer für die Rechte-Prüfungen). Fehlt das Admin-Konto, wird übersprungen – sonst läuft die Suite vollständig durch.
+
+> **Stand:** `npx playwright test` → **84 passed, 0 failed, 0 skipped**. Zwei Einstellungen sind dafür nötig und stehen in `playwright.config.ts` bzw. im Testaufbau:
+>
+> - `fullyParallel: false`: Tests **einer** Datei laufen nacheinander. Mit `true` verteilte Playwright sie auf mehrere Worker, und `beforeAll` läuft je Worker – ein Worker mit unvollständigem Datenbestand ließ Zähl-Assertions scheitern. Dateien laufen weiter parallel (2,3 statt 4,0 Minuten).
+> - Ein normaler Benutzer wird je Spec angelegt statt vorausgesetzt. Dabei gilt: **Die Personalnummer muss man sich merken** – das Backend gibt sie nie zurück (`backend/app/schemas/user.py`), `angelegt.personal_number` ist `undefined`.
+
 
 **Drei Fallen, die beim Schreiben der Tests aufgefallen sind** (für künftige Specs wichtig):
 
 1. Eine Suche darf nicht nur auf *eine* passende Zeile warten: bei 12 Plänen steht sie schon in der ungefilterten ersten Seite. Der Klick traf dann die erste Zeile der alten Liste – beim Bearbeiten wurde so der falsche Plan geändert. `suche()` wartet deshalb, bis **alle** sichtbaren Zeilen den Suchbegriff enthalten.
 2. Die Liste darf sich nicht auf eine feste Gesamtzahl verlassen: im Bestand können weitere Serienartikel liegen (eigene Testdaten). Assertions arbeiten mit Mustern (`/^1–10 von \d+ Serienartikeln$/`).
 3. `getByLabel('Werk')` ist mehrdeutig: im Werkzeugformular heißen drei Felder so ähnlich (`Werkzeug-ID`, `Werkzeug-Typ`, `Werk`), und der Reiter „Serienartikel" beschriftet sein Werk mit `Werk *`. Ebenso kollidiert `getByRole('button', { name: /Werk/ })` mit dem Tab „Werkzeuge“ – `exact: true` bzw. der vollständige Name sind nötig.
+4. **Das Pflicht-Sternchen darf nicht ins `<label>`.** Als Label-Kind wird der zugängliche Name zu `Werk*` statt `Werk`; `getByLabel('Werk', { exact: true })` findet dann **0** Elemente und läuft in den Timeout. `FieldLabel` gibt es deshalb als Geschwister des Labels aus (Guide §1.9 Regel 3).
