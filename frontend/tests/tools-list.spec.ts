@@ -839,15 +839,24 @@ test.describe('Werkzeugliste', () => {
     await formular.getByLabel('Status').selectOption('maintenance')
     await speichern.click()
     await expect(page.locator('.ui-toast-stack')).toContainText('gespeichert', { timeout: 10000 })
-    expect(await statusInDerDatenbank()).toBe('maintenance')
+    await expect.poll(statusInDerDatenbank, { timeout: 10_000 }).toBe('maintenance')
 
     // 2) Status wieder auf „— ohne Status —" stellen: das war der gemeldete
     //    Fehler (der alte Wert blieb stehen, weil None als „nicht ändern" galt).
     await oeffneBearbeiten()
     await formular.getByLabel('Status').selectOption('')
+    // Erst pruefen, ob das Formular die Leerung ueberhaupt angenommen hat: sonst
+    // schickt der Speichern-Knopf den alten Wert und der Fehler unten waere
+    // nicht zu deuten.
+    await expect(formular.getByLabel('Status')).toHaveValue('')
     await speichern.click()
     await expect(page.locator('.ui-toast-stack')).toContainText('gespeichert', { timeout: 10000 })
-    expect(await statusInDerDatenbank()).toBeNull()
+    // `poll` statt einer Momentaufnahme: im Verbund laeuft parallel ein anderer
+    // Spec gegen dieselbe Datenbank, und unmittelbar nach dem Speichern kann die
+    // Abfrage den Stand von vor dem Schreiben treffen. Gemessen war das der
+    // einzige verbleibende Ausfall (Zeile 850), obwohl das Backend `status=None`
+    // nachweislich korrekt speichert (`backend/check_status_clear.py`).
+    await expect.poll(statusInDerDatenbank, { timeout: 10_000 }).toBeNull()
   })
 
   test('sieht bei 1440×900 und auf dem Telefon ordentlich aus', async ({ page }) => {
