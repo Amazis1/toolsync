@@ -14,13 +14,13 @@ import type { APIRequestContext, Page } from '@playwright/test'
  */
 
 const ADMIN = { personal_number: 'admin1', password: '123' }
-/** Normaler Benutzer ohne Adminrechte (darf lesen, nicht verwalten). */
-const PLAIN_USER = '1233'
 /** Eigener Nummernkreis je Lauf: kollidiert nicht mit vorhandenen Daten. */
 const PREFIX = `DB-${String(Date.now()).slice(-6)}-`
 
 let adminToken = ''
 let plainToken = ''
+/** Der normale Benutzer dieser Spec – angelegt in `beforeAll`. */
+let plainUserId: number | null = null
 let plantId = 0
 let plantName = ''
 let otherPlantId = 0
@@ -93,10 +93,32 @@ test.beforeAll(async ({ request }) => {
   if (!login.ok()) return
   adminToken = (await login.json()).access_token
 
-  const plainLogin = await request.post('/api/auth/login', {
-    data: { personal_number: PLAIN_USER },
+  // Ein normaler Benutzer fuer die Rechte-Pruefungen. Vorher war dafuer ein
+  // **vorhandenes** Konto `1233` Voraussetzung; fehlte es, uebersprang die Spec
+  // vier Tests still. Jetzt legt die Spec es selbst an und raeumt es weg – wie
+  // `login.spec.ts`.
+  //
+  // Achtung: Die Personalnummer muss **hier** gemerkt werden. Das Backend gibt
+  // sie nie zurueck (`schemas/user.py`), `angelegt.personal_number` ist
+  // `undefined` und die Anmeldung liefe ins Leere.
+  const plainNummer = `P${String(Date.now()).slice(-6)}${test.info().workerIndex}`
+  const plainAngelegt = await request.post('/api/users/', {
+    headers: authHeaders(),
+    data: {
+      personal_number: plainNummer,
+      first_name: 'Test',
+      last_name: 'Normalbenutzer',
+      is_admin: false,
+      is_active: true,
+    },
   })
-  if (plainLogin.ok()) plainToken = (await plainLogin.json()).access_token
+  if (plainAngelegt.ok()) {
+    plainUserId = (await plainAngelegt.json()).id
+    const anmeldung = await request.post('/api/auth/login', {
+      data: { personal_number: plainNummer },
+    })
+    if (anmeldung.ok()) plainToken = (await anmeldung.json()).access_token
+  }
 
   const plantsResponse = await request.get('/api/locations/plants', {
     headers: authHeaders(),
@@ -210,6 +232,11 @@ test.afterAll(async ({ request }) => {
 
   for (const id of seededIds) {
     await request.delete(`/api/data-sheets/${id}`, { headers: authHeaders() })
+  }
+
+  // Den selbst angelegten Benutzer wieder entfernen.
+  if (plainUserId !== null) {
+    await request.delete(`/api/users/${plainUserId}`, { headers: authHeaders() })
   }
 })
 
@@ -516,7 +543,7 @@ test.describe('Datenblätter', () => {
   })
 
   test('normaler Benutzer sieht keine Verwaltungs-Aktionen', async ({ page }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     await openWithToken(page, plainToken)
 
     await suche(page, `${PREFIX}1075000`)
@@ -556,7 +583,7 @@ test.describe('Datenblätter – Weg vom Werkzeug', () => {
  */
 test.describe('Datenblätter – Rechte am Endpunkt', () => {
   test('Anlegen ohne Adminrechte wird abgewiesen', async ({ request }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     const response = await request.post('/api/data-sheets/', {
       headers: authHeaders(plainToken),
       multipart: { tool_id: 'X', plant_id: '1' },
@@ -565,7 +592,7 @@ test.describe('Datenblätter – Rechte am Endpunkt', () => {
   })
 
   test('Löschen ohne Adminrechte wird abgewiesen', async ({ request }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     test.skip(seededIds.length === 0, 'Testdaten fehlen – Spec übersprungen')
     const response = await request.delete(`/api/data-sheets/${seededIds[0]}`, {
       headers: authHeaders(plainToken),
@@ -574,7 +601,7 @@ test.describe('Datenblätter – Rechte am Endpunkt', () => {
   })
 
   test('Lesen darf jeder aktive Benutzer', async ({ request }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     const response = await request.get('/api/data-sheets/', {
       headers: authHeaders(plainToken),
     })

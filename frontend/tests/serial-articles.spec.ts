@@ -17,14 +17,14 @@ import type { APIRequestContext, Locator, Page } from '@playwright/test'
 
 const SHOTS = '../.audit/shots'
 const ADMIN = { personal_number: 'admin1', password: '123' }
-/** Normaler Benutzer ohne Adminrechte (nur lesen). */
-const PLAIN_USER = '1233'
 const SEED_COUNT = 12
 /** Eigener Nummernkreis je Lauf: so kollidiert nichts mit vorhandenen Daten. */
 const PREFIX = `SA-${String(Date.now()).slice(-6)}-`
 
 let adminToken = ''
 let plainToken = ''
+/** Der normale Benutzer dieser Spec – angelegt in `beforeAll`. */
+let plainUserId: number | null = null
 let plantId = 0
 let plantName = ''
 let otherPlantId = 0
@@ -118,8 +118,32 @@ test.beforeAll(async ({ request }) => {
   if (!login.ok()) return
   adminToken = (await login.json()).access_token
 
-  const plainLogin = await request.post('/api/auth/login', { data: { personal_number: PLAIN_USER } })
-  if (plainLogin.ok()) plainToken = (await plainLogin.json()).access_token
+  // Ein normaler Benutzer fuer die Rechte-Pruefung. Vorher war dafuer ein
+  // **vorhandenes** Konto `1233` Voraussetzung; fehlte es, uebersprang die Spec
+  // den Test still. Jetzt legt die Spec es selbst an und raeumt es weg – wie
+  // `login.spec.ts`.
+  //
+  // Achtung: Die Personalnummer muss **hier** gemerkt werden. Das Backend gibt
+  // sie nie zurueck (`schemas/user.py`), `angelegt.personal_number` ist
+  // `undefined` und die Anmeldung liefe ins Leere.
+  const plainNummer = `P${String(Date.now()).slice(-6)}${test.info().workerIndex}`
+  const plainAngelegt = await request.post('/api/users/', {
+    headers: authHeaders(),
+    data: {
+      personal_number: plainNummer,
+      first_name: 'Test',
+      last_name: 'Normalbenutzer',
+      is_admin: false,
+      is_active: true,
+    },
+  })
+  if (plainAngelegt.ok()) {
+    plainUserId = (await plainAngelegt.json()).id
+    const anmeldung = await request.post('/api/auth/login', {
+      data: { personal_number: plainNummer },
+    })
+    if (anmeldung.ok()) plainToken = (await anmeldung.json()).access_token
+  }
 
   const plantsResponse = await request.get('/api/locations/plants', { headers: authHeaders() })
   const customersResponse = await request.get('/api/customers', { headers: authHeaders() })
@@ -193,6 +217,10 @@ test.beforeAll(async ({ request }) => {
 test.afterAll(async ({ request }) => {
   for (const id of seededIds) {
     await request.delete(`/api/serial-articles/${id}`, { headers: authHeaders() })
+  }
+  // Den selbst angelegten Benutzer wieder entfernen.
+  if (plainUserId !== null) {
+    await request.delete(`/api/users/${plainUserId}`, { headers: authHeaders() })
   }
 })
 
@@ -528,7 +556,7 @@ test.describe('Serienartikel', () => {
   })
 
   test('zeigt normale Benutzer ohne Verwaltungs-Aktionen', async ({ page }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Test übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Test übersprungen')
     requireSeedIndices(1)
     await openWithToken(page, plainToken)
 

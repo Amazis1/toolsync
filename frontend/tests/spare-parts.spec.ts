@@ -15,13 +15,13 @@ import type { APIRequestContext, Page } from '@playwright/test'
  */
 
 const ADMIN = { personal_number: 'admin1', password: '123' }
-/** Normaler Benutzer ohne Adminrechte (darf pflegen, aber nicht löschen). */
-const PLAIN_USER = '1233'
 /** Eigener Nummernkreis je Lauf: kollidiert nicht mit vorhandenen Daten. */
 const PREFIX = `ET-${String(Date.now()).slice(-6)}-`
 
 let adminToken = ''
 let plainToken = ''
+/** Der normale Benutzer dieser Spec – angelegt in `beforeAll`. */
+let plainUserId: number | null = null
 let plantId = 0
 let plantName = ''
 let otherPlantId = 0
@@ -53,10 +53,35 @@ test.beforeAll(async ({ request }) => {
   if (!login.ok()) return
   adminToken = (await login.json()).access_token
 
-  const plainLogin = await request.post('/api/auth/login', {
-    data: { personal_number: PLAIN_USER },
+  // Ein normaler Benutzer fuer die Rechte-Pruefungen. Vorher war dafuer ein
+  // **vorhandenes** Konto `1233` Voraussetzung (siehe docs/06-serial-articles.md);
+  // fehlte es, uebersprang die Spec vier Tests still. Jetzt legt die Spec es
+  // selbst an und raeumt es hinterher weg – wie `login.spec.ts`.
+  // Die Nummer traegt Prozess- und Zeitanteil, damit parallele Laeufe sich
+  // nicht in die Quere kommen.
+  //
+  // Achtung: Die Personalnummer muss **hier** gemerkt werden. Das Backend gibt
+  // sie nie zurueck (`schemas/user.py`: „Nur für Eingabe beim Anlegen, wird nie
+  // zurückgegeben") – `angelegt.personal_number` ist `undefined`, und die
+  // anschliessende Anmeldung liefe mit leerer Nummer ins Leere.
+  const plainNummer = `P${String(Date.now()).slice(-6)}${test.info().workerIndex}`
+  const plainAngelegt = await request.post('/api/users/', {
+    headers: authHeaders(),
+    data: {
+      personal_number: plainNummer,
+      first_name: 'Test',
+      last_name: 'Normalbenutzer',
+      is_admin: false,
+      is_active: true,
+    },
   })
-  if (plainLogin.ok()) plainToken = (await plainLogin.json()).access_token
+  if (plainAngelegt.ok()) {
+    plainUserId = (await plainAngelegt.json()).id
+    const anmeldung = await request.post('/api/auth/login', {
+      data: { personal_number: plainNummer },
+    })
+    if (anmeldung.ok()) plainToken = (await anmeldung.json()).access_token
+  }
 
   const plantsResponse = await request.get('/api/locations/plants', {
     headers: authHeaders(),
@@ -207,6 +232,11 @@ test.afterAll(async ({ request }) => {
 
   for (const id of seededIds) {
     await request.delete(`/api/spare-parts/${id}`, { headers: authHeaders() })
+  }
+
+  // Den selbst angelegten Benutzer wieder entfernen.
+  if (plainUserId !== null) {
+    await request.delete(`/api/users/${plainUserId}`, { headers: authHeaders() })
   }
 })
 
@@ -446,7 +476,7 @@ test.describe('Ersatzteile', () => {
   })
 
   test('normaler Benutzer darf pflegen, aber nicht löschen', async ({ page }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     await openWithToken(page, plainToken)
 
     // Pflegen ist erlaubt: das Zeilenmenü bietet „Bearbeiten" an.
@@ -463,7 +493,7 @@ test.describe('Ersatzteile', () => {
  */
 test.describe('Ersatzteile – Rechte am Endpunkt', () => {
   test('Löschen ohne Adminrechte wird abgewiesen', async ({ request }) => {
-    test.skip(!plainToken, 'Normaler Benutzer (1233) nicht vorhanden – Spec übersprungen')
+    test.skip(!plainToken, 'Normaler Benutzer konnte nicht angelegt werden – Spec übersprungen')
     test.skip(seededIds.length === 0, 'Testdaten fehlen – Spec übersprungen')
 
     const response = await request.delete(`/api/spare-parts/${seededIds[0]}`, {
