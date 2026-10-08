@@ -1,11 +1,259 @@
-// SVG-Icons als React-Komponenten.
-// Alle Icons verwenden stroke="currentColor" und erben dadurch die Textfarbe.
+// Icons fuer die Oberflaeche – **duenne Wrapper um `lucide-react`**.
+//
+// ============================================================================
+// OFFLINE-GARANTIE (Guide §1.7)
+// ============================================================================
+// Die Oberflaeche muss ohne Internet laufen. Deshalb gilt:
+//
+//   1. `lucide-react` ist eine **npm-Abhaengigkeit** (`package.json`). Nach
+//      `npm install` liegen die Icons in `node_modules` und werden beim Bauen
+//      ins JavaScript-Bundle gelegt – wie jeder andere Programmtext. Zur
+//      Laufzeit gibt es **keine** Anfrage: kein CDN, kein `<script>`-Tag von
+//      einer fremden URL, keine Icon-Font, kein Sprite.
+//   2. `lucide-react` rendert **Inline-SVG** (ein echtes `<svg>` im DOM), nicht
+//      ein Bild und nicht eine Schrift.
+//   3. Die Pflichtattribute aus Guide §1.7 setzt die Bibliothek selbst – hier
+//      einmal in `BasisIcon` (siehe `./iconBase.tsx`) nachgehalten, damit die
+//      Werte nicht in 34 Komponenten wiederholt werden.
+//
+// **Einmalig installieren, danach autark:** `npm install` (mit Internet), dann
+// laeuft `npm run build` ohne Netz. Ohne `node_modules` baut nichts – das gilt
+// fuer React genauso.
+//
+// Geprueft wird die Zuordnung mit:
+//
+//   node scripts/verify-icons.mjs      (im Verzeichnis `frontend/`)
+//
+// **Diese Datei exportiert ausschliesslich Komponenten.** Helfer (`fromLucide`)
+// und Typen liegen in `./iconBase.tsx`: exportiert eine Datei Komponenten und
+// zusaetzlich Funktionen, verliert Vite die schnelle Aktualisierung im
+// Entwicklungsmodus (`react-refresh/only-export-components`).
+// ============================================================================
 
-interface IconProps {
-  className?: string
+import {
+  ArrowDownNarrowWide,
+  ArrowUpDown,
+  ArrowUpWideNarrow,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleAlert,
+  CircleX,
+  ClipboardList,
+  Cog,
+  Ellipsis,
+  FileText,
+  Filter,
+  Info,
+  Keyboard,
+  LogIn,
+  Pencil,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Search,
+  ShieldCheck,
+  Star,
+  Trash,
+  TrendingUp,
+  Upload,
+  User,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
+
+import { fromLucideBody, type IconProps } from './iconBase'
+
+/** Lucide `ZoomIn` – Zoom im Datei-Fenster (DEC-061). */
+export function ZoomInIcon(props: IconProps) {
+  return fromLucideBody(ZoomIn, props)
 }
 
-export function ToolIcon({ className }: IconProps) {
+/** Lucide `ZoomOut` – Zoom im Datei-Fenster (DEC-061). */
+export function ZoomOutIcon(props: IconProps) {
+  return fromLucideBody(ZoomOut, props)
+}
+
+/** Lucide `RotateCcw` – Bild nach links drehen (DEC-061). */
+export function RotateLeftIcon(props: IconProps) {
+  return fromLucideBody(RotateCcw, props)
+}
+
+/** Lucide `RotateCw` – Bild nach rechts drehen (DEC-061). */
+export function RotateRightIcon(props: IconProps) {
+  return fromLucideBody(RotateCw, props)
+}
+
+/** Lucide `Search` – Suche in Listen und Filterleisten. */
+export function SearchIcon(props: IconProps) {
+  return fromLucideBody(Search, props)
+}
+
+/** Lucide `User` – Benutzer (Sidebar, Anmeldung). */
+export function UserIcon(props: IconProps) {
+  return fromLucideBody(User, props)
+}
+
+/** Lucide `Plus` – „+ Anlegen" und „hinzufügen". */
+export function AddIcon(props: IconProps) {
+  return fromLucideBody(Plus, props)
+}
+
+/** Lucide `LogIn` – „Abmelden" und Anmeldeformular. */
+export function LoginIcon(props: IconProps) {
+  return fromLucideBody(LogIn, props)
+}
+
+/** Lucide `Info` – Hinweis in einer Meldung oder unter einem Feld. */
+export function InfoIcon(props: IconProps) {
+  return fromLucideBody(Info, props)
+}
+
+/** Lucide `CircleAlert` – Warnung (z. B. Toast „Achtung"). */
+export function AlertCircleIcon(props: IconProps) {
+  return fromLucideBody(CircleAlert, props)
+}
+
+/** Lucide `ClipboardList` – Reiter „Serienartikel" (Einrichteplan). */
+export function ClipboardListIcon(props: IconProps) {
+  return fromLucideBody(ClipboardList, props)
+}
+
+/** Lucide `FileText` – Reiter „Datenblatt" (Einstellwerte). */
+export function FileTextIcon(props: IconProps) {
+  return fromLucideBody(FileText, props)
+}
+
+/** Lucide `Cog` – Reiter „Ersatzteil" (Maschinen-Reparatur und -Wartung). */
+export function CogIcon(props: IconProps) {
+  return fromLucideBody(Cog, props)
+}
+
+/** Lucide `Check` – Erfolgsmeldung und Speichern-Knopf. */
+export function CheckIcon(props: IconProps) {
+  return fromLucideBody(Check, props)
+}
+
+/** Lucide `CircleX` – Fehlermeldung (ersetzt das Textzeichen „×"). */
+export function CircleXIcon(props: IconProps) {
+  return fromLucideBody(CircleX, props)
+}
+
+/** Lucide `Upload` – Dateifeld „hierher ziehen oder auswählen". */
+export function UploadIcon(props: IconProps) {
+  return fromLucideBody(Upload, props)
+}
+
+/** Lucide `Trash` – „Löschen" in einer Dateizeile. */
+export function TrashIcon(props: IconProps) {
+  return fromLucideBody(Trash, props)
+}
+
+/** Lucide `Pencil` – Überschrift der Anlege-/Bearbeiten-Karte. */
+export function PencilIcon(props: IconProps) {
+  return fromLucideBody(Pencil, props)
+}
+
+/** Lucide `Keyboard` – Abzeichen für die Esc-Taste neben „Zurück". */
+export function KeyboardIcon(props: IconProps) {
+  return fromLucideBody(Keyboard, props)
+}
+
+/** Lucide `Filter` – Filter öffnen und schließen. */
+export function FilterIcon(props: IconProps) {
+  return fromLucideBody(Filter, props)
+}
+
+/** Lucide `TrendingUp` – Entwicklung in der Statistik. */
+export function TrendingIcon(props: IconProps) {
+  return fromLucideBody(TrendingUp, props)
+}
+
+/** Lucide `ShieldCheck` – Admin-Panel: Rechte und Verwaltung. */
+export function AdminIcon(props: IconProps) {
+  return fromLucideBody(ShieldCheck, props)
+}
+
+/** Lucide `Star` – Favoriten-Spalte (gefüllt = gesetzt). */
+export function StarIcon(props: IconProps) {
+  return fromLucideBody(Star, props)
+}
+
+/** Lucide `ArrowUpDown` – Spalte ist sortierbar, aber nicht aktiv. */
+export function SortableIcon(props: IconProps) {
+  return fromLucideBody(ArrowUpDown, props)
+}
+
+/** Lucide `ArrowDownNarrowWide` – Aktive Sortierung aufsteigend. */
+export function SortAscIcon(props: IconProps) {
+  return fromLucideBody(ArrowDownNarrowWide, props)
+}
+
+/** Lucide `ArrowUpWideNarrow` – Aktive Sortierung absteigend. */
+export function SortDescIcon(props: IconProps) {
+  return fromLucideBody(ArrowUpWideNarrow, props)
+}
+
+/** Lucide `Ellipsis` – Weitere Aktionen einer Tabellenzeile. */
+export function MoreHorizontalIcon(props: IconProps) {
+  return fromLucideBody(Ellipsis, props)
+}
+
+/** Lucide `ChevronDown` – Auswahl öffnen. */
+export function ChevronDownIcon(props: IconProps) {
+  return fromLucideBody(ChevronDown, props)
+}
+
+/** Lucide `ChevronLeft` – Eine Seite zurück. */
+export function ChevronLeftIcon(props: IconProps) {
+  return fromLucideBody(ChevronLeft, props)
+}
+
+/** Lucide `ChevronRight` – Eine Seite vor. */
+export function ChevronRightIcon(props: IconProps) {
+  return fromLucideBody(ChevronRight, props)
+}
+
+/** Lucide `ChevronsLeft` – Erste Seite. */
+export function ChevronsLeftIcon(props: IconProps) {
+  return fromLucideBody(ChevronsLeft, props)
+}
+
+/** Lucide `ChevronsRight` – Letzte Seite. */
+export function ChevronsRightIcon(props: IconProps) {
+  return fromLucideBody(ChevronsRight, props)
+}
+
+/** Lucide `X` – Schließen, „Zurück", „Abbrechen". */
+export function XIcon(props: IconProps) {
+  return fromLucideBody(X, props)
+}
+
+/** Lucide `RotateCcw` – Filter zurücksetzen. */
+export function ResetIcon(props: IconProps) {
+  return fromLucideBody(RotateCcw, props)
+}
+
+/* ============================================================
+ * Eigenbauten – Zeichen, die es in Lucide **nicht** gibt
+ * ============================================================
+ * Sie tragen die Pflichtattribute aus Guide §1.7 selbst (24×24,
+ * `viewBox 0 0 24 24`, `fill="none"`, `stroke="currentColor"`,
+ * `stroke-width 2`, runde Enden) – deshalb wiederholt sich der Kopf hier.
+ * Jedes davon ist ein **Fachsymbol** dieser Anwendung: Werkzeug fuer Werkzeuge,
+ * das Klemmbrett fuer Serienartikel, Lagerhaus und Archiv fuer die Ablage.
+ * Geprueft werden sie von `scripts/verify-icons.mjs`.
+ */
+
+/** Eigenschaften eines Eigenbaus – `className` genuegt, der Rest ist fest. */
+type EigenbauProps = { className?: string }
+
+/** Eigenbau: Werkzeug (gekreuzter Schraubenschluessel) – Reiter „Werkzeug". */
+export function ToolIcon({ className }: EigenbauProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -18,13 +266,16 @@ export function ToolIcon({ className }: IconProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
     </svg>
   )
 }
 
-export function SerialIcon({ className }: IconProps) {
+/** Eigenbau: Klemmbrett mit Zeilen – Serienartikel in Listen und Menues. */
+export function SerialIcon({ className }: EigenbauProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -33,17 +284,22 @@ export function SerialIcon({ className }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      aria-hidden="true"
+      focusable="false"
     >
-      <path d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+      <path d="M9 3.75h6a.75.75 0 0 1 .75.75v.75a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75V4.5A.75.75 0 0 1 9 3.75Z" />
+      <path d="M8.25 5.25H6.75A1.5 1.5 0 0 0 5.25 6.75v12a1.5 1.5 0 0 0 1.5 1.5h10.5a1.5 1.5 0 0 0 1.5-1.5v-12a1.5 1.5 0 0 0-1.5-1.5h-1.5" />
+      <path d="M9 11.25h6M9 15h4.5" />
     </svg>
   )
 }
 
-export function WarehouseIcon({ className }: IconProps) {
+/** Eigenbau: Lagerhaus – Lagerplaetze und Einlagerung. */
+export function WarehouseIcon({ className }: EigenbauProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -52,20 +308,23 @@ export function WarehouseIcon({ className }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      aria-hidden="true"
+      focusable="false"
     >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M3 21v-13l9 -4l9 4v13" />
-      <path d="M13 13h4v8h-10v-6h6" />
-      <path d="M13 21v-9a1 1 0 0 0 -1 -1h-2a1 1 0 0 0 -1 1v3" />
+      <path d="M3 21v-13l9-4 9 4v13" />
+      <path d="M13 21v-7h-2v7" />
+      <path d="M7 21v-5h4" />
+      <path d="M17 21v-5h-4" />
     </svg>
   )
 }
 
-export function ArchiveIcon({ className }: IconProps) {
+/** Eigenbau: Archivkiste – abgelegte und ausgemusterte Datensaetze. */
+export function ArchiveIcon({ className }: EigenbauProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -74,175 +333,20 @@ export function ArchiveIcon({ className }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      aria-hidden="true"
+      focusable="false"
     >
-      <polyline points="21 8 21 21 3 21 3 8" />
-      <rect x="1" y="3" width="22" height="5" />
-      <line x1="10" y1="12" x2="14" y2="12" />
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+      <path d="M10 12h4" />
     </svg>
   )
 }
 
-export function TrendingIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-    </svg>
-  )
-}
-
-export function SearchIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-      <path d="M21 21l-6 -6" />
-    </svg>
-  )
-}
-
-export function UserIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
-
-export function AddIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  )
-}
-
-export function LoginIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M15 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
-      <path d="M21 12h-13l3 -3" />
-      <path d="M11 15l-3 -3" />
-    </svg>
-  )
-}
-
-export function InfoIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-    </svg>
-  )
-}
-
-export function AlertCircleIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-  )
-}
-
-export function AdminIcon({ className }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
-}
+/* ============================================================
+ * Werkzeugliste: Favoriten, Sortierung, Filter, Pagination
+ * ============================================================ */

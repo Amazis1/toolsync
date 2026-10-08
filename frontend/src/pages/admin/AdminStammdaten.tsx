@@ -18,6 +18,7 @@ import {
   deleteToolType,
 } from '../../api/admin'
 import type { Plant, Customer, Machine, ToolType } from '../../api/types'
+import IconTipButton, { Tip } from './IconTipButton'
 
 // ------------------------------------------------------------
 // Inline-Icons (Lucide, offline-fähig – keine externen Assets)
@@ -86,46 +87,6 @@ function TrashIcon({ className }: { className?: string }) {
 }
 
 // ------------------------------------------------------------
-// Icon-Button mit Styleguide-Tooltip (.admin-tip / .admin-tip-bubble)
-// Quelle: AdminPanel-Styleguide.html – Tooltip bei Hover und Fokus
-// ------------------------------------------------------------
-function IconTipButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick?: () => void
-  children: React.ReactNode
-}) {
-  const [show, setShow] = useState(false)
-  return (
-    <span
-      className="admin-tip"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-      onFocus={() => setShow(true)}
-      onBlur={() => setShow(false)}
-    >
-      <button
-        type="button"
-        className="admin-icon-btn"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-      >
-        {children}
-      </button>
-      {show && (
-        <span className="admin-tip-bubble" role="tooltip">
-          {label}
-        </span>
-      )}
-    </span>
-  )
-}
-
-// ------------------------------------------------------------
 // Farbwähler (Hex) für Kunden; "Keine Farbe" -> null
 // ------------------------------------------------------------
 function ColorPicker({
@@ -137,24 +98,25 @@ function ColorPicker({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={value ?? '#0f766e'}
-        disabled={value === null}
-        onChange={(e) => onChange(e.target.value)}
-        title="Farbe wählen"
-        aria-label="Farbe wählen"
-        style={{
-          width: 36,
-          height: 28,
-          padding: 0,
-          border: '1px solid var(--admin-border-strong)',
-          borderRadius: 'var(--admin-radius-sm)',
-          background: 'transparent',
-          cursor: value === null ? 'not-allowed' : 'pointer',
-          opacity: value === null ? 0.5 : 1,
-        }}
-      />
+      <Tip label="Farbe wählen">
+        <input
+          type="color"
+          value={value ?? '#0f766e'}
+          disabled={value === null}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Farbe wählen"
+          style={{
+            width: 36,
+            height: 28,
+            padding: 0,
+            border: '1px solid var(--admin-border-strong)',
+            borderRadius: 'var(--admin-radius-sm)',
+            background: 'transparent',
+            cursor: value === null ? 'not-allowed' : 'pointer',
+            opacity: value === null ? 0.5 : 1,
+          }}
+        />
+      </Tip>
       <label className="flex items-center gap-1 text-xs admin-text-subtle">
         <input
           type="checkbox"
@@ -339,7 +301,7 @@ function TableEditor<T extends { id: number; name: string }>({
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan={renderExtra ? 3 : 2} className="text-center py-4 text-slate-400">
+                <td colSpan={renderExtra ? 3 : 2} className="text-center py-4 admin-text-subtle">
                   Noch keine Einträge.
                 </td>
               </tr>
@@ -375,13 +337,13 @@ function TableEditor<T extends { id: number; name: string }>({
                     {editingId === item.id ? (
                       <>
                         <button
-                          className="admin-btn admin-btn-primary !py-1 !px-2.5"
+                          className="admin-btn admin-btn-primary admin-btn-sm"
                           onClick={() => handleUpdate(item.id)}
                         >
                           Speichern
                         </button>
                         <button
-                          className="admin-btn admin-btn-ghost !py-1 !px-2.5"
+                          className="admin-btn admin-btn-ghost admin-btn-sm"
                           onClick={() => setEditingId(null)}
                         >
                           Abbrechen
@@ -389,21 +351,20 @@ function TableEditor<T extends { id: number; name: string }>({
                       </>
                     ) : (
                       <>
-                        <button
-                          className="admin-icon-btn admin-row-actions-trigger"
+                        <IconTipButton
+                          label="Aktionen"
+                          buttonClassName="admin-icon-btn admin-row-actions-trigger"
+                          ariaHaspopup
+                          ariaExpanded={menuItem?.id === item.id}
                           onClick={() => setMenuItem(menuItem?.id === item.id ? null : item)}
-                          title="Aktionen"
-                          aria-label="Aktionen"
-                          aria-haspopup="true"
-                          aria-expanded={menuItem?.id === item.id}
                         >
                           <MoreVerticalIcon className="w-4 h-4" />
-                        </button>
+                        </IconTipButton>
                         <div className="admin-row-actions-panel" role="menu" aria-label="Aktionen">
-                          <IconTipButton label="Bearbeiten" onClick={() => startEdit(item)}>
+                          <IconTipButton label="Bearbeiten" placement="below" onClick={() => startEdit(item)}>
                             <PencilIcon className="w-4 h-4" />
                           </IconTipButton>
-                          <IconTipButton label="Löschen" onClick={() => handleDelete(item.id)}>
+                          <IconTipButton label="Löschen" placement="below" onClick={() => handleDelete(item.id)}>
                             <TrashIcon className="w-4 h-4" />
                           </IconTipButton>
                         </div>
@@ -428,11 +389,14 @@ export default function AdminStammdaten() {
   const [toolTypes, setToolTypes] = useState<ToolType[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Eingaben für Anlegen/Bearbeiten (Kundenfarbe, Maschinen-Werk)
+  // Eingaben für Anlegen/Bearbeiten (Kundenfarbe, Maschinen-Werk und -Farbe)
   const [newCustomerColor, setNewCustomerColor] = useState<string | null>(null)
   const [editCustomerColor, setEditCustomerColor] = useState<string | null>(null)
   const [newMachinePlantId, setNewMachinePlantId] = useState('')
   const [editMachinePlantId, setEditMachinePlantId] = useState('')
+  // Maschinenfarbe – dieselbe Pflege wie bei Kunden (Farbpunkt in den Listen).
+  const [newMachineColor, setNewMachineColor] = useState<string | null>(null)
+  const [editMachineColor, setEditMachineColor] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([getPlants(), getCustomers(), getMachines(), getToolTypes()])
@@ -448,13 +412,13 @@ export default function AdminStammdaten() {
   const refresh = () => setRefreshKey((k) => k + 1)
 
   async function handleCreateMachine(name: string, plantId: number | null) {
-    await createMachine(name, plantId)
+    await createMachine(name, plantId, newMachineColor)
     refresh()
   }
 
   async function handleUpdateMachine(id: number, name: string, plantId: number | null) {
     const machine = machines.find((m) => m.id === id)
-    await updateMachine(id, name, plantId ?? machine?.plant_id ?? null)
+    await updateMachine(id, name, plantId ?? machine?.plant_id ?? null, editMachineColor)
     refresh()
   }
 
@@ -497,7 +461,7 @@ export default function AdminStammdaten() {
         )}
       />
 
-      {/* Maschinen mit Werk-Zuordnung */}
+      {/* Maschinen mit Werk-Zuordnung und Farbe (Farbpunkt in den Listen) */}
       <TableEditor<Machine>
         title="Maschinen (Machines)"
         items={machines}
@@ -509,25 +473,41 @@ export default function AdminStammdaten() {
         }
         onDelete={(id) => deleteMachine(id).then(refresh)}
         placeholder="Neue Maschine"
-        onEditStart={(m) => setEditMachinePlantId(m.plant_id != null ? String(m.plant_id) : '')}
+        onEditStart={(m) => {
+          setEditMachinePlantId(m.plant_id != null ? String(m.plant_id) : '')
+          setEditMachineColor(m.color)
+        }}
         renderCreateFields={() => (
-          <PlantSelect
-            value={newMachinePlantId}
-            onChange={setNewMachinePlantId}
-            plants={plants}
-            ariaLabel="Werk für neue Maschine wählen"
-          />
+          <>
+            <PlantSelect
+              value={newMachinePlantId}
+              onChange={setNewMachinePlantId}
+              plants={plants}
+              ariaLabel="Werk für neue Maschine wählen"
+            />
+            <ColorPicker value={newMachineColor} onChange={setNewMachineColor} />
+          </>
         )}
         renderEditFields={() => (
-          <PlantSelect
-            value={editMachinePlantId}
-            onChange={setEditMachinePlantId}
-            plants={plants}
-            ariaLabel="Werk für Maschine wählen"
-          />
+          <>
+            <PlantSelect
+              value={editMachinePlantId}
+              onChange={setEditMachinePlantId}
+              plants={plants}
+              ariaLabel="Werk für Maschine wählen"
+            />
+            <ColorPicker value={editMachineColor} onChange={setEditMachineColor} />
+          </>
         )}
         renderExtra={(m) => (
-          <span className="text-xs text-slate-500">
+          <span className="flex items-center gap-1.5 text-xs admin-text-subtle">
+            {m.color && (
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 shrink-0 rounded-full border border-white/80"
+                style={{ backgroundColor: m.color }}
+              />
+            )}
             {plants.find((p) => p.id === m.plant_id)?.name ?? 'Kein Werk'}
           </span>
         )}

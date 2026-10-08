@@ -62,7 +62,7 @@ export default function AdminToolTypes() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900">Werkzeugtypen</h3>
+        <h3 className="text-sm font-bold admin-text">Werkzeugtypen</h3>
       </div>
 
       {error && <div className="admin-alert admin-alert-error"><span>×</span><div>{error}</div></div>}
@@ -109,7 +109,7 @@ export default function AdminToolTypes() {
                           <button className="admin-btn admin-btn-primary admin-btn-sm" onClick={() => handleUpdate(type.id)}>
                             Speichern
                           </button>
-                          <button className="admin-btn admin-btn-ghost !py-1 !px-2.5" onClick={() => {
+                          <button className="admin-btn admin-btn-ghost admin-btn-sm" onClick={() => {
                             setEditingId(null)
                             setEditingValue('')
                           }}>

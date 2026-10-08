@@ -5,6 +5,9 @@ import AdminStammdaten from './AdminStammdaten'
 import AdminStorageLocations from './AdminStorageLocations'
 import { useAuth } from '../../context/AuthContext'
 import { getDisplayName } from '../../lib/api'
+import { Tip } from './IconTipButton'
+import SessionTimer from '../../components/SessionTimer'
+import SessionWarning from '../../components/SessionWarning'
 
 type AdminSection = 'dashboard' | 'stammdaten' | 'storage'
 
@@ -56,7 +59,7 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ onBack }: AdminLayoutProps) {
-  const { user, logout } = useAuth()
+  const { user, logout, expireSession, extendSession, expiresAt } = useAuth()
   const [section, setSection] = useState<AdminSection>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -77,6 +80,9 @@ export default function AdminLayout({ onBack }: AdminLayoutProps) {
     <div className="admin-shell">
       <a href="#admin-main" className="admin-skip">Zum Inhalt springen</a>
 
+      {/* Warnung vor dem Ablauf der Sitzung – auch hier, wie im Haupt-Frontend */}
+      {user && <SessionWarning onExtend={extendSession} />}
+
       {/* SIDEBAR (dark, Split-Tone) */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'is-open' : ''}`} id="admin-sidebar">
         {/* Marke */}
@@ -89,6 +95,34 @@ export default function AdminLayout({ onBack }: AdminLayoutProps) {
             </span>
           </div>
         </div>
+
+        {/* Nutzer + Aktionen direkt unter der Marke: wer angemeldet ist und
+            wie man zurückkommt, steht damit ganz oben statt im Fuß. */}
+        {user && (
+          <div className="px-3 py-3 border-b" style={{ borderColor: 'var(--admin-sidebar-border)' }}>
+            <div className="admin-user-card cursor-default" title={`${user.first_name} ${user.last_name}`}>
+              <span className="admin-avatar">{getInitials(user.first_name, user.last_name)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12px] font-semibold text-white truncate">{getDisplayName(user)}</span>
+                <span className="block text-[10px] truncate" style={{ color: 'var(--admin-sidebar-dim)' }}>
+                  {user.is_admin ? 'Administrator' : 'Benutzer'}
+                </span>
+              </span>
+            </div>
+            {/* Restzeit der Sitzung – wie im Haupt-Frontend */}
+            <div className="mt-2">
+              <SessionTimer expiresAt={expiresAt} onExpire={expireSession} />
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <button onClick={onBack} className="admin-btn admin-btn-secondary w-full">
+                ← Zur Hauptseite
+              </button>
+              <button onClick={logout} className="admin-btn admin-btn-danger-ghost w-full">
+                Abmelden
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Navigation mit Gruppen */}
         <nav className="flex-1 p-3 overflow-y-auto" aria-label="Admin-Navigation">
@@ -110,29 +144,6 @@ export default function AdminLayout({ onBack }: AdminLayoutProps) {
             ))}
           </div>
         </nav>
-
-        {/* Nutzerkarte im Fuß */}
-        {user && (
-          <div className="p-3 border-t" style={{ borderColor: 'var(--admin-sidebar-border)' }}>
-            <div className="admin-user-card cursor-default" title={`${user.first_name} ${user.last_name}`}>
-              <span className="admin-avatar">{getInitials(user.first_name, user.last_name)}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-semibold text-white truncate">{getDisplayName(user)}</span>
-                <span className="block text-[10px] truncate" style={{ color: 'var(--admin-sidebar-dim)' }}>
-                  {user.is_admin ? 'Administrator' : 'Benutzer'}
-                </span>
-              </span>
-            </div>
-            <div className="mt-2 space-y-1.5">
-              <button onClick={onBack} className="admin-btn admin-btn-secondary w-full">
-                ← Zur Hauptseite
-              </button>
-              <button onClick={logout} className="admin-btn admin-btn-danger-ghost w-full">
-                Abmelden
-              </button>
-            </div>
-          </div>
-        )}
       </aside>
 
       {sidebarOpen && (
@@ -169,9 +180,11 @@ export default function AdminLayout({ onBack }: AdminLayoutProps) {
               <span className="admin-badge admin-badge-success hidden sm:inline-flex">
                 <span className="admin-dot" /> System aktiv
               </span>
-              <span className="admin-avatar" title={`${user.first_name} ${user.last_name}`}>
-                {getInitials(user.first_name, user.last_name)}
-              </span>
+              <Tip label={`${user.first_name} ${user.last_name}`}>
+                <span className="admin-avatar">
+                  {getInitials(user.first_name, user.last_name)}
+                </span>
+              </Tip>
             </div>
           )}
         </header>

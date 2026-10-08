@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { getPlants } from '../../api/admin'
+import IconTipButton, { Tip } from './IconTipButton'
 import {
   getCabinets,
   deleteCabinetWithResult,
@@ -27,6 +28,7 @@ import {
   type TrayTool,
 } from '../../api/locations'
 import { getToolById, updateTool, deleteTool } from '../../api/tools'
+import { toolLabel } from '../../lib/toolLabel'
 import MovementLog from '../../components/movements/MovementLog'
 
 import type { Position } from '../../api/locations'
@@ -142,28 +144,29 @@ function TrayToolCard({ tool, isSelected, onClick }: TrayToolCardProps) {
   }
 
   return (
-    <button
-      ref={setNodeRef}
-      type="button"
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onClick(tool)}
-      title={tool.description ?? tool.tool_id}
-      className={`
-        inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold shadow-sm transition-all
-        ${isSelected
-          ? 'ring-3 ring-amber-500 bg-amber-50 border-amber-300 text-amber-900'
-          : 'bg-teal-700 border-teal-800 text-white hover:bg-teal-800'}
-      `}
-    >
-      <span className="font-mono">{tool.tool_id}</span>
-      {tool.status === 'lent' && (
-        <span className="text-[9px] px-1 rounded-full bg-white/20 text-white whitespace-nowrap">
-          Ausgeliehen
-        </span>
-      )}
-    </button>
+    <Tip label={tool.description ?? toolLabel(tool.tool_id)}>
+      <button
+        ref={setNodeRef}
+        type="button"
+        style={style}
+        {...attributes}
+        {...listeners}
+        onClick={() => onClick(tool)}
+        className={`
+          inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold shadow-sm transition-all
+          ${isSelected
+            ? 'ring-3 ring-[var(--admin-warning)] bg-[var(--admin-warning-bg)] border-[var(--admin-warning-line)] text-[var(--admin-warning-fg)]'
+            : 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-[var(--admin-on-primary)] hover:bg-[var(--admin-primary-hover)]'}
+        `}
+      >
+        <span className="font-mono">{toolLabel(tool.tool_id)}</span>
+        {tool.status === 'lent' && (
+          <span className="text-[9px] px-1 rounded-full bg-white/20 text-white whitespace-nowrap">
+            Ausgeliehen
+          </span>
+        )}
+      </button>
+    </Tip>
   )
 }
 
@@ -179,7 +182,7 @@ function TrayDropZone() {
       className={`
         mt-2 flex min-h-[52px] items-center justify-center rounded-xl border-2 border-dashed px-4 py-2 text-xs font-bold transition-all
         ${isOver
-          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+          ? 'border-[var(--admin-success)] bg-[var(--admin-success-bg)] text-[var(--admin-success-fg)]'
           : 'admin-line-strong admin-surface-sub admin-text-subtle'}
       `}
     >
@@ -210,12 +213,16 @@ function SlotCard({
   onEditTool,
   onDeleteTool,
 }: SlotCardProps) {
-  const isBelegt = position.tool_id !== null
+  // Ein Platz kann ein **Werkzeug** oder ein **Ersatzteil** halten (DEC-064).
+  // Beides gilt als belegt; nur Werkzeuge sind ziehbar.
+  const ersatzteil = position.spare_part ?? null
+  const hatWerkzeug = position.tool_id !== null
+  const isBelegt = hatWerkzeug || ersatzteil !== null
   const istAusgeliehen = position.tool?.status === 'lent'
 
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
     id: `slot-${position.id}`,
-    disabled: !isBelegt,
+    disabled: !hatWerkzeug,
   })
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `slot-${position.id}` })
 
@@ -229,18 +236,24 @@ function SlotCard({
       ref={setDropRef}
       onClick={() => onPlatzClick(codeKurz)}
       title={
-        isBelegt && position.tool
-          ? `${codeVoll}\n${position.tool.tool_id} - ${position.tool.description ?? ''}`
-          : `${codeVoll}\n${isBelegt ? 'Ziehen: belegtes Ziel = Tausch, freies = Verschieben, Ablage = Entfernen' : 'Freier Platz'}`
+        ersatzteil
+          ? `${codeVoll}\nErsatzteil ${ersatzteil.article_number}${ersatzteil.name ? ` – ${ersatzteil.name}` : ''}\nDer Platz ist belegt: Werkzeuge können hier nicht abgelegt werden.`
+          : isBelegt && position.tool
+            ? `${codeVoll}\n${toolLabel(position.tool.tool_id)} - ${position.tool.description ?? ''}`
+            : `${codeVoll}\n${isBelegt ? 'Ziehen: belegtes Ziel = Tausch, freies = Verschieben, Ablage = Entfernen' : 'Freier Platz'}`
       }
       className={`border rounded-lg p-3 min-h-[80px] flex flex-col justify-between text-xs font-mono transition-all cursor-pointer ${
         isSelected
-          ? 'ring-3 ring-amber-500 bg-amber-50 admin-text'
+          ? 'ring-3 ring-[var(--admin-warning)] bg-[var(--admin-warning-bg)] admin-text'
           : isOver
-            ? 'ring-3 ring-emerald-500 bg-emerald-50 admin-text'
-            : isBelegt
-              ? 'bg-blue-600 border-blue-700 text-white shadow-sm hover:bg-blue-700'
-              : 'admin-surface-sub admin-line admin-text-subtle hover:border-blue-400'
+            ? 'ring-3 ring-[var(--admin-success)] bg-[var(--admin-success-bg)] admin-text'
+            : ersatzteil
+              ? // Ersatzteil: eigener Zustand zwischen „belegt" und „frei" – die
+                // Werkzeug-Fläche würde ein Werkzeug versprechen.
+                'bg-[var(--admin-warning-bg)] border-[var(--admin-warning)] text-[var(--admin-warning-fg)] hover:bg-[var(--admin-warning-bg)]'
+              : isBelegt
+                ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-[var(--admin-on-primary)] shadow-sm hover:bg-[var(--admin-primary-hover)]'
+                : 'admin-surface-sub admin-line admin-text-subtle hover:border-[var(--admin-primary)]'
       }`}
     >
       <div
@@ -256,22 +269,34 @@ function SlotCard({
         </div>
         <div
           className={`font-sans font-semibold text-xs my-1 ${
-            isBelegt && !isSelected ? 'text-white' : isSelected ? 'text-amber-900' : 'admin-text-subtle italic'
+            isBelegt && !isSelected
+              ? 'text-[var(--admin-on-primary)]'
+              : isSelected
+                ? 'text-[var(--admin-warning-fg)]'
+                : 'admin-text-subtle italic'
           }`}
         >
-          {position.tool_id === null ? (
+          {ersatzteil ? (
+            <Tip label={ersatzteil.name ?? 'Ersatzteil'}>
+              <span className="cursor-help">
+                Ersatzteil {ersatzteil.article_number}
+              </span>
+            </Tip>
+          ) : position.tool_id === null ? (
             '[Frei]'
           ) : position.tool ? (
-            <span title={position.tool.description ?? position.tool.tool_id} className="cursor-help">
-              {position.tool.tool_id}
-            </span>
+            <Tip label={position.tool.description ?? toolLabel(position.tool.tool_id)}>
+              <span className="cursor-help">
+                {toolLabel(position.tool.tool_id)}
+              </span>
+            </Tip>
           ) : (
             `Werkzeug ${position.tool_id}`
           )}
         </div>
         <div className="flex items-center justify-between mt-auto">
           {istAusgeliehen && (
-            <span className="admin-badge admin-badge-warning !text-[9px] !px-1.5 !py-0.5">
+            <span className="admin-badge admin-badge-warning">
               Ausgeliehen
             </span>
           )}
@@ -280,33 +305,31 @@ function SlotCard({
               className="flex items-center gap-1"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <button
-                className="w-6 h-6 rounded bg-white/20 hover:bg-white/40 text-white flex items-center justify-center transition-colors"
-                title="Werkzeug bearbeiten"
-                aria-label="Werkzeug bearbeiten"
+              <IconTipButton
+                label="Werkzeug bearbeiten"
+                buttonClassName="admin-icon-btn-on-color"
                 onClick={(e) => {
                   e.stopPropagation()
                   onEditTool(position.tool_id!)
                 }}
               >
                 <PencilIcon />
-              </button>
-              <button
-                className="w-6 h-6 rounded bg-rose-500/30 hover:bg-rose-500/60 text-white flex items-center justify-center transition-colors"
-                title="Werkzeug löschen"
-                aria-label="Werkzeug löschen"
+              </IconTipButton>
+              <IconTipButton
+                label="Werkzeug löschen"
+                buttonClassName="admin-icon-btn-on-color is-danger"
                 onClick={(e) => {
                   e.stopPropagation()
                   onDeleteTool(position.tool_id!)
                 }}
               >
                 <TrashIcon />
-              </button>
+              </IconTipButton>
             </div>
           )}
           {isBelegt && (
             <span
-              className={`w-2 h-2 rounded-full ${istAusgeliehen ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              className={`w-2 h-2 rounded-full ${istAusgeliehen ? 'bg-[var(--admin-warning)]' : 'bg-[var(--admin-success)]'}`}
             ></span>
           )}
         </div>
@@ -529,13 +552,22 @@ export default function AdminStorageLocations() {
 
   // Ein Werkzeug aus der Ablage auf einen Platz legen/einreihen.
   async function placeTrayOnSlot(tool: TrayTool, targetPosition: Position) {
+    // Ein Platz mit Ersatzteil nimmt kein Werkzeug auf (DEC-064). Der Server
+    // lehnt es ebenfalls ab – hier kommt die verständlichere Meldung.
+    if (targetPosition.spare_part) {
+      setError(
+        `Platz ${targetPosition.name} ist mit dem Ersatzteil ` +
+          `„${targetPosition.spare_part.article_number}“ belegt.`,
+      )
+      return
+    }
     try {
       const updatedPositions = await placeToolAtPosition(tool.id, targetPosition.id)
       const wasFrei = targetPosition.tool_id === null
       setInfo(
         wasFrei
-          ? `Werkzeug ${tool.tool_id} auf Platz gelegt.`
-          : `Einreihen: ${tool.tool_id} eingeordnet, nachfolgende Werkzeuge rücken auf.`,
+          ? `Werkzeug ${toolLabel(tool.tool_id)} auf Platz gelegt.`
+          : `Einreihen: ${toolLabel(tool.tool_id)} eingeordnet, nachfolgende Werkzeuge rücken auf.`,
       )
       mergeUpdatedPositions(updatedPositions)
       setMovementRefreshKey((k) => k + 1)
@@ -548,6 +580,14 @@ export default function AdminStorageLocations() {
   // Belegten Platz auf einen anderen Platz verschieben oder tauschen.
   async function moveSlotToSlot(source: Slot, target: Slot) {
     if (source.pos.id === target.pos.id) return
+    // Auf dem Ziel liegt ein Ersatzteil: weder Verschieben noch Tausch möglich.
+    if (target.pos.spare_part) {
+      setError(
+        `Platz ${target.pos.name} ist mit dem Ersatzteil ` +
+          `„${target.pos.spare_part.article_number}“ belegt.`,
+      )
+      return
+    }
     const action: MoveAction = target.pos.tool_id !== null ? 'swap' : 'move'
     try {
       const updatedPositions = await movePosition(source.pos.id, target.pos.id, action)
@@ -566,10 +606,11 @@ export default function AdminStorageLocations() {
   // Belegten Platz in die Ablage legen (Platz freigeben).
   async function releaseSlotToTray(slot: Slot) {
     if (!slot.pos.tool_id) return
-    const toolLabel = slot.pos.tool?.tool_id ?? slot.pos.tool_id
+    // Bewusst NICHT `toolLabel` als Name: so heißt schon der Import.
+    const toolName = toolLabel(slot.pos.tool?.tool_id)
     try {
       const updatedPositions = await releaseToolFromPosition(slot.pos.id)
-      setInfo(`Werkzeug ${toolLabel} in die Ablage gelegt.`)
+      setInfo(`Werkzeug ${toolName} in die Ablage gelegt.`)
       mergeUpdatedPositions(updatedPositions)
       setMovementRefreshKey((k) => k + 1)
       await loadTray()
@@ -592,7 +633,7 @@ export default function AdminStorageLocations() {
     setSelection((prev) =>
       prev?.kind === 'tray' && prev.toolId === tool.id
         ? null
-        : { kind: 'tray', toolId: tool.id, label: tool.tool_id },
+        : { kind: 'tray', toolId: tool.id, label: toolLabel(tool.tool_id) },
     )
   }
 
@@ -881,10 +922,10 @@ export default function AdminStorageLocations() {
         <div className="flex items-center justify-between border-b pb-2">
 
           <h3 className="text-sm font-bold admin-text">
-            Werkzeug bearbeiten: {editingTool.tool_id}
+            Werkzeug bearbeiten: {toolLabel(editingTool.tool_id)}
           </h3>
           <button
-            className="admin-btn admin-btn-secondary !py-1 !px-2 !text-xs"
+            className="admin-btn admin-btn-secondary admin-btn-sm"
             onClick={() => {
               setEditFormOpen(false)
               setEditingTool(null)
@@ -1123,7 +1164,7 @@ export default function AdminStorageLocations() {
               <div className="flex items-center justify-between border-b pb-2 mb-4" style={{ borderColor: 'var(--admin-divider)' }}>
                 <span className="section-title">Lagerstruktur-Ansicht</span>
                 {selection && (
-                  <span className="text-xs text-amber-600 font-bold">
+                  <span className="text-xs text-[var(--admin-warning)] font-bold">
                     [Ausgewählt: {selection.label}]
                   </span>
                 )}
@@ -1146,64 +1187,63 @@ export default function AdminStorageLocations() {
                   const isCabinetOpen = expandedCabinet === c.name
                   return (
                     <div key={c.id} className="admin-card overflow-hidden">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between admin-rowhead">
                         <button
                           onClick={() => toggleCabinet(c.name)}
-
-                          className="flex-1 flex items-center gap-2 p-3 admin-rowhead text-left"
+                          className="flex-1 flex items-center gap-2 p-3 text-left"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`inline-block transition-transform ${isCabinetOpen ? 'rotate-90' : ''}`}><path d="m9 18 6-6-6-6"/></svg>
                           <span className="font-bold text-sm" style={{ color: 'var(--admin-text)' }}>Schrank {c.name}</span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-bold text-teal-700 ring-1 ring-teal-500/25">
+                          <span className="admin-badge admin-badge-primary">
                             {c.drawers.length}{' '}
                             {c.drawers.length === 1 ? 'Schublade' : 'Schubladen'}
                           </span>
                         </button>
                         <div className="flex items-center gap-1.5 mr-2 shrink-0">
-                          <button
-                            type="button"
-
-                            className={`admin-btn admin-btn-secondary admin-btn-sm gap-1.5 ${addDrawerCabinetId === c.id ? 'ring-2 ring-teal-500' : ''}`}
-                            title="Neue Schublade in diesem Schrank anlegen"
-                            aria-label="Schublade hinzufügen"
-                            aria-expanded={addDrawerCabinetId === c.id}
-                            onClick={() => {
-                              setExpandedCabinet(c.name)
-                              toggleAddDrawer(c)
-                            }}
-                          >
-                            <PlusIcon />
-                            Schublade hinzufügen
-                          </button>
-                          <button
-                            className="admin-btn gap-1.5 py-1! px-2.5! text-[11px]! bg-rose-500/15! text-rose-700! border! border-rose-500/25! hover:bg-rose-500/25!"
-                            title="Schrank inkl. Schubladen löschen"
-                            aria-label="Schrank löschen"
-                            onClick={() => handleDeleteCabinet(c.id)}
-                          >
-                            <TrashIcon />
-                            Löschen
-                          </button>
+                          <Tip label="Neue Schublade in diesem Schrank anlegen">
+                            <button
+                              type="button"
+                              className={`admin-btn admin-btn-ghost admin-btn-sm gap-1.5 ${addDrawerCabinetId === c.id ? 'ring-2 ring-[var(--admin-primary)]' : ''}`}
+                              aria-label="Schublade hinzufügen"
+                              aria-expanded={addDrawerCabinetId === c.id}
+                              onClick={() => {
+                                setExpandedCabinet(c.name)
+                                toggleAddDrawer(c)
+                              }}
+                            >
+                              <PlusIcon />
+                              Schublade hinzufügen
+                            </button>
+                          </Tip>
+                          <Tip label="Schrank inkl. Schubladen löschen">
+                            <button
+                              className="admin-btn admin-btn-danger-ghost admin-btn-sm"
+                              aria-label="Schrank löschen"
+                              onClick={() => handleDeleteCabinet(c.id)}
+                            >
+                              <TrashIcon />
+                              Löschen
+                            </button>
+                          </Tip>
                         </div>
                       </div>
 
                       {isCabinetOpen && (
                         <div className="space-y-2 p-3 border-t admin-line-soft">
                           {addDrawerCabinetId === c.id && (
-                            <div className="rounded-lg border border-teal-200 bg-teal-50/60 p-3 space-y-3">
+                            <div className="rounded-lg border border-[var(--admin-primary-soft)] bg-[var(--admin-primary-bg-soft)] p-3 space-y-3">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-teal-900">
+                                <span className="text-xs font-bold text-[var(--admin-primary-fg-soft)]">
                                   Neue Schublade in Schrank {c.name}
                                 </span>
-                                <button
-                                  type="button"
-                                  className="admin-btn admin-btn-tertiary"
-                                  title="Abbrechen"
-                                  aria-label="Schublade hinzufügen abbrechen"
+                                <IconTipButton
+                                  label="Abbrechen"
+                                  ariaLabel="Schublade hinzufügen abbrechen"
+                                  buttonClassName="admin-btn admin-btn-tertiary"
                                   onClick={() => setAddDrawerCabinetId(null)}
                                 >
                                   <XIcon />
-                                </button>
+                                </IconTipButton>
                               </div>
 
                               <div className="grid grid-cols-3 gap-2">
@@ -1270,28 +1310,29 @@ export default function AdminStorageLocations() {
                           {c.drawers.map((d) => {
                             const isDrawerOpen = expandedDrawer === d.name
                             return (
-                              <div key={d.id} className="admin-card !rounded-lg overflow-hidden">
-                                <div className="flex items-center justify-between">
+                              <div key={d.id} className="admin-card overflow-hidden">
+                                <div className="flex items-center justify-between admin-rowhead">
                                   <button
                                     onClick={() => toggleDrawer(d.name)}
-                                    className="flex-1 flex items-center gap-2 p-2.5 admin-rowhead text-left"
+                                    className="flex-1 flex items-center gap-2 p-2.5 text-left"
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`inline-block transition-transform ${isDrawerOpen ? 'rotate-90' : ''}`}><path d="m9 18 6-6-6-6"/></svg>
                                     <span className="font-bold text-xs" style={{ color: 'var(--admin-text-muted)' }}>Schublade {d.name}</span>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-sky-500/25">
+                                    <span className="admin-badge admin-badge-info">
                                       {d.positions.length}{' '}
                                       {d.positions.length === 1 ? 'Platz' : 'Plätze'}
                                     </span>
                                   </button>
-                                  <button
-                                    className="admin-btn admin-btn-danger-ghost admin-btn-sm gap-1.5 mr-1.5 shrink-0"
-                                    title="Schublade löschen"
-                                    aria-label="Schublade löschen"
-                                    onClick={() => handleDeleteDrawer(c.id, d)}
-                                  >
-                                    <TrashIcon />
-                                    Löschen
-                                  </button>
+                                  <Tip label="Schublade löschen">
+                                    <button
+                                      className="admin-btn admin-btn-danger-ghost admin-btn-sm gap-1.5 mr-1.5 shrink-0"
+                                      aria-label="Schublade löschen"
+                                      onClick={() => handleDeleteDrawer(c.id, d)}
+                                    >
+                                      <TrashIcon />
+                                      Löschen
+                                    </button>
+                                  </Tip>
                                 </div>
 
                                 {isDrawerOpen && (

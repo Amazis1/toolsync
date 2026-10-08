@@ -72,7 +72,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
     <div className="admin-card p-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-sm font-bold admin-text">
             {initial ? 'Benutzer bearbeiten' : 'Neuer Benutzer'}
           </h3>
           <button
@@ -86,7 +86,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Personalnummer</label>
+            <label className="block text-xs font-semibold admin-text-muted mb-1">Personalnummer</label>
             <input
               className={inputClass}
               type="password"
@@ -100,7 +100,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Anzeigename (optional)</label>
+            <label className="block text-xs font-semibold admin-text-muted mb-1">Anzeigename (optional)</label>
             <input
               className={inputClass}
               value={input.display_name ?? ''}
@@ -108,7 +108,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Vorname</label>
+            <label className="block text-xs font-semibold admin-text-muted mb-1">Vorname</label>
             <input
               className={inputClass}
               value={input.first_name}
@@ -117,7 +117,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Nachname</label>
+            <label className="block text-xs font-semibold admin-text-muted mb-1">Nachname</label>
             <input
               className={inputClass}
               value={input.last_name}
@@ -127,7 +127,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
           </div>
           {input.is_admin && (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Admin-Passwort</label>
+              <label className="block text-xs font-semibold admin-text-muted mb-1">Admin-Passwort</label>
               <input
                 type="password"
                 className={inputClass}
@@ -140,7 +140,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
         </div>
 
         <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-xs font-medium admin-text-muted">
             <input
               type="checkbox"
               checked={input.is_active}
@@ -148,7 +148,7 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
             />
             Aktiv
           </label>
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-xs font-medium admin-text-muted">
             <input
               type="checkbox"
               checked={input.is_admin}
@@ -243,7 +243,7 @@ export default function AdminUsers() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900">Benutzer</h3>
+        <h3 className="text-sm font-bold admin-text">Benutzer</h3>
         <button
           type="button"
           onClick={openCreate}

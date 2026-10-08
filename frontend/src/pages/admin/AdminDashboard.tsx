@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getTools } from '../../api/tools'
 import type { Tool } from '../../api/types'
+import { toolLabel } from '../../lib/toolLabel'
 import AdminUsers from './AdminUsers'
 
 
@@ -13,10 +14,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let mounted = true
-    getTools()
-      .then((data) => {
+    // Die Werkzeugliste liefert jetzt eine Seite samt Gesamtzahl. Das Dashboard
+    // zählt seine Kennzahlen weiterhin über die geladenen Datensätze – es lädt
+    // dafür die größte zulässige Seite (200). Für belastbare Kennzahlen bei
+    // sehr großem Bestand braucht es einen eigenen Statistik-Endpunkt
+    // (siehe docs/05-tools.md, Abschnitt 9).
+    getTools({ limit: 200 })
+      .then((page) => {
         if (mounted) {
-          setTools(data)
+          setTools(page.items)
           setLoading(false)
         }
       })
@@ -41,7 +47,7 @@ export default function AdminDashboard() {
   const filteredTools = tools.filter((tool) => {
     const q = search.toLowerCase()
     return (
-      tool.tool_id.toLowerCase().includes(q) ||
+      toolLabel(tool.tool_id).toLowerCase().includes(q) ||
       (tool.description ?? '').toLowerCase().includes(q) ||
       (tool.tool_type?.name ?? '').toLowerCase().includes(q)
     )
@@ -131,7 +137,7 @@ export default function AdminDashboard() {
               <tbody>
                 {filteredTools.slice(0, 20).map((tool) => (
                   <tr key={tool.id}>
-                    <td className="font-mono font-semibold" style={{ color: 'var(--admin-text)' }}>{tool.tool_id}</td>
+                    <td className="font-mono font-semibold" style={{ color: 'var(--admin-text)' }}>{toolLabel(tool.tool_id)}</td>
                     <td>{tool.description || '—'}</td>
                     <td style={{ color: 'var(--admin-text-subtle)' }}>{tool.tool_type?.name ?? '—'}</td>
                     <td>{getStatusBadge(tool.status)}</td>

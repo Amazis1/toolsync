@@ -1,26 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import Tools from './pages/Tools';
 import SerialArticleList from './components/serial-articles/SerialArticleList';
-import SerialArticleUpload from './components/serial-articles/SerialArticleUpload';
 import PDFViewer from './components/serial-articles/PDFViewer';
-import StorageItemList from './components/storage/StorageItemList';
-import StorageItemForm from './components/storage/StorageItemForm';
-import { createStorageItem, updateStorageItem } from './api/storage';
-import type { StorageItem, StorageItemInput } from './types/storage-item';
+import SparePartList from './components/spare-parts/SparePartList';
+import DataSheetList from './components/data-sheets/DataSheetList';
+import type { SparePart } from './types/spare-part';
+import type { DataSheet } from './types/data-sheet';
 import type { SerialArticle } from './types/serial-article';
+import type { ViewerRequest } from './types/viewer';
+import { dataSheetViewer, serialArticleViewer } from './lib/viewerSources';
 import { getDisplayName } from './lib/api';
 import { LoginIcon, AddIcon, AdminIcon } from './components/icons';
 import AdminLayout from './pages/admin/AdminLayout';
+import SessionTimer from './components/SessionTimer';
+import SessionWarning from './components/SessionWarning';
+import ToastStack from './components/ToastStack';
+import { useToasts } from './lib/useToasts';
+import { useSessionHeartbeat } from './lib/useSessionHeartbeat';
 
-type TabKey = 'werkzeuge' | 'serienartikel' | 'lager' | 'historie' | 'create';
+type TabKey =
+  | 'werkzeuge'
+  | 'serienartikel'
+  | 'datenblaetter'
+  | 'ersatzteile'
+  | 'historie'
+  | 'create';
 type ViewMode = 'main' | 'admin';
 
+// Tab-Leiste der Hauptansicht (DEC-066): Werkzeuge · Serienartikel ·
+// Datenblätter · Ersatzteile · Historie. „Lager/Ersatz" ist entfallen:
+// Ersatzwerkzeuge stehen in der Werkzeugliste, Ersatzteile im eigenen Tab.
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'werkzeuge', label: 'Werkzeuge' },
   { key: 'serienartikel', label: 'Serienartikel' },
-  { key: 'lager', label: 'Lager/Ersatz' },
+  { key: 'datenblaetter', label: 'Datenblätter' },
+  { key: 'ersatzteile', label: 'Ersatzteile' },
   { key: 'historie', label: 'Historie' },
 ];
 
@@ -29,12 +45,14 @@ function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
 }
 
-function Placeholder({ title }: { title: string }) {
+// Platzhalter für Bereiche, die noch nicht gebaut sind. Der Text benennt das
+// Vorhaben, statt nur „folgt später" zu sagen (DEC-066 Punkt 3).
+function Placeholder({ title, note }: { title: string; note?: string }) {
   return (
     <div className="app-content-block rounded-2xl p-5 shadow-xs">
       <h2 className="text-base font-bold text-slate-900">{title}</h2>
       <p className="mt-1 text-xs text-slate-600">
-        Dieser Bereich folgt in einem späteren Schritt.
+        {note ?? 'Dieser Bereich folgt in einem späteren Schritt.'}
       </p>
     </div>
   );
@@ -65,27 +83,144 @@ function StatisticsSidebar() {
 }
 
 const MainApp: React.FC = () => {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, expireSession, extendSession, isLoading, expiresAt } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('werkzeuge');
-  const [view, setView] = useState<ViewMode>('main');
-  const [toolCreateSignal, setToolCreateSignal] = useState(0);
+  // Auftrag „Werkzeug anlegen“ an die Liste: eindeutiges Token statt Zähler,
+  // damit ein bereits verbrauchter Auftrag nicht erneut greift.
+  const createToken = useRef(0);
+  const [toolCreateRequest, setToolCreateRequest] = useState<number | null>(null);
 
   // Serienartikel-Zustände
-  const [showSerialArticleForm, setShowSerialArticleForm] = useState(false);
-  const [viewingPdf, setViewingPdf] = useState<SerialArticle | null>(null);
+  // Datei-Fenster: Dokument + Datei-Quelle kommen als fertiger Auftrag herein
+  // (`lib/viewerSources.ts`) – das Fenster selbst kennt keine Endpunkte (DEC-065).
+  const [viewingFiles, setViewingFiles] = useState<ViewerRequest | null>(null);
+  // Sitzung bei Aktivitaet verlaengern (Backend erneuert den Token). Solange ein
+  // Plan-/Bildfenster offen ist, zusaetzlich ein Lebenszeichen: die Ereignisse
+  // darin (Chrome-PDF im iframe) erreichen das Hauptfenster nicht.
+  useSessionHeartbeat(!!user, viewingFiles !== null);
   const [serialArticleRefreshKey, setSerialArticleRefreshKey] = useState(0);
+  // Es gibt EINEN Anlegen-Knopf: er öffnet das Anlege-Formular mit Reitern
+  // (Werkzeug, Serienartikel, Datenblatt, Ersatzteil). Der Auftrag wandert als
+  // Einmal-Token dorthin – ein eigenes Fenster für Serienartikel gibt es nicht
+  // (DEC-056 Punkt 5). `article: null` = anlegen, sonst bearbeiten.
+  const serialToken = useRef(0);
+  const [serialRequest, setSerialRequest] = useState<
+    { token: number; article: SerialArticle | null } | null
+  >(null);
+  // Verwalten (anlegen, bearbeiten, löschen) ist Administratoren vorbehalten
+  // (DEC-056 Punkt 4) – die Server prüfen es zusätzlich selbst.
+  const canManageSerialArticles = !!user?.is_admin;
+  // Ersatzteile: Lesen, Anlegen und Ändern darf jeder aktive Benutzer, **Löschen
+  // nur Admins** (DEC-064 Punkt 10) – serverseitig über `require_admin` geprüft.
+  const canDeleteSpareParts = !!user?.is_admin;
+  const [sparePartRefreshKey, setSparePartRefreshKey] = useState(0);
+  // Derselbe Einmal-Token-Weg wie beim Serienartikel: `part: null` = anlegen,
+  // sonst bearbeiten (DEC-066 Punkt 4).
+  const sparePartToken = useRef(0);
+  const [sparePartRequest, setSparePartRequest] = useState<
+    { token: number; part: SparePart | null } | null
+  >(null);
 
-  // Lager/Ersatz-Zustände
-  const [showStorageForm, setShowStorageForm] = useState(false);
-  const [editingStorageItem, setEditingStorageItem] = useState<StorageItem | null>(null);
-  const [storageRefreshKey, setStorageRefreshKey] = useState(0);
+  // Datenblätter (DEC-065): eigener Bereich, Verwaltung durch Admins. Der
+  // Auftrag aus einer Werkzeugzeile filtert die Liste auf diese Werkzeug-ID.
+  const canManageDataSheets = !!user?.is_admin;
+  // Im Datei-Fenster dürfen Dateien nur Admins entfernen – in **beiden**
+  // Bereichen (Serienartikel DEC-062, Datenblatt DEC-065).
+  const canManageViewerFiles = !!user?.is_admin;
+  const [dataSheetRefreshKey, setDataSheetRefreshKey] = useState(0);
+  const [dataSheetFilter, setDataSheetFilter] = useState<string | null>(null);
+  const dataSheetToken = useRef(0);
+  const [dataSheetRequest, setDataSheetRequest] = useState<
+    { token: number; sheet: DataSheet | null } | null
+  >(null);
+  // Rückmeldungen als Toast (Guide „Feedback"), nicht als Meldung im Block.
+  const { toasts, showToast, dismissToast } = useToasts();
 
-  // Prüfen, ob die URL /admin ist
-  useEffect(() => {
-    if (window.location.pathname === '/admin') {
-      setView('admin');
-    }
-  }, []);
+  /** Anlege-Formular öffnen – mit dem Reiter „Serienartikel" (null = neuer Plan). */
+  function openSerialForm(article: SerialArticle | null = null) {
+    if (!canManageSerialArticles) return;
+    serialToken.current += 1;
+    setSerialRequest({ token: serialToken.current, article });
+    setActiveTab('create');
+  }
+
+  /**
+   * Zurück aus dem Anlege-Formular („Zurück" oder nach dem Bearbeiten): wieder in
+   * den Serienartikel-Bereich und die Liste dort aktualisieren.
+   */
+  function handleSerialFormClosed() {
+    setActiveTab('serienartikel');
+    setSerialArticleRefreshKey((k) => k + 1);
+  }
+
+  /**
+   * Liste nach dem Speichern aktualisieren.
+   *
+   * Die **Meldung** kommt nicht von hier, sondern vom Formular selbst
+   * (`onNotify`): es weiß, ob angelegt oder geändert wurde, und ist die eine
+   * Stelle, an der die Rückmeldung entsteht. Vorher meldeten Formular und App
+   * denselben Vorgang – der Benutzer sah denselben Satz zweimal.
+   */
+  function handleSerialArticleSaved() {
+    setSerialArticleRefreshKey((k) => k + 1);
+  }
+
+  // Ersatzteil-Zustände (DEC-064): Der Bereich hat denselben Einmal-Token-Weg
+  // wie die Serienartikel – ein Anlegen-Knopf, Reiter „Ersatzteil" offen.
+
+  /** Anlege-Formular öffnen – mit dem Reiter „Ersatzteil" (null = neues Teil). */
+  function openSparePartForm(part: SparePart | null = null) {
+    sparePartToken.current += 1;
+    setSparePartRequest({ token: sparePartToken.current, part });
+    setActiveTab('create');
+  }
+
+  /** Zurück aus dem Anlege-Formular: wieder in den Ersatzteil-Bereich. */
+  function handleSpareFormClosed() {
+    setActiveTab('ersatzteile');
+    setSparePartRefreshKey((k) => k + 1);
+  }
+
+  /** Liste nach dem Speichern aktualisieren – die Meldung macht das Formular. */
+  function handleSparePartSaved() {
+    setSparePartRefreshKey((k) => k + 1);
+  }
+
+  /** Anlege-Formular öffnen – mit dem Reiter „Datenblatt" (null = neues Blatt). */
+  function openDataSheetForm(sheet: DataSheet | null = null) {
+    if (!canManageDataSheets) return;
+    dataSheetToken.current += 1;
+    setDataSheetRequest({ token: dataSheetToken.current, sheet });
+    setActiveTab('create');
+  }
+
+  /** Zurück aus dem Anlege-Formular: wieder in den Datenblatt-Bereich. */
+  function handleDataSheetFormClosed() {
+    setActiveTab('datenblaetter');
+    setDataSheetRefreshKey((k) => k + 1);
+  }
+
+  /** Liste nach dem Speichern aktualisieren – die Meldung macht das Formular. */
+  function handleDataSheetSaved() {
+    setDataSheetRefreshKey((k) => k + 1);
+  }
+
+  /**
+   * Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10): in den
+   * Datenblatt-Bereich wechseln und auf diese Werkzeug-ID filtern. Wer an der
+   * Maschine steht, kommt vom Werkzeug – nicht aus einer Liste.
+   */
+  function openDataSheetsForTool(tool: { tool_id: string | null }) {
+    setDataSheetFilter(tool.tool_id ?? '');
+    setActiveTab('datenblaetter');
+  }
+
+  // Direktaufruf von /admin (Lesezeichen, Neuladen): Startwert kommt aus der
+  // Adresszeile – so wie bei den Werkzeugfiltern. Damit erscheint das
+  // Admin-Panel ohne Umweg und ohne kurzes Aufblitzen der Hauptseite.
+  const [view, setView] = useState<ViewMode>(() =>
+    window.location.pathname === '/admin' ? 'admin' : 'main',
+  );
 
   // Admin-View aktualisiert die URL
   function openAdmin() {
@@ -106,45 +241,46 @@ const MainApp: React.FC = () => {
     );
   }
 
-  async function handleStorageSave(input: StorageItemInput): Promise<void> {
-    if (editingStorageItem) {
-      await updateStorageItem(editingStorageItem.id, input);
-    } else {
-      await createStorageItem(input);
-    }
-    setShowStorageForm(false);
-    setEditingStorageItem(null);
-    setStorageRefreshKey((k) => k + 1);
-  }
-
-  function openStorageCreate() {
-    setEditingStorageItem(null);
-    setShowStorageForm(true);
-  }
-
-  function openStorageEdit(item: StorageItem) {
-    setEditingStorageItem(item);
-    setShowStorageForm(true);
-  }
-
   function switchTab(key: TabKey) {
     setActiveTab(key);
-    if (key !== 'serienartikel') {
-      setShowSerialArticleForm(false);
+    // Ein offener Serienartikel- oder Ersatzteil-Auftrag gehört zum Anlege-
+    // Formular; beim Verlassen der Ansicht wird er verworfen (sonst öffnete er
+    // sich später erneut, weil er nicht verbraucht wurde).
+    if (key !== 'create') {
+      setSerialRequest(null);
+      setSparePartRequest(null);
+      setDataSheetRequest(null);
     }
     if (key === 'create') {
-      setToolCreateSignal((k) => k + 1);
+      requestToolCreate();
     }
   }
 
-  // + Anlegen in der Tabbar – öffnet je nach aktivem Tab das passende Formular
+  // Einmal-Auftrag an die Werkzeugliste: das Formular geht auf, der Auftrag ist
+  // damit verbraucht. Ohne dieses Verbrauchen würde die Liste beim nächsten
+  // Einhängen (Tab-Wechsel, Rückkehr aus dem Admin-Panel) das Anlegen-Formular
+  // von selbst wieder öffnen.
+  function requestToolCreate() {
+    createToken.current += 1;
+    setToolCreateRequest(createToken.current);
+  }
+
+  function handleToolCreateHandled() {
+    setToolCreateRequest(null);
+  }
+
+  // + Anlegen in der Tabbar – immer EIN Weg: das Anlege-Formular mit Reitern
   function handleCreateClick() {
     if (activeTab === 'serienartikel') {
-      setShowSerialArticleForm(true);
+      openSerialForm(null);
       return;
     }
-    if (activeTab === 'lager') {
-      openStorageCreate();
+    if (activeTab === 'datenblaetter') {
+      openDataSheetForm(null);
+      return;
+    }
+    if (activeTab === 'ersatzteile') {
+      openSparePartForm(null);
       return;
     }
     // Standard: Werkzeug anlegen (auch bei Historie oder Create)
@@ -166,6 +302,9 @@ const MainApp: React.FC = () => {
         {user && (
           <div className="flex min-w-0 items-center gap-3 text-xs font-medium text-slate-600">
             <span className="min-w-0 truncate">{getDisplayName(user)}</span>
+            {/* Restzeit auch auf Telefon/Tablet: ohne diese Anzeige endet die
+                Sitzung hier unbemerkt, weil die Sidebar (ab md) nicht sichtbar ist. */}
+            <SessionTimer expiresAt={expiresAt} onExpire={expireSession} short />
             {user.is_admin && (
               <button
                 type="button"
@@ -186,8 +325,10 @@ const MainApp: React.FC = () => {
         )}
       </header>
 
-      {/* SIDEBAR (.app-sidebar): NUR Branding + User/Abmelden – KEINE Navigation */}
-      <aside className="app-sidebar hidden md:flex w-60 p-6 flex-col justify-between shrink-0">
+      {/* SIDEBAR (.app-sidebar): Branding, darunter direkt der Benutzerblock –
+          KEINE Navigation. Ohne justify-between sitzt der Block oben unter den
+          Logos statt am unteren Rand. */}
+      <aside className="app-sidebar hidden md:flex w-60 p-6 flex-col shrink-0">
         <div className="flex flex-col items-center gap-3 pb-4 mb-4 border-b border-white/20">
           {/* Firmenlogo HPolytechnik (wie im LoginForm) */}
           <div className="logo-main relative w-[100px] h-[100px]">
@@ -205,9 +346,10 @@ const MainApp: React.FC = () => {
           </div>
         </div>
 
-        {/* Profil + Abmelden – nur wenn eingeloggt */}
+        {/* Profil + Abmelden – nur wenn eingeloggt, direkt unter den Logos.
+            Die Trennlinie kommt schon vom Logoblock darüber. */}
         {user && (
-          <div className="space-y-2 border-t border-white/40 pt-4 text-xs font-medium text-slate-600">
+          <div className="space-y-2 text-xs font-medium text-slate-600">
             <div className="flex items-center gap-2 px-2 py-1 group">
               <div className="ui-avatar shrink-0">
                 {getInitials(user.first_name, user.last_name)}
@@ -216,6 +358,10 @@ const MainApp: React.FC = () => {
                 {getDisplayName(user)}
                 {user.is_admin ? ' (Admin)' : ''}
               </span>
+            </div>
+            {/* Restzeit der Sitzung – wird bei Aktivitaet zurueckgesetzt */}
+            <div className="px-2">
+              <SessionTimer expiresAt={expiresAt} onExpire={expireSession} />
             </div>
             {user.is_admin && (
               <button
@@ -256,57 +402,121 @@ const MainApp: React.FC = () => {
                 ))}
               </div>
 
-              {/* + Anlegen öffnet das passende Formular je nach aktivem Tab */}
-              <button
-                onClick={handleCreateClick}
-                className={`ui-btn ui-btn-primary shrink-0 ${
-                  activeTab === 'create' ? 'ring-2 ring-teal-700/30' : ''
-                }`}
-              >
-                <AddIcon className="w-3.5 h-3.5" />
-                Anlegen
-              </button>
+              {/* + Anlegen öffnet das passende Formular je nach aktivem Tab.
+                  Im Serienartikel-Bereich nur für Admins (DEC-056 Punkt 4). */}
+              {!(activeTab === 'serienartikel' && !canManageSerialArticles) && (
+                <button
+                  onClick={handleCreateClick}
+                  className={`ui-btn ui-btn-primary shrink-0 ${
+                    activeTab === 'create' ? 'ring-2 ring-teal-700/30' : ''
+                  }`}
+                >
+                  <AddIcon className="w-3.5 h-3.5" />
+                  Anlegen
+                </button>
+              )}
             </nav>
 
             {/* Hauptinhalt – nur wenn eingeloggt */}
             {user && (
               <>
-                {activeTab === 'werkzeuge' && <Tools createSignal={toolCreateSignal} />}
+                {activeTab === 'werkzeuge' && (
+                  <Tools
+                    createRequest={toolCreateRequest}
+                    onCreateRequestHandled={handleToolCreateHandled}
+                    serialRequest={serialRequest}
+                    onSerialRequestHandled={() => setSerialRequest(null)}
+                    onSerialArticleSaved={handleSerialArticleSaved}
+                    onSerialFormClosed={handleSerialFormClosed}
+                    // Meldungen aus dem Anlege-Formular: sie laufen über **diese**
+                    // Ebene, weil die Werkzeugliste beim Speichern verschwindet
+                    // (die Karte geht zu und `Tools` wird ausgehängt). Ein Toast
+                    // aus der Liste heraus würde mit ihr verschwinden.
+                    onNotify={showToast}
+                    // Zeilenaktion „Datenblatt" gehört zur **Liste** – sie liegt
+                    // hier, nicht in der Anlege-Instanz darunter (DEC-065).
+                    onOpenDataSheets={openDataSheetsForTool}
+                  />
+                )}
 
                 {activeTab === 'serienartikel' && (
                   <div className="app-content-block rounded-2xl p-5 shadow-xs space-y-4">
-                    <h2 className="text-base font-bold text-slate-900">Serienartikel</h2>
-                    {showSerialArticleForm && (
-                      <SerialArticleUpload
-                        onCreated={() => {
-                          setShowSerialArticleForm(false);
-                          setSerialArticleRefreshKey((k) => k + 1);
-                        }}
-                        onClose={() => setShowSerialArticleForm(false)}
-                      />
-                    )}
-                    {!showSerialArticleForm && (
-                      <SerialArticleList
-                        refreshKey={serialArticleRefreshKey}
-                        onOpenPdf={setViewingPdf}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'lager' && (
-                  <div className="app-content-block rounded-2xl p-5 shadow-xs space-y-4">
-                    <h2 className="text-base font-bold text-slate-900">Lager/Ersatz</h2>
-                    <StorageItemList
-                      onEdit={openStorageEdit}
-                      refreshKey={storageRefreshKey}
-                      onRefreshDone={() => {}}
+                    {/* Überschrift und Schnellfilter kommen aus der Liste – wie bei
+                        den Werkzeugen stehen sie in einer Zeile. */}
+                    <SerialArticleList
+                      refreshKey={serialArticleRefreshKey}
+                      canManage={canManageSerialArticles}
+                      onOpenFiles={(article, tab) =>
+                        setViewingFiles(serialArticleViewer(article, tab))
+                      }
+                      onCreate={() => openSerialForm(null)}
+                      onEdit={(article) => openSerialForm(article)}
+                      onInfo={(message) => showToast('success', message)}
+                      onError={(message) => showToast('error', message)}
                     />
                   </div>
                 )}
 
-                {activeTab === 'historie' && <Placeholder title="Historie" />}
-                {activeTab === 'create' && <Tools createSignal={toolCreateSignal} />}
+                {activeTab === 'datenblaetter' && (
+                  <div className="app-content-block rounded-2xl p-5 shadow-xs space-y-4">
+                    <DataSheetList
+                      key={dataSheetFilter ?? 'alle'}
+                      refreshKey={dataSheetRefreshKey}
+                      canManage={canManageDataSheets}
+                      initialSearch={dataSheetFilter ?? ''}
+                      onOpenFiles={(sheet) => setViewingFiles(dataSheetViewer(sheet))}
+                      onCreate={() => openDataSheetForm(null)}
+                      onEdit={(sheet) => openDataSheetForm(sheet)}
+                      onInfo={(message) => showToast('success', message)}
+                      onError={(message) => showToast('error', message)}
+                    />
+                  </div>
+                )}
+
+                {activeTab === 'ersatzteile' && (
+                  <div className="app-content-block rounded-2xl p-5 shadow-xs space-y-4">
+                    <SparePartList
+                      refreshKey={sparePartRefreshKey}
+                      canManage={canDeleteSpareParts}
+                      onCreate={() => openSparePartForm(null)}
+                      onEdit={(part) => openSparePartForm(part)}
+                      onInfo={(message) => showToast('success', message)}
+                      onError={(message) => showToast('error', message)}
+                    />
+                  </div>
+                )}
+
+                {activeTab === 'historie' && (
+                  <Placeholder
+                    title="Historie"
+                    note={
+                      'Hier erscheinen später alle Werkzeugbewegungen (Ausleihe, Rückgabe, ' +
+                      'Verschieben, Statuswechsel) mit Filter und Auswertung. Der Verlauf wird ' +
+                      'heute im Admin-Panel unter „Lagerplätze“ geführt; der eigene Tab kommt ' +
+                      'mit dem Bewegungspaket (TASK-025).'
+                    }
+                  />
+                )}
+                {activeTab === 'create' && (
+                  <Tools
+                    createRequest={toolCreateRequest}
+                    onCreateRequestHandled={handleToolCreateHandled}
+                    serialRequest={serialRequest}
+                    onSerialRequestHandled={() => setSerialRequest(null)}
+                    onSerialArticleSaved={handleSerialArticleSaved}
+                    onSerialFormClosed={handleSerialFormClosed}
+                    sparePartRequest={sparePartRequest}
+                    onSparePartRequestHandled={() => setSparePartRequest(null)}
+                    onSparePartSaved={handleSparePartSaved}
+                    onSpareFormClosed={handleSpareFormClosed}
+                    onOpenDataSheets={openDataSheetsForTool}
+                    dataSheetRequest={dataSheetRequest}
+                    onDataSheetRequestHandled={() => setDataSheetRequest(null)}
+                    onDataSheetSaved={handleDataSheetSaved}
+                    onDataSheetFormClosed={handleDataSheetFormClosed}
+                    onNotify={showToast}
+                  />
+                )}
               </>
             )}
           </div>
@@ -325,20 +535,29 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
-      {user && showStorageForm && (
-        <StorageItemForm
-          initial={editingStorageItem}
-          onSave={handleStorageSave}
-          onClose={() => {
-            setShowStorageForm(false);
-            setEditingStorageItem(null);
-          }}
+      {user && viewingFiles && (
+        <PDFViewer
+          key={`${viewingFiles.document.id}-${viewingFiles.planLabel}-${viewingFiles.tab}`}
+          document={viewingFiles.document}
+          source={viewingFiles.source}
+          planLabel={viewingFiles.planLabel}
+          filesAriaLabel={viewingFiles.filesAriaLabel}
+          initialTab={viewingFiles.tab}
+          canManage={canManageViewerFiles}
+          onFilesChanged={() =>
+            viewingFiles.planLabel === 'Datenblatt'
+              ? setDataSheetRefreshKey((k) => k + 1)
+              : setSerialArticleRefreshKey((k) => k + 1)
+          }
+          onClose={() => setViewingFiles(null)}
         />
       )}
 
-      {user && viewingPdf && (
-        <PDFViewer article={viewingPdf} onClose={() => setViewingPdf(null)} />
-      )}
+      {/* Warnung vor dem Ablauf der Sitzung – oberhalb aller Fenster, damit sie
+          auch ueber der Plan-Vorschau sichtbar bleibt. */}
+      {user && <SessionWarning onExtend={extendSession} />}
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

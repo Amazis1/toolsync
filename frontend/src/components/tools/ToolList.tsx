@@ -1,257 +1,167 @@
-import { useCallback, useEffect, useState } from 'react'
-import { getTools } from '../../api/tools'
-import { TOOL_CATEGORY_LABELS, TOOL_STATUS_LABELS } from '../../api/types'
-import type { Tool, ToolCategory, ToolStatus } from '../../api/types'
-import { formatMeasureMm } from './ToolForm'
-import LendModal from '../movements/LendModal'
+import { useRef } from 'react'
+import ToolFilterBar from './ToolFilterBar'
+import ToolPagination from './ToolPagination'
+import ToolTable from './ToolTable'
+import { ResetIcon, ToolIcon } from '../icons'
+import type { Tool, ToolSortKey, ToolType } from '../../api/types'
+import type { ToolQuery } from '../../lib/toolQuery'
+import { hasActiveSearch } from '../../lib/toolQuery'
 
 interface ToolListProps {
+  query: ToolQuery
+  searchText: string
+  tools: Tool[]
+  total: number
+  loading: boolean
+  /** Werkzeug, dessen Favorit gerade gespeichert wird (Knopf gesperrt). */
+  busyFavoriteId: number | null
+  toolTypes: ToolType[]
+  onSearchTextChange: (value: string) => void
+  /** Filterwechsel – setzt immer auf Seite 1 zurück. */
+  onQueryChange: (patch: Partial<ToolQuery>) => void
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
+  onResetFilters: () => void
+  onSort: (key: ToolSortKey) => void
+  onToggleFavorite: (tool: Tool) => void
   onEdit: (tool: Tool) => void
   onDelete: (tool: Tool) => void
-  refreshKey: number
-  onRefreshDone: () => void
+  onLend: (tool: Tool) => void
+  /** Datenblätter dieses Werkzeugs öffnen (DEC-065 Punkt 10). */
+  onOpenDataSheets: (tool: Tool) => void
+  onCreate: () => void
 }
 
-export default function ToolList({ onEdit, onDelete, refreshKey, onRefreshDone }: ToolListProps) {
-  const [tools, setTools] = useState<Tool[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+/**
+ * Werkzeugliste: Filterleiste, Tabelle und Blätterleiste.
+ *
+ * Diese Komponente lädt nichts selbst — Zustand und Abfrage liegen in
+ * `pages/Tools.tsx`. Nur so überlebt die Ansicht den Weg ins Formular und
+ * zurück, und nur so passen Adresszeile und Liste immer zusammen.
+ */
+export default function ToolList({
+  query,
+  searchText,
+  tools,
+  total,
+  loading,
+  busyFavoriteId,
+  toolTypes,
+  onSearchTextChange,
+  onQueryChange,
+  onPageChange,
+  onPageSizeChange,
+  onResetFilters,
+  onSort,
+  onToggleFavorite,
+  onEdit,
+  onDelete,
+  onLend,
+  onOpenDataSheets,
+  onCreate,
+}: ToolListProps) {
+  const tableRef = useRef<HTMLDivElement>(null)
 
-  // Filter
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const filtered = hasActiveSearch(query)
+  const showNoData = !loading && total === 0 && !filtered
+  const showNoMatch = !loading && total === 0 && filtered
+  const showEmptyPage = !loading && tools.length === 0 && total > 0
 
-  // Modal-Status
-  const [lendTool, setLendTool] = useState<Tool | null>(null)
-  const [lendMessage, setLendMessage] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      setTools(await getTools())
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Werkzeuge konnten nicht geladen werden. Lade die Seite neu.',
-      )
-    } finally {
-      setLoading(false)
-      onRefreshDone()
-    }
-  }, [onRefreshDone])
-
-  useEffect(() => {
-    load()
-  }, [load, refreshKey])
-
-  async function handleDelete(tool: Tool) {
-    onDelete(tool)
-  }
-
-  const filtered = tools.filter((tool) => {
-    const q = search.trim().toLowerCase()
-    if (q) {
-      const haystack = [
-        tool.tool_id,
-        tool.description ?? '',
-        tool.tool_type?.name ?? '',
-        tool.plant?.name ?? '',
-      ]
-        .join(' ')
-        .toLowerCase()
-      if (!haystack.includes(q)) return false
-    }
-    if (categoryFilter && tool.category !== categoryFilter) return false
-    if (statusFilter && tool.status !== statusFilter) return false
-    return true
-  })
-
-  const statusBadgeClass = (status: ToolStatus | null): string => {
-    switch (status) {
-      case 'available':
-        return 'ui-badge ui-badge-success'
-      case 'lent':
-        return 'ui-badge ui-badge-info'
-      case 'maintenance':
-        return 'ui-badge ui-badge-warning'
-      case 'defective':
-      case 'in_transit':
-        return 'ui-badge ui-badge-danger'
-      default:
-        return 'ui-badge ui-badge-neutral'
-    }
+  /** Nach dem Blättern zurück zur Tabelle – sonst steht man auf der Leiste. */
+  function goToPage(page: number) {
+    onPageChange(page)
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
-    <div>
-      {/* Such- und Filterleiste */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
-          <svg
-            className="absolute left-3 top-2.5 h-5 w-5 text-slate-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
+    <div className="space-y-4">
+      <ToolFilterBar
+        query={query}
+        searchText={searchText}
+        toolTypes={toolTypes}
+        loading={loading}
+        onSearchTextChange={onSearchTextChange}
+        onQueryChange={onQueryChange}
+        onReset={onResetFilters}
+      />
+
+      {showNoData && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-white/60 bg-white/30 px-4 py-10 text-center">
+          <ToolIcon className="h-6 w-6 text-slate-600" />
+          <div>
+            <p className="text-sm font-bold text-slate-900">Noch keine Werkzeuge vorhanden</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Lege das erste Werkzeug an – danach lässt sich die Liste durchsuchen,
+              filtern und sortieren.
+            </p>
+          </div>
+          <button type="button" onClick={onCreate} className="ui-btn ui-btn-primary">
+            Werkzeug anlegen
+          </button>
+        </div>
+      )}
+
+      {showNoMatch && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-white/60 bg-white/30 px-4 py-10 text-center">
+          <p className="text-sm font-bold text-slate-900">
+            {query.q.trim()
+              ? `Keine Treffer für „${query.q.trim()}“`
+              : 'Keine Werkzeuge für die aktuellen Filter'}
+          </p>
+          <p className="text-xs text-slate-600">
+            Suche oder Filter anpassen – oder alles zurücksetzen und die vollständige
+            Liste ansehen.
+          </p>
+          <button type="button" onClick={onResetFilters} className="ui-btn ui-btn-secondary">
+            <ResetIcon className="h-3.5 w-3.5" />
+            Alle Filter zurücksetzen
+          </button>
+        </div>
+      )}
+
+      {showEmptyPage && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-white/60 bg-white/30 px-4 py-8 text-center">
+          <p className="text-sm font-bold text-slate-900">
+            Diese Seite ist leer
+          </p>
+          <p className="text-xs text-slate-600">
+            Die Filter haben sich geändert und die Liste ist kürzer geworden.
+          </p>
+          <button
+            type="button"
+            onClick={() => goToPage(1)}
+            className="ui-btn ui-btn-secondary ui-btn-sm"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-          <input
-            type="search"
-            aria-label="Werkzeuge durchsuchen"
-            placeholder="Werkzeug-ID, Bezeichnung, Typ oder Werk…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-bordered text-base sm:text-sm pl-10 pr-4 py-2"
+            Zur ersten Seite
+          </button>
+        </div>
+      )}
+
+      {!showNoData && !showNoMatch && (
+        <div ref={tableRef} className="scroll-mt-4">
+          <ToolTable
+            tools={tools}
+            query={query}
+            loading={loading}
+            busyFavoriteId={busyFavoriteId}
+            onSort={onSort}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onLend={onLend}
+            onOpenDataSheets={onOpenDataSheets}
           />
         </div>
-        <select
-          aria-label="Nach Kategorie filtern"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="select-bordered text-base sm:text-sm px-3 py-1.5 cursor-pointer"
-        >
-          <option value="">Alle Kategorien</option>
-          {(Object.keys(TOOL_CATEGORY_LABELS) as ToolCategory[]).map((c) => (
-            <option key={c} value={c}>
-              {TOOL_CATEGORY_LABELS[c]}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Nach Status filtern"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="select-bordered text-base sm:text-sm px-3 py-1.5 cursor-pointer"
-        >
-          <option value="">Alle Status</option>
-          {(Object.keys(TOOL_STATUS_LABELS) as ToolStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {TOOL_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {lendMessage && (
-        <div className="ui-alert ui-alert-success mb-4">
-          <span>✓</span>
-          <div>{lendMessage}</div>
-        </div>
       )}
 
-      {error && (
-        <div className="ui-alert ui-alert-error mb-4">
-          <span>×</span>
-          <div>{error}</div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center gap-3 py-8 justify-center">
-          <div className="ui-spinner" />
-          <p className="text-sm text-slate-600">Werkzeuge werden geladen …</p>
-        </div>
-      ) : error && tools.length === 0 ? null : filtered.length === 0 ? (
-        <p className="py-8 text-center text-slate-600">
-          {tools.length === 0
-            ? 'Noch keine Werkzeuge vorhanden. Lege das erste Werkzeug an.'
-            : 'Keine Werkzeuge für die aktuellen Filter gefunden.'}
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/60 bg-white/30">
-          <table className="w-full min-w-[760px] whitespace-nowrap text-left text-xs">
-            <thead className="border-b border-slate-200/60 bg-white/50 font-semibold uppercase tracking-wider text-slate-600">
-              <tr>
-                <th className="px-3.5 py-3">Werkzeug-ID</th>
-                <th className="px-3.5 py-3">Bezeichnung</th>
-                <th className="px-3.5 py-3">Maße</th>
-                <th className="px-3.5 py-3">Standort</th>
-                <th className="px-3.5 py-3">Status</th>
-                <th className="px-3.5 py-3 text-right">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((tool) => (
-                <tr
-                  key={tool.id}
-                  className="border-b border-slate-200/40 transition-colors last:border-b-0 hover:bg-white/50"
-                >
-                  <td className="px-3.5 py-3">
-                    <span className="inline-flex rounded-lg border border-white/90 bg-white/70 px-2 py-0.5 font-mono font-bold text-slate-900">
-                      {tool.tool_id}
-                    </span>
-                  </td>
-                  <td className="px-3.5 py-3 font-semibold text-slate-900">
-                    {tool.description || tool.tool_type?.name || '—'}
-                  </td>
-                  <td className="px-3.5 py-3 text-slate-700">
-                    {tool.measure_a || tool.measure_b
-                      ? `${tool.measure_a ? formatMeasureMm(tool.measure_a) : '—'}${
-                          tool.measure_b ? ` / ${formatMeasureMm(tool.measure_b)}` : ''
-                        }`
-                      : '—'}
-                  </td>
-                  <td className="px-3.5 py-3 text-slate-700">{tool.plant?.name ?? '—'}</td>
-                  <td className="px-3.5 py-3">
-                    {tool.status ? (
-                      <span className={statusBadgeClass(tool.status)}>
-                        {/* Punkt erbt die Badge-Farbe (currentColor) – eine Farbe pro Bedeutung. */}
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        {TOOL_STATUS_LABELS[tool.status] ?? tool.status}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">—</span>
-                    )}
-                  </td>
-                  <td className="px-3.5 py-3 text-right whitespace-nowrap">
-                    {tool.status === 'available' && (
-                      <button
-                        onClick={() => setLendTool(tool)}
-                        className="ui-btn ui-btn-primary ui-btn-sm mr-2"
-                      >
-                        Ausleihen
-                      </button>
-                    )}
-                    <button
-                      onClick={() => onEdit(tool)}
-                      className="ui-btn ui-btn-secondary ui-btn-sm mr-2"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={() => handleDelete(tool)}
-                      className="ui-btn ui-btn-danger-soft ui-btn-sm"
-                    >
-                      Löschen
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {lendTool && (
-        <LendModal
-          tool={lendTool}
-          onClose={() => setLendTool(null)}
-          onSuccess={() => {
-            setLendTool(null)
-            setLendMessage(`"${lendTool.tool_id}" wurde ausgeliehen.`)
-            setTimeout(() => setLendMessage(null), 4000)
-            load()
-          }}
-        />
-      )}
+      <ToolPagination
+        total={total}
+        page={query.page}
+        pageSize={query.pageSize}
+        busy={loading}
+        onPageChange={goToPage}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   )
 }

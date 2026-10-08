@@ -430,12 +430,39 @@
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .ui-tabs button:hover {
+    background-color: rgba(255, 255, 255, 0.55);
+    color: #115e59;
   }
   .ui-tabs button.is-active {
     background: #fff;
     /* Primary als TEXTFARBE dunkler als die Fläche (6,0:1 statt 4,3:1). */
     color: #115e59;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Senkrechte Reiterleiste im Anlege-Formular (lg:flex-col).
+     Der aktive Reiter trägt zusätzlich einen Primary-Streifen am linken Rand:
+     in einer senkrechten Spalte ist „weiße Fläche" allein schwer zu finden,
+     weil die Blickführung von oben nach unten läuft und nicht über eine Reihe.
+     Der Streifen ersetzt eine eigene Icon-Farbe – die Form trägt die
+     Information, nicht nur der Farbton. */
+  @media (min-width: 1024px) {
+    .ui-tabs.is-vertical-labels button {
+      /* Platz für den Streifen, damit die Beschriftungen bündig bleiben. */
+      border-left: 3px solid transparent;
+    }
+    .ui-tabs.is-vertical-labels button:hover {
+      border-left-color: rgba(15, 118, 110, 0.25);
+    }
+    .ui-tabs.is-vertical-labels button.is-active {
+      border-left-color: #0f766e;
+    }
   }
 
   /* ==================== */
@@ -485,6 +512,19 @@
     font-size: 0.7rem;
     font-weight: 700;
     border: 1px solid;
+  }
+  /* Größere Ausführung (`ui-badge-lg`): für Abzeichen, die **allein** stehen und
+     eine Tastatur oder einen Zustand ankündigen – nicht als Beisatz zu einem
+     Text. Das Esc-Abzeichen im Anlege-Formular war in der Basisgröße neben dem
+     „Zurück"-Knopf kaum zu sehen. */
+  .ui-badge-lg {
+    gap: 0.45rem;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.78rem;
+  }
+  .ui-badge-lg > svg {
+    width: 1.05rem;
+    height: 1.05rem;
   }
   .ui-badge-success {
     background: rgba(15, 118, 110, 0.12);
@@ -546,6 +586,51 @@
   }
 
   /* ==================== */
+  /* UI SEGMENTS          */
+  /* ==================== */
+  /* Segmentierte Auswahlgruppe (Filter über der Liste): dieselben Maße wie
+     .ui-tabs, aber als native Kontrollkästchen/Radios – die Eingabe ist
+     unsichtbar, die Beschriftung ist der Knopf. Native Felder bringen
+     Semantik und Tastaturbedienung (Pfeiltasten) kostenlos mit.
+     Schriftgröße bewusst .8rem (12,8 px): Guide §1.8 setzt 12 px als
+     Untergrenze für Text. */
+  .ui-segments {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.25rem;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+  }
+  .ui-segments label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    border-radius: 0.65rem;
+    padding: 0.4rem 0.7rem;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .ui-segments label:hover {
+    background: rgba(255, 255, 255, 0.45);
+    color: #115e59;
+  }
+  .ui-segments label:has(input:checked) {
+    background: #fff;
+    color: #115e59;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+  .ui-segments label:has(input:focus-visible) {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
+  }
+
+  /* ==================== */
   /* UI PAGINATION        */
   /* ==================== */
   .ui-pagination a,
@@ -567,6 +652,23 @@
   .ui-pagination button:hover {
     background: rgba(255, 255, 255, 0.55);
   }
+  /* Ergänzung zum Guide: die Vorlage kannte keinen deaktivierten Zustand.
+     Am ersten und letzten Blatt sind die Randknöpfe ohne Wirkung – ohne
+     sichtbaren Unterschied würde man vergeblich klicken. */
+  .ui-pagination a:disabled,
+  .ui-pagination button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+  }
+  /* Fokus muss auch auf den 30px-Knöpfen sichtbar bleiben (Tastaturbedienung). */
+  .ui-pagination a:focus-visible,
+  .ui-pagination button:focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
+  }
+  .ui-pagination a[aria-current="page"],
+  .ui-pagination button[aria-current="page"],
   .ui-pagination .active {
     background: #0f766e;
     color: #fff;
@@ -630,6 +732,155 @@
   }
 
   /* ==================== */
+  /* UI TOASTS            */
+  /* ==================== */
+  /* Aktions-Feedback nach dem Klick, gestapelt unten rechts – aus der Vorlage
+     (UI-Styleguide.html, „Feedback"), hier erstmals umgesetzt. Abweichungen zur
+     Vorlage: Schriftgröße .8rem statt .72rem (Guide §1.8: 12px Untergrenze) und
+     der Schließen-Knopf ist ein Icon statt des „×"-Zeichens (Audit A-10). */
+  .ui-toast-stack {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: min(23rem, calc(100vw - 3rem));
+    pointer-events: none;
+  }
+  @media (max-width: 640px) {
+    .ui-toast-stack {
+      left: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+      width: auto;
+    }
+  }
+  .ui-toast {
+    /* Informiert, ohne zu blockieren: Klicks gehen durch die Fläche hindurch
+       (nur der Schließen-Knopf fängt sie). Sonst liegt der Toast nach dem
+       Speichern fünf Sekunden über dem Speichern-Knopf und schluckt den
+       nächsten Klick. Abweichung zur Vorlage, die `pointer-events: auto` setzt. */
+    pointer-events: none;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-left: 3px solid #0f766e;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+    font-size: 0.8rem;
+    color: #0f766e;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-toast {
+      animation: ui-toast-in 0.22s ease-out;
+    }
+    .ui-toast.is-leaving {
+      animation: ui-toast-out 0.16s ease-in forwards;
+    }
+  }
+  .ui-toast-icon {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: #0f766e;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ui-toast-title {
+    font-weight: 700;
+    color: inherit;
+  }
+  .ui-toast-msg {
+    color: #475569;
+    font-weight: 500;
+    margin-top: 0.15rem;
+    line-height: 1.5;
+  }
+  .ui-toast-close {
+    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    /* Einziger klickbarer Teil des Toasts (siehe .ui-toast). */
+    pointer-events: auto;
+    color: #475569;
+    padding: 0.15rem;
+    border-radius: 0.4rem;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .ui-toast-close:hover {
+    color: #0f172a;
+    background: rgba(15, 118, 110, 0.08);
+  }
+  .ui-toast-close:focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
+  }
+  .ui-toast-life {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: currentColor;
+    opacity: 0.3;
+    animation-name: ui-toast-life;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-toast-life {
+      display: none;
+    }
+  }
+  .ui-toast-success { border-left-color: #0f766e; color: #0f766e; }
+  .ui-toast-error   { border-left-color: #e11d48; color: #9f1239; }
+  .ui-toast-warning { border-left-color: #f59e0b; color: #b45309; }
+  .ui-toast-info    { border-left-color: #3b82f6; color: #1d4ed8; }
+  .ui-toast-error .ui-toast-icon   { background: #e11d48; }
+  .ui-toast-warning .ui-toast-icon { background: #f59e0b; }
+  .ui-toast-info .ui-toast-icon    { background: #3b82f6; }
+  @keyframes ui-toast-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes ui-toast-out {
+    from { opacity: 1; transform: none; }
+    to   { opacity: 0; transform: translateX(12px) scale(0.98); }
+  }
+  @keyframes ui-toast-life {
+    from { width: 100%; }
+    to   { width: 0; }
+  }
+
+  /* ==================== */
+  /* TABELLENZEILEN       */
+  /* ==================== */
+  /* Glasverlauf der Datenzeilen: derselbe diagonale Verlauf wie `.glass-card`
+     (Guide §1.2), deutlich schwächer dosiert — er soll die Zeile füllen, nicht
+     zur Fläche machen. Als `background-image` liegt er ÜBER den Farbwerten
+     (Zebra, Hover, Favoriten); die bleiben dadurch sichtbar. */
+  .table-row-glass {
+    background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(220, 220, 220, 0.14) 100%
+    );
+  }
+
+  /* ==================== */
   /* UI MENU              */
   /* ==================== */
   .ui-menu {
@@ -654,6 +905,26 @@
   .ui-menu button:hover {
     background: rgba(15, 118, 110, 0.08);
     color: #0f766e;
+  }
+  /* Menü einer Tabellenzeile: die rechte Kante liegt auf dem „…"-Knopf,
+     deshalb fährt es von rechts nach links ein (Guide Ergänzung §1.6). */
+  .ui-menu-left {
+    transform-origin: top right;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-menu-left {
+      animation: ui-menu-left-in 0.14s ease-out;
+    }
+  }
+  @keyframes ui-menu-left-in {
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 
   /* ==================== */
@@ -979,6 +1250,44 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     animation: fade-in-up 0.5s ease-out;
   }
+  /* Admin-Passwortfeld (Login): Höhe wächst per Transition, statt zu springen.
+     Der Abstand zum Feld darüber wandert mit – sonst bliebe im
+     Mitarbeiter-Modus eine leere Lücke zwischen Nummer und Anmelden stehen. */
+  .login-extra {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    opacity: 0;
+    pointer-events: none;
+    /* better-ui: exakte Properties statt `all`; Opacity läuft mit derselben
+       Kurve wie die Höhe, damit der Inhalt nicht vor der Fläche erscheint. */
+    transition:
+      grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .login-extra.is-open {
+    grid-template-rows: 1fr;
+    margin-top: 1rem;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* Das Kind muss unter seine Inhaltshöhe schrumpfen dürfen, sonst greift 0fr nicht. */
+  .login-extra > .login-extra-clip {
+    overflow: hidden;
+    min-height: 0;
+  }
+  /* Polster liegt INNEN: es hält den 3px-Fokusring des Feldes im Clip, ohne den
+     eingeklappten Block um 8px hoch stehen zu lassen. */
+  .login-extra-inner {
+    padding: 0.25rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .login-extra {
+      transition: none;
+    }
+  }
+
   .btn-login {
     @apply w-full px-4 py-2.5 rounded-xl font-semibold text-white;
     background: #0f766e;
