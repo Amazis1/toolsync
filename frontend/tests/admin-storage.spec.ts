@@ -13,7 +13,7 @@ test('Lagerplätze zeigt Schrank anlegen, Ablage, Struktur und Verlauf ohne Tab-
   await page.getByRole('button', { name: 'Admin' }).click()
 
   const personalNumber = page.getByRole('textbox', { name: 'Personalnummer' })
-  const password = page.getByRole('textbox', { name: 'Admin-Passwort' })
+  const password = page.getByLabel('Passwort', { exact: true })
   await expect(password).toBeVisible()
 
   // Anmelden
@@ -50,7 +50,7 @@ test('Lagerplätze: Buttons der Lagerstruktur-Ansicht sind eindeutig benannt', a
   await page.goto('/')
   await page.getByRole('button', { name: 'Admin' }).click()
   await page.getByRole('textbox', { name: 'Personalnummer' }).fill('admin1')
-  await page.getByRole('textbox', { name: 'Admin-Passwort' }).fill('123')
+  await page.getByLabel('Passwort', { exact: true }).fill('123')
   await page.getByRole('button', { name: 'Anmelden' }).click()
   await page.getByRole('button', { name: 'Admin-Panel' }).click()
   await page.getByRole('button', { name: 'Lagerplätze' }).click()
@@ -73,7 +73,7 @@ test('Lagerplätze: Verlauf zeigt Farb-Legende der Aktionen', async ({ page }) =
   await page.goto('/')
   await page.getByRole('button', { name: 'Admin' }).click()
   await page.getByRole('textbox', { name: 'Personalnummer' }).fill('admin1')
-  await page.getByRole('textbox', { name: 'Admin-Passwort' }).fill('123')
+  await page.getByLabel('Passwort', { exact: true }).fill('123')
   await page.getByRole('button', { name: 'Anmelden' }).click()
   await page.getByRole('button', { name: 'Admin-Panel' }).click()
   await page.getByRole('button', { name: 'Lagerplätze' }).click()
