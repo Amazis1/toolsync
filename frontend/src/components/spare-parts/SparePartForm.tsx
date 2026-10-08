@@ -40,6 +40,11 @@ const CHECK_DEBOUNCE_MS = 400
  * Maschine" gibt es **Artikelnummer (mehrfach erlaubt), Werk, Menge + Einheit,
  * Maschine und Lagerort**.
  *
+ * **Ausnahme vom Innenlabel:** Die Felder der Gruppe „Lagerort" (Freitext,
+ * Schrank, Schublade, Platz) tragen ihre Beschriftung **über** dem Feld – wie
+ * der Lagerplatz im Werkzeugformular. In einer dreispaltigen Reihe bliebe dem
+ * Select neben einem 7,5-rem-Innenlabel zu wenig Platz (Guide §1.9 Ausnahme 11).
+ *
  * Die Artikelnummer ist die Identität, aber **nicht eindeutig**: mehrere Zeilen
  * mit derselben Nummer sind der Normalfall (mehrere Lagerorte, mehrere Chargen).
  * Die Live-Prüfung sagt deshalb nur, wie oft es die Nummer schon gibt – sie
@@ -455,7 +460,7 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
               onChange={(event) => setMachineId(event.target.value)}
               disabled={!plantId}
             >
-              <option value="">{plantId ? 'Keine Maschine' : 'zuerst Werk wählen'}</option>
+              <option value="">{plantId ? 'keine Maschine' : 'zuerst Werk wählen'}</option>
               {machines.map((machine) => (
                 <option key={machine.id} value={machine.id}>
                   {machine.name}
@@ -468,21 +473,30 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
 
       {/* Lagerort als eigene Gruppe – dasselbe Muster wie „Lagerplatz" im
           Werkzeugformular. Vorher standen diese drei Felder ohne Gruppe mitten
-          im Feldraster, obwohl es dieselbe Sache ist. */}
+          im Feldraster, obwohl es dieselbe Sache ist.
+
+          Die Beschriftungen stehen **über** den Feldern, nicht darin: In einer
+          dreispaltigen Reihe bliebe dem Select neben einem 7,5-rem-Innenlabel
+          zu wenig Platz (Guide §1.9 Ausnahme 11) – das Werkzeugformular macht
+          es bei Schrank/Schublade/Platz genauso. */}
       <FormSection title="Lagerort" optional>
         <div className="grid grid-cols-1 gap-3">
           <div className="min-w-0">
-            <div className="ui-field">
-              <FieldLabel htmlFor={`${uid}-place`}>Lagerort</FieldLabel>
-              <input
-                id={`${uid}-place`}
-                type="text"
-                value={storagePlace}
-                onChange={(event) => setStoragePlace(event.target.value)}
-                placeholder="z. B. Regal B3 / Fach 2"
-                aria-describedby={`${uid}-place-hint`}
-              />
-            </div>
+            {/* „Freitext", nicht „Lagerort": die Beschriftung der Gruppe ist
+                bereits „Lagerort", und die Zeile darunter erklaert den
+                Unterschied zur Matrix. */}
+            <FieldLabel htmlFor={`${uid}-place`} standalone>
+              Freitext
+            </FieldLabel>
+            <input
+              id={`${uid}-place`}
+              type="text"
+              value={storagePlace}
+              onChange={(event) => setStoragePlace(event.target.value)}
+              placeholder="z. B. Regal B3 / Fach 2"
+              aria-describedby={`${uid}-place-hint`}
+              className="input-bordered w-full text-base sm:text-sm"
+            />
             <FieldMessage id={`${uid}-place-hint`}>
               Für Schütten und Fächer, die nicht in der Werkzeug-Matrix liegen.
             </FieldMessage>
@@ -492,8 +506,10 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
               Nur freie Plätze: ein Platz mit Werkzeug oder Ersatzteil ist belegt. */}
           <div className="min-w-0">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="ui-field">
-                <FieldLabel htmlFor={`${uid}-cabinet`}>Schrank</FieldLabel>
+              <div className="min-w-0">
+                <FieldLabel htmlFor={`${uid}-cabinet`} standalone>
+                  Schrank
+                </FieldLabel>
                 <select
                   id={`${uid}-cabinet`}
                   value={cabinetId}
@@ -503,10 +519,11 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
                     setDrawerId('')
                     setPositionId('')
                   }}
+                  className="select-bordered w-full text-base sm:text-sm"
                 >
                   {/* Die Abhängigkeit trägt der Optionstext, nicht ein Tooltip
                       (Guide §1.9 Regel 12). */}
-                  <option value="">{plantId ? 'Kein Schrank' : 'Bitte zuerst Werk wählen'}</option>
+                  <option value="">{plantId ? 'kein Schrank' : 'Bitte zuerst Werk wählen'}</option>
                   {cabinets.map((cabinet) => (
                     <option key={cabinet.id} value={cabinet.id}>
                       {cabinet.name}
@@ -515,8 +532,10 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
                 </select>
               </div>
 
-              <div className="ui-field">
-                <FieldLabel htmlFor={`${uid}-drawer`}>Schublade</FieldLabel>
+              <div className="min-w-0">
+                <FieldLabel htmlFor={`${uid}-drawer`} standalone>
+                  Schublade
+                </FieldLabel>
                 <select
                   id={`${uid}-drawer`}
                   value={drawerId}
@@ -525,9 +544,10 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
                     setDrawerId(event.target.value)
                     setPositionId('')
                   }}
+                  className="select-bordered w-full text-base sm:text-sm"
                 >
                   <option value="">
-                    {cabinetId ? 'Keine Schublade' : 'Bitte zuerst Schrank wählen'}
+                    {cabinetId ? 'keine Schublade' : 'Bitte zuerst Schrank wählen'}
                   </option>
                   {drawers.map((drawer) => (
                     <option key={drawer.id} value={drawer.id}>
@@ -537,20 +557,23 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
                 </select>
               </div>
 
-              <div className="ui-field">
-                <FieldLabel htmlFor={`${uid}-position`}>Platz</FieldLabel>
+              <div className="min-w-0">
+                <FieldLabel htmlFor={`${uid}-position`} standalone>
+                  Platz
+                </FieldLabel>
                 <select
                   id={`${uid}-position`}
                   value={positionId}
                   disabled={!drawerId}
                   onChange={(event) => setPositionId(event.target.value)}
+                  className="select-bordered w-full text-base sm:text-sm"
                 >
                   <option value="">
                     {!drawerId
                       ? 'Bitte zuerst Schublade wählen'
                       : freePositions.length === 0
                         ? 'Keine freien Plätze'
-                        : 'Kein Platz'}
+                        : 'kein Platz'}
                   </option>
                   {freePositions.map((position) => (
                     <option key={position.id} value={position.id}>
@@ -581,6 +604,7 @@ export default function SparePartForm({ initial = null, prefill, onSaved, onNoti
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           className="textarea-bordered w-full resize-none text-base sm:text-sm"
+          placeholder="Zusätzliche Informationen"
         />
       </div>
 

@@ -362,7 +362,9 @@ test.describe('Ersatzteile', () => {
     await karte.getByLabel('Werk').selectOption(String(plantId))
     await karte.getByLabel('Menge').fill('7')
     await karte.getByLabel('Einheit').fill('Stk')
-    await karte.getByLabel('Lagerort').fill('Regal Z9')
+    // Das Freitextfeld der Gruppe „Lagerort" – die Gruppe traegt den Namen,
+    // das Feld darunter heisst „Freitext" (daneben steht die Werkzeug-Matrix).
+    await karte.getByLabel('Freitext').fill('Regal Z9')
     // Die Beschriftung der Beschreibung steht **über** dem Feld, nicht darin.
     await expect(karte.getByLabel('Beschreibung')).toBeVisible()
     await karte.getByLabel('Beschreibung').fill('Notiz zur Einlagerung')

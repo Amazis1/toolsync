@@ -433,7 +433,7 @@ export default function DataSheetForm({
               onChange={(event) => setMachineId(event.target.value)}
               disabled={!plantId}
             >
-              <option value="">{plantId ? 'Keine Maschine' : 'zuerst Werk wählen'}</option>
+              <option value="">{plantId ? 'keine Maschine' : 'zuerst Werk wählen'}</option>
               {machines.map((machine) => (
                 <option key={machine.id} value={machine.id}>
                   {machine.name}
@@ -456,6 +456,7 @@ export default function DataSheetForm({
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           className="textarea-bordered w-full resize-none text-base sm:text-sm"
+          placeholder="Zusätzliche Informationen"
         />
       </div>
 

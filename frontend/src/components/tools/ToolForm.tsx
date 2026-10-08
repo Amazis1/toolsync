@@ -17,7 +17,7 @@ import type { DataSheet } from '../../types/data-sheet'
 import {
   CheckIcon,
   ClipboardListIcon,
-  CogIcon,
+  SettingsIcon,
   FileTextIcon,
   CircleXIcon,
   InfoIcon,
@@ -108,7 +108,7 @@ const SUB_TABS: { key: SubTab; label: string; icon: typeof ToolIcon }[] = [
   { key: 'tool', label: 'Werkzeug', icon: ToolIcon },
   { key: 'series', label: 'Serienartikel', icon: ClipboardListIcon },
   { key: 'sheet', label: 'Datenblatt', icon: FileTextIcon },
-  { key: 'spare', label: 'Ersatzteil', icon: CogIcon },
+  { key: 'spare', label: 'Ersatzteil', icon: SettingsIcon },
 ]
 
 // Beschriftete Felder nutzen `.ui-field` (Innenlabel, Guide §1.9) und bringen
@@ -843,7 +843,7 @@ export default function ToolForm({
                         aria-required
                         className="select-bordered text-base sm:text-sm"
                       >
-                        <option value="">{plantId ? 'Schrank wählen' : 'Bitte zuerst Werk wählen'}</option>
+                        <option value="">{plantId ? 'kein Schrank' : 'Bitte zuerst Werk wählen'}</option>
                         {cabinets.map((c) => (
                           <option key={c.id} value={c.id}>Schrank {c.name}</option>
                         ))}
@@ -860,7 +860,7 @@ export default function ToolForm({
                         aria-required
                         className="select-bordered text-base sm:text-sm"
                       >
-                        <option value="">{cabinetId ? 'Schublade wählen' : 'Bitte zuerst Schrank wählen'}</option>
+                        <option value="">{cabinetId ? 'keine Schublade' : 'Bitte zuerst Schrank wählen'}</option>
                         {drawers.map((d) => (
                           <option key={d.id} value={d.id}>Schublade {d.name}</option>
                         ))}
@@ -877,7 +877,7 @@ export default function ToolForm({
                         aria-required
                         className="select-bordered text-base sm:text-sm"
                       >
-                        <option value="">{freePositions.length === 0 && drawerId ? 'Keine freien Plätze' : 'Platz wählen'}</option>
+                        <option value="">{freePositions.length === 0 && drawerId ? 'Keine freien Plätze' : 'kein Platz'}</option>
                         {freePositions.map((p) => (
                           <option key={p.id} value={p.id}>{getPositionLabel(p)}</option>
                         ))}
@@ -949,7 +949,7 @@ export default function ToolForm({
                       value={customerId}
                       onChange={(e) => setCustomerId(e.target.value)}
                     >
-                      <option value="">— kein Kunde —</option>
+                      <option value="">kein Kunde</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -965,7 +965,7 @@ export default function ToolForm({
                       onChange={(e) => setMachineId(e.target.value)}
                       disabled={!plantId}
                     >
-                      <option value="">{plantId ? '— keine Maschine —' : 'zuerst Werk wählen'}</option>
+                      <option value="">{plantId ? 'keine Maschine' : 'zuerst Werk wählen'}</option>
                       {machines.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}

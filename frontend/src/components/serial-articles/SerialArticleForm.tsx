@@ -471,7 +471,7 @@ export default function SerialArticleForm({
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
             >
-              <option value="">— kein Kunde —</option>
+              <option value="">kein Kunde</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.name}
@@ -490,7 +490,7 @@ export default function SerialArticleForm({
               onChange={(event) => setMachineId(event.target.value)}
               disabled={!plantId}
             >
-              <option value="">{plantId ? '— keine Maschine —' : 'zuerst Werk wählen'}</option>
+              <option value="">{plantId ? 'keine Maschine' : 'zuerst Werk wählen'}</option>
               {machineOptions.map((machine) => (
                 <option key={machine.id} value={machine.id}>
                   {machine.name}

@@ -22,7 +22,7 @@
 //
 // Geprueft wird die Zuordnung mit:
 //
-//   node scripts/verify-icons.mjs      (im Verzeichnis `frontend/`)
+//   node scripts/verify-icons.mjs
 //
 // **Diese Datei exportiert ausschliesslich Komponenten.** Helfer (`fromLucide`)
 // und Typen liegen in `./iconBase.tsx`: exportiert eine Datei Komponenten und
@@ -43,7 +43,6 @@ import {
   CircleAlert,
   CircleX,
   ClipboardList,
-  Cog,
   Ellipsis,
   FileText,
   Filter,
@@ -55,6 +54,7 @@ import {
   RotateCcw,
   RotateCw,
   Search,
+  Settings,
   ShieldCheck,
   Star,
   Trash,
@@ -128,9 +128,9 @@ export function FileTextIcon(props: IconProps) {
   return fromLucideBody(FileText, props)
 }
 
-/** Lucide `Cog` – Reiter „Ersatzteil" (Maschinen-Reparatur und -Wartung). */
-export function CogIcon(props: IconProps) {
-  return fromLucideBody(Cog, props)
+/** Lucide `Settings` – Zahnrad für den Reiter „Ersatzteil" (Reparatur und Wartung). */
+export function SettingsIcon(props: IconProps) {
+  return fromLucideBody(Settings, props)
 }
 
 /** Lucide `Check` – Erfolgsmeldung und Speichern-Knopf. */
