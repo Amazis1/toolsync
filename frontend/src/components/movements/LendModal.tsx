@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { createMovement } from '../../api/movements'
 import { TOOL_CATEGORY_LABELS } from '../../api/types'
 import { useEscapeKey } from '../../lib/useEscapeKey'
+import { toolLabel } from '../../lib/toolLabel'
 import type { Tool } from '../../api/types'
 
 interface LendModalProps {
@@ -72,7 +73,7 @@ export default function LendModal({ tool, onClose, onSuccess }: LendModalProps) 
           <p>
             <span className="font-medium text-slate-700">Werkzeug-ID:</span>{' '}
             <span className="inline-flex rounded-lg border border-white/90 bg-white/70 px-2 py-0.5 font-mono font-bold text-slate-900">
-              {tool.tool_id}
+              {toolLabel(tool.tool_id)}
             </span>
           </p>
           <p className="mt-2">

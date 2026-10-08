@@ -244,7 +244,7 @@
 }
 .admin-nav-group:first-child { padding-top: var(--admin-space-1); }
 
-/* Nutzerkarte (Sidebar-Fuß) */
+/* Nutzerkarte (Sidebar, direkt unter der Marke) */
 .admin-user-card {
   display: flex; align-items: center; gap: .6rem;
   padding: .55rem .6rem; border-radius: var(--admin-radius);
@@ -401,6 +401,8 @@
 .admin-badge-warning { background: var(--admin-warning-bg); color: var(--admin-warning-fg); }
 .admin-badge-neutral { background: var(--admin-neutral-bg); color: var(--admin-neutral-fg); }
 .admin-badge-primary { background: var(--admin-primary-bg-soft); color: var(--admin-primary-fg-soft); }
+/* Info-Familie: die Tokens existierten, es fehlte nur die Badge-Klasse. */
+.admin-badge-info { background: var(--admin-info-bg); color: var(--admin-info-fg); }
 /* Dot erbt die Badge-Textfarbe -> kein bg-*-Utility mehr nötig */
 .admin-badge .admin-dot { background: currentColor; }
 .admin-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
@@ -594,6 +596,21 @@
 }
 .admin-icon-btn:hover { background: var(--admin-surface-hover); color: var(--admin-text); }
 
+/* Icon-Button auf einer farbigen Fläche (z. B. belegte Platzkarte mit
+   --admin-primary). .admin-icon-btn ist für neutrale Flächen gedacht und
+   wäre hier unsichtbar. --admin-danger mit Alpha als Flächenwert, weil es
+   dafür keinen eigenen Token gibt. */
+.admin-icon-btn-on-color {
+  width: 24px; height: 24px; border-radius: var(--admin-radius-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; cursor: pointer; flex-shrink: 0;
+  background: rgba(255, 255, 255, .20); color: var(--admin-on-primary);
+  transition: background var(--admin-dur) var(--admin-ease);
+}
+.admin-icon-btn-on-color:hover { background: rgba(255, 255, 255, .40); }
+.admin-icon-btn-on-color.is-danger { background: rgba(225, 29, 72, .30); }
+.admin-icon-btn-on-color.is-danger:hover { background: rgba(225, 29, 72, .60); }
+
 /* ==========================================================================
    CHARTS
    ========================================================================== */
@@ -637,6 +654,7 @@
 }
 .admin-bar:hover { background: var(--admin-primary-hover); }
 .admin-bar.is-peak { background: var(--admin-primary-hover); }
+.admin-bar.is-peak:hover { background: var(--admin-primary-hover); }
 .admin-bar.is-muted { background: var(--admin-primary-soft); }
 .admin-bar-label { font-size: .625rem; font-weight: 600; color: var(--admin-text-subtle); }
 .admin-bar-label.is-peak { color: var(--admin-primary); font-weight: 700; }
@@ -692,13 +710,39 @@
 .admin-toast-error { border-color: var(--admin-danger-bg); }
 .admin-toast-warning { border-color: var(--admin-warning-bg); }
 
-.admin-tip { position: relative; }
+/* z-index: 30 muss den Sticky-Tabellenkopf (.admin-table-sticky thead th, z-index 5)
+   überbieten — sonst verschwinden Tooltip und Zeilenmenü unter <th>. */
+.admin-tip { position: relative; z-index: 30; }
 .admin-tip-bubble {
   position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  z-index: 30;
   background: var(--admin-tooltip-bg); color: var(--admin-tooltip-fg);
   font-size: .625rem; font-weight: 600; white-space: nowrap;
   padding: .3rem .5rem; border-radius: var(--admin-radius-sm);
   box-shadow: var(--admin-shadow-2); pointer-events: none;
+}
+
+/* Variante unterhalb des Ausloesers. Noetig in scrollenden Tabellen
+   (.admin-scroll-y hat overflow-y: auto): eine Bubble oberhalb des
+   Ausloesers ragt dort aus dem Scrollcontainer heraus und wird
+   abgeschnitten bzw. vom Sticky-Kopf verdeckt. */
+.admin-tip-bubble.is-below {
+  top: calc(100% + 6px); bottom: auto;
+}
+
+/* Portal-Variante (Standard im AdminPanel): die Bubble wird in document.body
+   gerendert und mit position: fixed an den Auslöser geheftet. Nötig, weil eine
+   absolut positionierte Bubble aus Containern mit overflow nicht herauskommt:
+   .admin-card (overflow: hidden) schneidet sie ab, und .admin-scroll-y
+   (overflow-y: auto) lässt laut Spezifikation overflow-x auf auto mitrechnen —
+   die Bubble erzeugt dann einen horizontalen Scrollbalken.
+   z-index 60 liegt über dem Modal-Overlay (50). */
+.admin-tip-bubble.is-fixed {
+  position: fixed; bottom: auto; z-index: 60;
+  transform: translate(-50%, -100%);
+}
+.admin-tip-bubble.is-fixed.is-below {
+  transform: translate(-50%, 0);
 }
 
 /* ==========================================================================
@@ -788,4 +832,4 @@
     transition-duration: .01ms !important;
   }
 }
-/* Tabellenzeilen-Aktionen: Slide-out nach links statt Modal */ .admin-row-actions{position:relative;display:flex;justify-content:flex-end;align-items:center;min-height:28px;min-width:72px;} .admin-row-actions-trigger{transition:opacity var(--admin-dur) var(--admin-ease);} .admin-row-actions-panel{position:absolute;right:0;top:50%;display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(-50%) scaleX(.5);transform-origin:right center;transition:transform .22s var(--admin-ease),opacity .18s var(--admin-ease);} .admin-row-actions.is-open .admin-row-actions-trigger{opacity:0;pointer-events:none;} .admin-row-actions.is-open .admin-row-actions-panel{opacity:1;pointer-events:auto;transform:translate(0,-50%);}
+/* Tabellenzeilen-Aktionen: Slide-out nach links statt Modal */ .admin-row-actions{position:relative;display:flex;justify-content:flex-end;align-items:center;min-height:28px;min-width:72px;} .admin-row-actions-trigger{transition:opacity var(--admin-dur) var(--admin-ease);} .admin-row-actions-panel{position:absolute;z-index:30;right:0;top:50%;display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(-50%) scaleX(.5);transform-origin:right center;transition:transform .22s var(--admin-ease),opacity .18s var(--admin-ease);} .admin-row-actions.is-open .admin-row-actions-trigger{opacity:0;pointer-events:none;} .admin-row-actions.is-open .admin-row-actions-panel{opacity:1;pointer-events:auto;transform:translate(0,-50%);}

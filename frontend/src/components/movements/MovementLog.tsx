@@ -11,7 +11,7 @@ import type { ToolMovement } from '../../types/movement'
 interface ActionStyle {
   /** Anzeigetext des Badges */
   label: string
-  /** Badge-Farben (Tailwind v4 Utilities) */
+  /** Badge-Farben aus der Tokenschicht (admin.css) */
   badge: string
   /** Farbiger linker Rand der Verlaufszeile */
   border: string
@@ -22,58 +22,68 @@ interface ActionStyle {
  *   Lagerbewegungen -> Tausch / Verschieben / Einreihen / In Ablage
  *   Ausleihe & Rückgabe -> eigene Töne
  *   Statusänderung -> rot
+ *
+ * Die Farben kommen ausschließlich aus den --admin-* Tokens des Design-Systems.
+ * "Ausleihe" war vorher violett; Violett gibt es im Guide nicht, deshalb läuft
+ * die Gruppe über die Info-Familie (dort über --admin-info-line, damit sie von
+ * "Verschieben" unterscheidbar bleibt).
+ *
+ * Hinweis: Die Badges nutzen nur die Farbfamilien-Klassen (.admin-badge-*);
+ * Layout und Größe kommen weiterhin aus BADGE_BASE.
  */
 const GROUP_STYLES = {
   swap: {
     label: 'Tausch',
-    badge: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-    border: 'border-l-4 border-l-emerald-400',
+    badge: 'admin-badge-success border border-[var(--admin-success-line)]',
+    border: 'border-l-4 border-l-[var(--admin-success)]',
   },
   move: {
     label: 'Verschieben',
-    badge: 'bg-sky-100 text-sky-800 border border-sky-300',
-    border: 'border-l-4 border-l-sky-400',
+    badge:
+      'bg-[var(--admin-info-bg)] text-[var(--admin-info-fg)] border border-[var(--admin-info-line)]',
+    border: 'border-l-4 border-l-[var(--admin-info-fg)]',
   },
   insert: {
     label: 'Einreihen',
-    badge: 'bg-amber-100 text-amber-800 border border-amber-300',
-    border: 'border-l-4 border-l-amber-400',
+    badge: 'admin-badge-warning border border-[var(--admin-warning-line)]',
+    border: 'border-l-4 border-l-[var(--admin-warning)]',
   },
   remove: {
     label: 'In Ablage',
-    badge: 'bg-slate-200 text-slate-700 border border-slate-300',
-    border: 'border-l-4 border-l-slate-400',
+    badge: 'admin-badge-neutral border border-[var(--admin-neutral-bg)]',
+    border: 'border-l-4 border-l-[var(--admin-neutral)]',
   },
   lend: {
     label: 'Ausleihe',
-    badge: 'bg-violet-100 text-violet-800 border border-violet-300',
-    border: 'border-l-4 border-l-violet-400',
+    badge:
+      'bg-[var(--admin-info-line)] text-[var(--admin-info-fg)] border border-[var(--admin-info-line)]',
+    border: 'border-l-4 border-l-[var(--admin-info-line)]',
   },
   return: {
     label: 'Rückgabe',
-    badge: 'bg-teal-100 text-teal-800 border border-teal-300',
-    border: 'border-l-4 border-l-teal-400',
+    badge: 'admin-badge-primary border border-[var(--admin-primary-soft)]',
+    border: 'border-l-4 border-l-[var(--admin-primary-soft)]',
   },
   status: {
     label: 'Statusänderung',
-    badge: 'bg-rose-100 text-rose-800 border border-rose-300',
-    border: 'border-l-4 border-l-rose-400',
+    badge: 'admin-badge-danger border border-[var(--admin-danger-line)]',
+    border: 'border-l-4 border-l-[var(--admin-danger)]',
   },
   unknown: {
     label: 'Umplatzierung',
-    badge: 'bg-slate-100 text-slate-600 border border-slate-200',
-    border: 'border-l-4 border-l-slate-300',
+    badge: 'admin-badge-neutral border border-[var(--admin-neutral-bg)]',
+    border: 'border-l-4 border-l-[var(--admin-border-strong)]',
   },
 } as const
 
 /** Legende für die Kopfzeile (verwandte Aktionen gruppiert). */
 const LEGEND: { label: string; dot: string }[] = [
-  { label: 'Tausch', dot: 'bg-emerald-400' },
-  { label: 'Verschieben', dot: 'bg-sky-400' },
-  { label: 'Einreihen', dot: 'bg-amber-400' },
-  { label: 'In Ablage', dot: 'bg-slate-400' },
-  { label: 'Ausleihe', dot: 'bg-violet-400' },
-  { label: 'Rückgabe', dot: 'bg-teal-400' },
+  { label: 'Tausch', dot: 'bg-[var(--admin-success)]' },
+  { label: 'Verschieben', dot: 'bg-[var(--admin-info-fg)]' },
+  { label: 'Einreihen', dot: 'bg-[var(--admin-warning)]' },
+  { label: 'In Ablage', dot: 'bg-[var(--admin-neutral)]' },
+  { label: 'Ausleihe', dot: 'bg-[var(--admin-info-line)]' },
+  { label: 'Rückgabe', dot: 'bg-[var(--admin-primary)]' },
 ]
 
 /**
@@ -277,6 +287,7 @@ export default function MovementLog({ plantId, refreshKey = 0, limit = 50 }: Mov
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {LEGEND.map((entry) => (
             <span
+              key={entry.label}
               className="inline-flex items-center gap-1 text-[10px] font-semibold admin-text-subtle"
             >
               <span className={`w-2 h-2 rounded-full ${entry.dot}`} aria-hidden="true" />
@@ -294,7 +305,7 @@ export default function MovementLog({ plantId, refreshKey = 0, limit = 50 }: Mov
             <div
               key={m.id}
 
-              className={`flex items-start gap-3 p-2.5 rounded-lg border admin-line-soft admin-surface-sub hover:bg-slate-50 transition-colors ${action.border}`}
+              className={`flex items-start gap-3 p-2.5 rounded-lg border admin-line-soft admin-surface-sub hover:bg-[var(--admin-surface-hover)] transition-colors ${action.border}`}
             >
               {/* Badge (Farbe je Aktion) */}
               <span className={`${BADGE_BASE} mt-0.5 ${action.badge}`}>{action.label}</span>

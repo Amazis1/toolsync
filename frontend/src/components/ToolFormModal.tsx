@@ -45,7 +45,8 @@ const ToolFormModal: React.FC<ToolFormModalProps> = ({
   useEffect(() => {
     if (initialData) {
       setFormData({
-        tool_id: initialData.tool_id,
+        // null = Werkzeug ohne ID (Abstreifer/Matrize) → im Feld als leerer Text
+        tool_id: initialData.tool_id ?? '',
         category: initialData.category,
         status: initialData.status,
         is_storage: initialData.is_storage,
@@ -97,7 +98,7 @@ const ToolFormModal: React.FC<ToolFormModalProps> = ({
       // Pflichfelder, die das Backend erwartet
       const payload: ToolInput = {
         ...formData,
-        tool_id: formData.tool_id.trim(),
+        tool_id: formData.tool_id?.trim() ? formData.tool_id.trim() : null,
         measure_a: emptyToNull(formData.measure_a ?? ''),
         measure_b: emptyToNull(formData.measure_b ?? ''),
         description: emptyToNull(formData.description ?? ''),
@@ -132,7 +133,7 @@ const ToolFormModal: React.FC<ToolFormModalProps> = ({
             <input
               type="text"
               name="tool_id"
-              value={formData.tool_id}
+              value={formData.tool_id ?? ''}
               onChange={handleChange}
               required
               className={inputClass}

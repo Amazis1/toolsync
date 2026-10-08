@@ -5,7 +5,8 @@ import { UserIcon, LoginIcon } from '../icons';
 type Tab = 'user' | 'admin';
 
 const LoginForm: React.FC = () => {
-  const { login } = useAuth();
+
+  const { login, sessionExpired } = useAuth();
   const [tab, setTab] = useState<Tab>('user');
   const [personalNumber, setPersonalNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -87,7 +88,9 @@ const LoginForm: React.FC = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className='space-y-4'>
+      {/* flex-col statt space-y-4: der Abstand vor dem Passwortfeld muss
+          mitanimiert werden (siehe .login-extra in index.css). */}
+      <form onSubmit={handleSubmit} className='flex flex-col'>
         <div>
           <label htmlFor='personalNumber' className='mb-1 block text-sm font-medium text-slate-700'>
             Personalnummer
@@ -113,34 +116,50 @@ const LoginForm: React.FC = () => {
           />
         </div>
 
-        {tab === 'admin' && (
-          <div>
-            <label htmlFor='password' className='mb-1 block text-sm font-medium text-slate-700'>
-              Passwort
-            </label>
-            <input
-              id='password'
-              type='password'
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder='Admin-Passwort'
-              required
-              autoComplete='current-password'
-              disabled={isLoading}
-              className='input-bordered'
-            />
+        {/* Bleibt immer im DOM, damit die Höhe animiert werden kann.
+            Im Mitarbeiter-Modus ist das Feld deaktiviert (nicht fokussierbar,
+            keine Pflichtfeld-Prüfung) und von der Vorlesehilfe ausgeblendet. */}
+        <div
+          className={tab === 'admin' ? 'login-extra is-open' : 'login-extra'}
+          aria-hidden={tab !== 'admin'}
+        >
+          <div className='login-extra-clip'>
+            <div className='login-extra-inner'>
+              <label htmlFor='password' className='mb-1 block text-sm font-medium text-slate-700'>
+                Passwort
+              </label>
+              <input
+                id='password'
+                type='password'
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder='Admin-Passwort'
+                required={tab === 'admin'}
+                autoComplete='current-password'
+                disabled={isLoading || tab !== 'admin'}
+                tabIndex={tab === 'admin' ? undefined : -1}
+                className='input-bordered'
+              />
+            </div>
+          </div>
+        </div>
+
+        {sessionExpired && !error && (
+          <div role='alert' className='ui-alert ui-alert-warning mt-4'>
+            <span aria-hidden='true'>!</span>
+            <div>Sitzung abgelaufen. Bitte melde dich neu an.</div>
           </div>
         )}
 
         {error && (
-          <div role='alert' className='ui-alert ui-alert-error'>
+          <div role='alert' className='ui-alert ui-alert-error mt-4'>
             <span aria-hidden='true'>×</span>
             <div>{error}</div>
           </div>
         )}
 
-        <button type='submit' disabled={isLoading} className='ui-btn ui-btn-primary w-full'>
+        <button type='submit' disabled={isLoading} className='ui-btn ui-btn-primary w-full mt-4'>
           {isLoading ? 'Wird angemeldet …' : 'Anmelden'}
         </button>
       </form>
