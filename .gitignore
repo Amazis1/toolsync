@@ -19,6 +19,12 @@ frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
 
+# Hochgeladene Dateien (Einrichteplaene, Datenblaetter, Bilder).
+# Das sind Laufzeitdaten des Betriebs, kein Quelltext: sie gehoeren in die
+# Ablage des Servers, nicht ins Repository. Der Ordner entsteht beim Anlegen
+# selbst (`mkdir(parents=True, exist_ok=True)`).
+backend/uploads/
+
 # IDE / OS
 .vscode/
 .idea/
