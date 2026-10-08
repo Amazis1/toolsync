@@ -72,6 +72,8 @@ export interface Machine {
   id: number
   name: string
   plant_id: number | null
+  /** Optionale Farbe aus den Stammdaten (#RRGGBB); null = kein Farbpunkt. */
+  color: string | null
   created_at: string
   updated_at: string
 }
@@ -103,7 +105,8 @@ export const TOOL_STATUS_LABELS: Record<ToolStatus, string> = {
 
 export interface Tool {
   id: number
-  tool_id: string
+  /** Fachliche Werkzeug-ID. null = ohne ID (Abstreifer/Matrize), siehe DEC-055. */
+  tool_id: string | null
   category: ToolCategory
   status: ToolStatus | null
   is_storage: boolean
@@ -116,16 +119,44 @@ export interface Tool {
   position_id: number | null
   machine_id: number | null
   customer_id: number | null
+  /** Globaler Favorit (für alle Benutzer gleich) – siehe ToolList. */
+  is_favorite: boolean
+  /** Lagerplatz-Code wie "01-A-25"; null = Ablage (kein fester Platz). */
+  position_code: string | null
   // Beziehungen werden vom Backend direkt mitgeliefert (lazy="joined")
   plant: Plant | null
   tool_type: ToolType | null
   customer?: Customer | null
+  machine?: Machine | null
   created_at: string
   updated_at: string
 }
 
+/** Sortierbare Spalten der Werkzeugliste (Whitelist, spiegelt das Backend). */
+export type ToolSortKey =
+  | 'tool_id'
+  | 'description'
+  | 'measure_a'
+  | 'status'
+  | 'plant'
+  | 'tool_type'
+  | 'location'
+  | 'customer'
+  | 'machine'
+
+export type ToolSortOrder = 'asc' | 'desc'
+
+/** Eine Seite der Werkzeugliste samt Gesamtzahl der Treffer. */
+export interface ToolPage {
+  items: Tool[]
+  total: number
+  skip: number
+  limit: number
+}
+
 export interface ToolInput {
-  tool_id: string
+  /** null = ohne ID. Nur für Abstreifer und Matrize erlaubt (DEC-055). */
+  tool_id: string | null
   category: ToolCategory
   status: ToolStatus | null
   is_storage: boolean

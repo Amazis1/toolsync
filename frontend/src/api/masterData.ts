@@ -37,16 +37,21 @@ export async function getMachines(plantId?: number): Promise<Machine[]> {
   return http.get<Machine[]>(`/machines${query}`)
 }
 
-export async function createMachine(name: string, plantId: number | null): Promise<Machine> {
-  return http.post<Machine>('/machines', { name, plant_id: plantId })
+export async function createMachine(
+  name: string,
+  plantId: number | null,
+  color: string | null = null,
+): Promise<Machine> {
+  return http.post<Machine>('/machines', { name, plant_id: plantId, color })
 }
 
 export async function updateMachine(
   id: number,
   name: string,
   plantId: number | null,
+  color: string | null = null,
 ): Promise<Machine> {
-  return http.put<Machine>(`/machines/${id}`, { name, plant_id: plantId })
+  return http.put<Machine>(`/machines/${id}`, { name, plant_id: plantId, color })
 }
 
 export async function deleteMachine(id: number): Promise<void> {

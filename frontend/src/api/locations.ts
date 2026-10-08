@@ -113,9 +113,21 @@ export interface Position {
   tool_id: number | null
   tool?: {
     id: number
-    tool_id: string
+    /** null = Werkzeug ohne ID (Abstreifer/Matrize, DEC-055). */
+    tool_id: string | null
     description: string | null
     status: ToolStatus | null
+  } | null
+  /**
+   * Ersatzteil auf diesem Platz (**statt** eines Werkzeugs).
+   *
+   * Ein Platz ist belegt, wenn `tool_id` **oder** `spare_part` gesetzt ist
+   * (DEC-064). Die Platzauswahl filtert deshalb über beide Felder.
+   */
+  spare_part?: {
+    id: number
+    article_number: string
+    name: string | null
   } | null
   created_at: string
   updated_at: string
@@ -159,7 +171,8 @@ export async function movePosition(
 // ------------------------------------------------------------
 export interface TrayTool {
   id: number
-  tool_id: string
+  /** null = Werkzeug ohne ID (Abstreifer/Matrize, DEC-055). */
+  tool_id: string | null
   description: string | null
   status: ToolStatus | null
 }

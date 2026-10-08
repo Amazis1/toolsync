@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useEscapeKey } from '../lib/useEscapeKey'
 
 interface ConfirmDialogProps {
@@ -47,7 +48,12 @@ export default function ConfirmDialog({
   // Escape bricht ab (Nutzerkontrolle) – nicht, während die Aktion läuft.
   useEscapeKey(onCancel, !busy)
 
-  return (
+  // Der Dialog liegt in einem Portal an <body>: `.app-content-block` (und jede
+  // Glasfläche) hat `backdrop-filter`, und das macht ein Element zum
+  // Bezugsrahmen für `position: fixed`. Ohne Portal deckt die Abdunklung nur den
+  // Inhaltsblock ab und der Dialog klebt darin statt im Fenster (Regel 11,
+  // „Zwei Fallen im Glas-System").
+  return createPortal(
     <div
       className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -84,6 +90,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,50 +1,20 @@
-// Schlanker API-Client: Auth-Token + gemeinsame Fehlerbehandlung.
-// Die Fehlertexte kommen aus lib/api, damit beide Module identisch formulieren.
-import { ApiError, getErrorMessage } from '../lib/api'
+// Schlanker API-Client für die fachlichen Module (`http.get/post/…`).
+//
+// Der Anfrageweg selbst liegt in `lib/transport.ts` – Token, Sitzungs-Prüfung,
+// Übernahme des erneuerten Tokens, 401-Behandlung und Fehlertexte gibt es damit
+// nur **einmal** (vorher liefen `lib/api.ts` und diese Datei getrennt).
 
-const API_BASE = '/api'
-
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('token')
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> | undefined),
-  }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  let res: Response
-  try {
-    res = await fetch(`${API_BASE}${url}`, { ...options, headers })
-  } catch {
-    throw new ApiError(0, getErrorMessage(0, null))
-  }
-
-  if (!res.ok) {
-    let detail: unknown
-    try {
-      const data = await res.json()
-      detail = (data as { detail?: unknown }).detail
-    } catch {
-      // Kein JSON-Body vorhanden – generische Meldung verwenden
-    }
-    throw new ApiError(res.status, getErrorMessage(res.status, detail))
-  }
-
-  if (res.status === 204) {
-    return undefined as T
-  }
-  return (await res.json()) as T
-}
+import { requestBlob, requestJson, toBody } from '../lib/transport'
 
 export const http = {
-  get: <T>(url: string) => request<T>(url),
+  get: <T>(url: string) => requestJson<T>(url),
   post: <T>(url: string, body: unknown) =>
-    request<T>(url, { method: 'POST', body: JSON.stringify(body) }),
+    requestJson<T>(url, { method: 'POST', body: toBody(body) }),
   put: <T>(url: string, body: unknown) =>
-    request<T>(url, { method: 'PUT', body: JSON.stringify(body) }),
+    requestJson<T>(url, { method: 'PUT', body: toBody(body) }),
   patch: <T>(url: string, body: unknown) =>
-    request<T>(url, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+    requestJson<T>(url, { method: 'PATCH', body: toBody(body) }),
+  delete: <T>(url: string) => requestJson<T>(url, { method: 'DELETE' }),
+  /** Binärdaten (z. B. eine PDF) laden – nicht als JSON geparst. */
+  blob: (url: string): Promise<Blob> => requestBlob(url),
 }
