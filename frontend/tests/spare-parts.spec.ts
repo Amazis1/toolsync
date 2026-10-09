@@ -483,14 +483,25 @@ test.describe('Ersatzteile', () => {
     await expect(stern).toHaveAttribute('aria-pressed', 'true')
 
     // Die Markierung ist **global** – sie steht auch in der Datenbank (DEC-063).
-    const daten = await (
-      await request.get(`/api/spare-parts/?search=${encodeURIComponent(`${PREFIX}4711`)}`, {
-        headers: authHeaders(),
-      })
-    ).json()
-    const markiert = (daten.items as { storage_place: string | null; is_favorite: boolean }[])
-      .filter((eintrag) => eintrag.is_favorite)
-    expect(markiert).toHaveLength(1)
+    //
+    // `poll` statt einer Momentaufnahme: das Umschalten ist **optimistisch**, die
+    // Oberflaeche zeigt den Stern also schon, waehrend die Anfrage noch laeuft.
+    // Unmittelbar nach dem Klick kann die Abfrage deshalb den alten Stand
+    // treffen – im Verbund (mehr Last) ist genau das passiert.
+    const markiertInDerDatenbank = async () => {
+      const daten = await (
+        await request.get(`/api/spare-parts/?search=${encodeURIComponent(`${PREFIX}4711`)}`, {
+          headers: authHeaders(),
+        })
+      ).json()
+      return (daten.items as { storage_place: string | null; is_favorite: boolean }[]).filter(
+        (eintrag) => eintrag.is_favorite,
+      )
+    }
+    await expect
+      .poll(async () => (await markiertInDerDatenbank()).length, { timeout: 10_000 })
+      .toBe(1)
+    const markiert = await markiertInDerDatenbank()
     expect(markiert[0].storage_place).toBe('Regal B3 / Fach 2')
 
     // „Nur Favoriten" zeigt genau diese Zeile.
