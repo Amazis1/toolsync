@@ -16,6 +16,12 @@ import type {
  */
 export interface DataSheetListQuery {
   search?: string
+  /**
+   * Nur Datenblätter **genau** dieser Werkzeug-ID (nicht die unscharfe Suche).
+   * Die Zeilenaktion „Datenblatt" in der Werkzeugliste sucht damit das
+   * Datenblatt des Werkzeugs.
+   */
+  toolId?: string
   plantId?: number
   machineId?: number
   hasPdf?: boolean
@@ -32,6 +38,7 @@ export async function getDataSheets(
   const params = new URLSearchParams()
 
   if (query.search?.trim()) params.set('search', query.search.trim())
+  if (query.toolId?.trim()) params.set('tool_id', query.toolId.trim())
   if (query.plantId != null) params.set('plant_id', String(query.plantId))
   if (query.machineId != null) params.set('machine_id', String(query.machineId))
   if (query.hasPdf != null) params.set('has_pdf', String(query.hasPdf))

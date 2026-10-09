@@ -28,8 +28,6 @@ let machineId = 0
 let machineName = ''
 /** Farbe der Testmaschine vor dem Lauf – wird hinterher zurückgesetzt. */
 let machineColorBefore: string | null = null
-/** Eine echte Werkzeug-ID aus dem Bestand (für die Zeilenaktion). */
-let toolId = ''
 const seededIds: number[] = []
 
 function authHeaders(token = adminToken) {
@@ -138,13 +136,6 @@ test.beforeAll(async ({ request }) => {
     const machines = await machinesResponse.json()
     machineId = machines[0]?.id ?? 0
     machineName = machines[0]?.name ?? ''
-  }
-
-  // Eine vorhandene Werkzeug-ID für die Zeilenaktion „Datenblatt".
-  const toolsResponse = await request.get('/api/tools/?limit=50', { headers: authHeaders() })
-  if (toolsResponse.ok()) {
-    const tools = (await toolsResponse.json()).items as { tool_id: string | null }[]
-    toolId = tools.find((tool) => (tool.tool_id ?? '').length > 0)?.tool_id ?? ''
   }
 
   // Vier Datenblätter, damit die Position im Zebra (gerade/ungerade) prüfbar ist:
@@ -260,8 +251,16 @@ async function openAsAdmin(page: Page) {
 }
 
 /** Nach einem Begriff suchen und warten, bis nur noch passende Zeilen stehen. */
-async function suche(page: Page, term: string) {
-  await page.getByLabel('Datenblätter durchsuchen').fill(term)
+/**
+ * Suchen und warten, bis die Zeile wirklich steht.
+ *
+ * `feld` ist der Name des Suchfelds: Der Bereich „Datenblätter" und die
+ * **Werkzeugliste** haben je ein eigenes („Datenblätter durchsuchen" /
+ * „Werkzeuge durchsuchen"). Die Zeilenaktion „Datenblatt" startet in der
+ * Werkzeugliste – dort muss dieses Feld gefüllt werden.
+ */
+async function suche(page: Page, term: string, feld = 'Datenblätter durchsuchen') {
+  await page.getByLabel(feld).fill(term)
   await expect
     .poll(
       async () => {
@@ -563,17 +562,126 @@ test.describe('Datenblätter', () => {
 test.describe('Datenblätter – Weg vom Werkzeug', () => {
   test.beforeEach(() => requireSeed())
 
-  test('Zeilenaktion „Datenblatt" in der Werkzeugliste filtert auf diese ID', async ({ page }) => {
-    test.skip(!toolId, 'Kein Werkzeug mit ID im Bestand – Spec übersprungen')
-    await openWithToken(page, adminToken)
+  /**
+   * **Gibt es genau ein Datenblatt zu dieser ID, geht es direkt auf**
+   * (DEC-065 Punkt 10). Wer an der Maschine steht, kommt vom Werkzeug: der
+   * Umweg über den Bereich und die Liste wäre unnoetig.
+   */
+  test('öffnet das Datenblatt direkt, wenn es genau eines gibt', async ({ page, request }) => {
+    const werkzeugId = `${PREFIX}1075000`
 
+    // Aufräumen **vor** dem Anlegen: ein Rest aus einem früheren Lauf würde das
+    // Anlegen mit HTTP 400 scheitern lassen, und der Test wäre dann still
+    // übersprungen statt aussagekräftig.
+    const alte = await request.get(
+      `/api/tools/?q=${encodeURIComponent(werkzeugId)}&limit=50`,
+      { headers: authHeaders() },
+    )
+    if (alte.ok()) {
+      for (const eintrag of (await alte.json()).items as { id: number; tool_id: string | null }[]) {
+        if (eintrag.tool_id === werkzeugId) {
+          await request.delete(`/api/tools/${eintrag.id}`, { headers: authHeaders() })
+        }
+      }
+    }
+
+    // Werkzeugtyp hier holen, nicht in `beforeAll`: ein zusätzlicher Aufruf im
+    // Aufbau ließ dessen 30-Sekunden-Zeitfenster reißen.
+    const typen = await (
+      await request.get('/api/tools/types', { headers: authHeaders() })
+    ).json()
+    const typId = (typen as { id: number }[])[0]?.id
+    test.skip(!typId, 'Kein Werkzeugtyp im Bestand – Spec übersprungen')
+
+    // Ein Werkzeug mit der ID des Test-Datenblatts anlegen – die Zeilenaktion
+    // startet in der **Werkzeugliste**, dort muss das Werkzeug stehen.
+    const angelegt = await request.post('/api/tools/', {
+      headers: authHeaders(),
+      data: {
+        tool_id: werkzeugId,
+        category: 'Stempel',
+        status: null,
+        is_storage: false,
+        allow_duplicate_id: false,
+        measure_a: '7,00',
+        measure_b: null,
+        description: 'Für die Zeilenaktion',
+        plant_id: plantId,
+        tool_type_id: typId,
+        position_id: null,
+        machine_id: null,
+        customer_id: null,
+      },
+    })
+    expect(angelegt.ok(), `Testwerkzeug anlegen: HTTP ${angelegt.status()}`).toBe(true)
+
+    await openWithToken(page, adminToken)
     await page.getByRole('button', { name: 'Werkzeuge', exact: true }).click()
-    await oeffneZeilenmenue(page, toolId)
+    // Auf der Werkzeuge-Seite heisst das Suchfeld anders als im Datenblatt-Bereich.
+    await suche(page, werkzeugId, 'Werkzeuge durchsuchen')
+
+    // Die Zeile steht wirklich da, bevor das Menü geöffnet wird.
+    const zeile = page.locator('tbody tr').filter({ hasText: werkzeugId }).first()
+    await expect(zeile).toBeVisible({ timeout: 10_000 })
+    await oeffneZeilenmenue(page, werkzeugId)
     await page.getByRole('menuitem', { name: 'Datenblatt' }).click()
 
-    // Der Bereich wechselt und die Suche steht auf der Werkzeug-ID.
-    await expect(page.getByRole('heading', { name: 'Datenblätter', exact: true })).toBeVisible()
-    await expect(page.getByLabel('Datenblätter durchsuchen')).toHaveValue(toolId)
+    // Kein Bereichswechsel: das Datei-Fenster geht auf und nennt die ID.
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 15_000 })
+    await expect(dialog).toContainText(werkzeugId)
+    await dialog.getByRole('button', { name: 'Schließen' }).click()
+  })
+
+  /**
+   * **Ohne Datenblatt zur ID** wechselt die Ansicht in den Bereich und filtert –
+   * dann ist die Liste die richtige Antwort (dort laesst sich eines anlegen).
+   *
+   * Das Testwerkzeug wird hier angelegt, nicht aus dem Bestand genommen: die
+   * Testdaten dieser Spec enthalten selbst ein Datenblatt zu ihrer ID, ein
+   * beliebiges vorhandenes Werkzeug kann also eines haben – der Test wäre dann
+   * vom Zufall abhaengig.
+   */
+  test('wechselt in den Bereich, wenn es kein Datenblatt gibt', async ({ page, request }) => {
+    const werkzeugId = `${PREFIX}OHNE-BLATT`
+
+    const typen = await (
+      await request.get('/api/tools/types', { headers: authHeaders() })
+    ).json()
+    const typId = (typen as { id: number }[])[0]?.id
+    test.skip(!typId, 'Kein Werkzeugtyp im Bestand – Spec übersprungen')
+
+    const angelegt = await request.post('/api/tools/', {
+      headers: authHeaders(),
+      data: {
+        tool_id: werkzeugId,
+        category: 'Stempel',
+        status: null,
+        is_storage: false,
+        allow_duplicate_id: false,
+        measure_a: '7,00',
+        measure_b: null,
+        description: 'Ohne Datenblatt',
+        plant_id: plantId,
+        tool_type_id: typId,
+        position_id: null,
+        machine_id: null,
+        customer_id: null,
+      },
+    })
+    expect(angelegt.ok(), `Testwerkzeug anlegen: HTTP ${angelegt.status()}`).toBe(true)
+
+    await openWithToken(page, adminToken)
+    await page.getByRole('button', { name: 'Werkzeuge', exact: true }).click()
+    await suche(page, werkzeugId, 'Werkzeuge durchsuchen')
+    await oeffneZeilenmenue(page, werkzeugId)
+    await page.getByRole('menuitem', { name: 'Datenblatt' }).click()
+
+    // Kein Datenblatt: der Bereich wechselt und die Suche steht auf der ID.
+    await expect(
+      page.getByRole('heading', { name: 'Datenblätter', exact: true }),
+    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByLabel('Datenblätter durchsuchen')).toHaveValue(werkzeugId)
   })
 })
 

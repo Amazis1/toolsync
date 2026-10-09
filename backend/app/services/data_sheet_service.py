@@ -51,6 +51,18 @@ except ImportError:  # pragma: no cover – Ablage und Anzeige funktionieren auc
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 UPLOAD_SUBDIR = Path("uploads") / "data_sheets"
 
+
+def upload_root() -> Path:
+    """Wurzel der Ablage; über `TOOLSYNC_UPLOAD_DIR` übersteuerbar (Tests).
+
+    Dieselbe Funktion wie in `serial_article_service.py` – beide Bereiche legen
+    ihre Ordner unter `uploads/` ab.
+    """
+    override = os.getenv("TOOLSYNC_UPLOAD_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    return BACKEND_DIR / UPLOAD_SUBDIR
+
 # Datenblätter liegen als `plan.pdf` (erstes) und `plan-2.pdf`, `plan-3.pdf` …
 # Mehrere Datenblätter je Datensatz sind möglich (andere Auflage, andere
 # Maschine, andere Version) – dieselbe Namenslogik wie bei den Serienartikeln.
@@ -116,10 +128,17 @@ class DataSheetService:
     def __init__(self, db: AsyncSession, root: Optional[Path] = None) -> None:
         self.db = db
         self.crud = CRUDDataSheet(db)
-        # Ablageort: Standard ist `backend/uploads/data_sheets`; über
-        # `TOOLSYNC_UPLOAD_DIR` übersteuerbar (Tests, andere Umgebung).
-        base = os.environ.get("TOOLSYNC_UPLOAD_DIR")
-        self.root = Path(base).resolve() if base else (BACKEND_DIR / "uploads")
+        # Ablageort: `root` gewinnt (Tests), sonst `TOOLSYNC_UPLOAD_DIR`, sonst
+        # `backend/uploads`.
+        #
+        # **Der `root`-Parameter wurde vorher ignoriert**: hier stand
+        # `Path(base).resolve() if base else (BACKEND_DIR / "uploads")` mit
+        # `base` aus der Umgebungsvariable – `root` kam nicht vor. Die Tests
+        # reichten deshalb einen temporären Ordner herein und schrieben in die
+        # **echte** Ablage: in `backend/uploads/data_sheets/1` lagen danach sechs
+        # `plan*.pdf` aus Testläufen. `SerialArticleService` machte es von Anfang
+        # an richtig; hier ist es jetzt genauso.
+        self.root = Path(root).resolve() if root is not None else upload_root()
         self.root.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
@@ -131,6 +150,7 @@ class DataSheetService:
     async def get_all(
         self,
         search: Optional[str] = None,
+        tool_id: Optional[str] = None,
         plant_id: Optional[int] = None,
         machine_id: Optional[int] = None,
         has_pdf: Optional[bool] = None,
@@ -142,6 +162,7 @@ class DataSheetService:
     ):
         return await self.crud.get_multi(
             search=search,
+            tool_id=tool_id,
             plant_id=plant_id,
             machine_id=machine_id,
             has_pdf=has_pdf,

@@ -26,6 +26,7 @@ class CRUDDataSheet(CRUDBase):
     async def get_multi(
         self,
         search: Optional[str] = None,
+        tool_id: Optional[str] = None,
         plant_id: Optional[int] = None,
         machine_id: Optional[int] = None,
         has_pdf: Optional[bool] = None,
@@ -61,6 +62,12 @@ class CRUDDataSheet(CRUDBase):
                     machine.name.ilike(like),
                 )
             )
+        if tool_id is not None:
+            # **Exakter** Vergleich, nicht `ilike`: Aus der Werkzeugzeile wird
+            # diese Abfrage mit der ID des Werkzeugs aufgerufen, um dessen
+            # Datenblatt zu finden. Mit `ilike` waere „188" auch in „1880"
+            # enthalten und die Liste zeigte ein fremdes Datenblatt.
+            conditions.append(DataSheet.tool_id == tool_id.strip())
         if plant_id is not None:
             conditions.append(DataSheet.plant_id == plant_id)
         if machine_id is not None:

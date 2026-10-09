@@ -68,6 +68,18 @@ async def get_data_sheets(
         None,
         description="Freitextsuche über Werkzeug-ID, Name, Beschreibung, Werk und Maschine.",
     ),
+    tool_id: Optional[str] = Query(
+        None,
+        description=(
+            # Einfache Anfuehrungszeichen aussen: der Text enthaelt deutsche
+            # Anfuehrungszeichen („…“). Mit doppelten aussen schliesst das
+            # normale " den String vorzeitig – genau dieser Syntaxfehler hat
+            # das Backend einmal nicht mehr starten lassen.
+            'Nur Datenblätter **genau** dieser Werkzeug-ID. Für die Zeilenaktion '
+            '„Datenblatt“ in der Werkzeugliste: sie sucht das Datenblatt des '
+            'Werkzeugs, nicht ähnliche IDs.'
+        ),
+    ),
     plant_id: Optional[int] = Query(None, description="Nur dieses Werk."),
     machine_id: Optional[int] = Query(None, description="Nur diese Maschine."),
     has_pdf: Optional[bool] = Query(
@@ -97,6 +109,7 @@ async def get_data_sheets(
     service = DataSheetService(db)
     items, total = await service.get_all(
         search=search,
+        tool_id=tool_id,
         plant_id=plant_id,
         machine_id=machine_id,
         has_pdf=has_pdf,

@@ -11,6 +11,7 @@ import type { DataSheet } from './types/data-sheet';
 import type { SerialArticle } from './types/serial-article';
 import type { ViewerRequest } from './types/viewer';
 import { dataSheetViewer, serialArticleViewer } from './lib/viewerSources';
+import { getDataSheets } from './api/dataSheets';
 import { getDisplayName } from './lib/api';
 import { LoginIcon, AddIcon, AdminIcon } from './components/icons';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -130,6 +131,11 @@ const MainApp: React.FC = () => {
   const [dataSheetRefreshKey, setDataSheetRefreshKey] = useState(0);
   const [dataSheetFilter, setDataSheetFilter] = useState<string | null>(null);
   const dataSheetToken = useRef(0);
+  /**
+   * Laufender Auftrag der Zeilenaktion „Datenblatt": eine späte Antwort einer
+   * vorigen Anfrage darf das inzwischen gewählte Datenblatt nicht überschreiben.
+   */
+  const dataSheetRequestId = useRef(0);
   const [dataSheetRequest, setDataSheetRequest] = useState<
     { token: number; sheet: DataSheet | null } | null
   >(null);
@@ -206,13 +212,58 @@ const MainApp: React.FC = () => {
   }
 
   /**
-   * Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10): in den
-   * Datenblatt-Bereich wechseln und auf diese Werkzeug-ID filtern. Wer an der
-   * Maschine steht, kommt vom Werkzeug – nicht aus einer Liste.
+   * Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10).
+   *
+   * **Gibt es genau ein Datenblatt zu dieser ID, geht es direkt auf.** Wer an
+   * der Maschine steht, kommt vom Werkzeug: der Weg über den Bereich und die
+   * Liste wäre ein Umweg, den er nicht braucht.
+   *
+   * Sonst (kein Datenblatt, mehrere zu dieser ID, oder eines ohne hinterlegte
+   * Datei) wechselt die Ansicht in den Datenblatt-Bereich und filtert dort auf
+   * die ID – dann ist die Liste die richtige Antwort. Bei mehreren sagt ein
+   * Hinweis, warum.
    */
   function openDataSheetsForTool(tool: { tool_id: string | null }) {
-    setDataSheetFilter(tool.tool_id ?? '');
-    setActiveTab('datenblaetter');
+    const id = tool.tool_id?.trim();
+    // Ohne ID (Abstreifer, Matrize – DEC-055) gibt es nichts zu suchen; das
+    // Datenblatt ist dann nur über Werk und Maschine auffindbar.
+    if (!id) {
+      setDataSheetFilter('');
+      setActiveTab('datenblaetter');
+      return;
+    }
+
+    // Ein Klick darf den vorigen Auftrag entwerten: kommt eine späte Antwort
+    // nach einem zweiten Klick, öffnet sie sonst das falsche Datenblatt.
+    const auftrag = ++dataSheetRequestId.current;
+
+    void getDataSheets({ toolId: id, limit: 200 })
+      .then((seite) => {
+        if (auftrag !== dataSheetRequestId.current) return;
+        const treffer = seite.items;
+        if (treffer.length === 1 && treffer[0].has_pdf) {
+          setViewingFiles(dataSheetViewer(treffer[0]));
+          return;
+        }
+        if (treffer.length > 1) {
+          showToast(
+            'info',
+            `Zu „${id}“ gibt es ${treffer.length} Datenblätter.`,
+            'Bitte das passende in der Liste wählen.',
+          );
+        }
+        setDataSheetFilter(id);
+        setActiveTab('datenblaetter');
+      })
+      .catch((err: unknown) => {
+        if (auftrag !== dataSheetRequestId.current) return;
+        // Kein stiller Fehlschlag: ohne Rückmeldung bliebe der Klick wirkungslos.
+        showToast(
+          'error',
+          'Datenblatt konnte nicht geöffnet werden.',
+          err instanceof Error ? err.message : undefined,
+        );
+      });
   }
 
   // Direktaufruf von /admin (Lesezeichen, Neuladen): Startwert kommt aus der
