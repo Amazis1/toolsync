@@ -33,6 +33,7 @@ from starlette.datastructures import Headers, UploadFile
 from app.models.base import Base
 from app.models.data_sheet import DataSheet  # noqa: F401  (Modell registrieren)
 from app.models.master_data import Machine, Plant
+from app.routers.data_sheets import _to_read
 from app.schemas.data_sheet import DataSheetCreate
 from app.services.data_sheet_service import DataSheetService
 
@@ -181,8 +182,8 @@ async def test_tool_id_filter_without_pdf(workspace):
 async def test_tool_id_filter_counts_only_that_id(workspace):
     """Der Filter zählt nur die eigene ID – `total` trägt die Entscheidung.
 
-    Die Oberfläche entscheidet anhand von `total` und `all_pdf`, ob sie direkt
-    öffnet; deshalb muss die Zählung stimmen.
+    Die Oberfläche entscheidet anhand von `total` und `has_pdf` des Treffers, ob
+    sie direkt öffnet; deshalb muss die Zählung stimmen.
     """
     for nummer in ("188", "188", "1880", "999"):
         await _anlegen(workspace, nummer, f"Blatt {nummer}")
@@ -192,3 +193,38 @@ async def test_tool_id_filter_counts_only_that_id(workspace):
     assert total == 2
     _, alle = await service.get_all()
     assert alle == 4
+
+
+# --------------------------------------------------------------------------
+# `has_pdf` in der Antwort folgt der Dateiliste
+# --------------------------------------------------------------------------
+
+
+async def test_antwort_has_pdf_folgt_der_dateiliste(workspace):
+    """Die Antwort meldet `has_pdf` genau dann, wenn eine Datei da ist."""
+    sheet = await _anlegen(workspace, "5001", "Mit Datei")
+    service = workspace["service"]
+
+    data = _to_read(sheet, service)
+    assert data.has_pdf is True
+    assert [eintrag.name for eintrag in data.plans] == ["plan.pdf"]
+
+
+async def test_antwort_has_pdf_ist_falsch_wenn_die_datei_verschwindet(workspace):
+    """Verschwindet die Datei außerhalb der Anwendung, bleibt keine Lüge übrig.
+
+    Der gespeicherte Verweis `pdf_path` zeigt dann ins Leere – die Antwort darf
+    trotzdem **nicht** `has_pdf: true` bei leerer Dateiliste melden: die
+    Zeilenaktion „Datenblatt" in der Werkzeugliste öffnet nur bei `has_pdf`, und
+    ein Öffnen ohne Datei wäre ein Fehler statt einer Anzeige.
+    """
+    sheet = await _anlegen(workspace, "5002", "Verschwundene Datei")
+    service = workspace["service"]
+
+    # Eingriff von außen: die Datei wird am Service vorbei entfernt.
+    (service.sheet_dir(sheet.id) / "plan.pdf").unlink()
+    assert sheet.pdf_path is not None  # der Verweis steht noch in der Datenbank
+
+    data = _to_read(sheet, service)
+    assert data.plans == []
+    assert data.has_pdf is False

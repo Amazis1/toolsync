@@ -30,11 +30,21 @@ NO_STORE = {"Cache-Control": "no-store"}
 
 
 def _to_read(sheet: DataSheet, service: DataSheetService) -> DataSheetRead:
-    """Antwort bauen – inklusive der Dateien aus dem Ordner des Datensatzes."""
+    """Antwort bauen – inklusive der Dateien aus dem Ordner des Datensatzes.
+
+    `has_pdf` wird aus der **Dateiliste** abgeleitet, nicht aus der Spalte
+    `pdf_path` (so liefert es das Modell). Beide können auseinanderlaufen: die
+    Datei kann außerhalb der Anwendung verschwinden, und während des Fehlers in
+    `sheet_dir` fand die Nachführung die vorhandenen Dateien nicht und leerte den
+    Verweis. Eine Antwort mit `has_pdf: true` und leerer Dateiliste widerspricht
+    sich selbst – und die Zeilenaktion „Datenblatt" in der Werkzeugliste hängt
+    genau an diesem Feld, sie hätte das vorhandene Datenblatt nicht geöffnet.
+    """
     data = DataSheetRead.model_validate(sheet)
     plans, images = service.list_files(sheet)
     data.plans = [DataSheetFileRead(**entry) for entry in plans]
     data.images = [DataSheetFileRead(**entry) for entry in images]
+    data.has_pdf = bool(plans)
     return data
 
 
@@ -83,7 +93,13 @@ async def get_data_sheets(
     plant_id: Optional[int] = Query(None, description="Nur dieses Werk."),
     machine_id: Optional[int] = Query(None, description="Nur diese Maschine."),
     has_pdf: Optional[bool] = Query(
-        None, description="true = nur mit Datenblatt, false = nur ohne."
+        None,
+        description=(
+            "true = nur mit Datenblatt, false = nur ohne. Filtert über den "
+            "gespeicherten Verweis `pdf_path`; im Ergebnis zählt die Dateiliste "
+            "im Ordner. Beides geht normalerweise zusammen – nach einem Eingriff "
+            "von außen kann der Filter deshalb kurz nachlaufen."
+        ),
     ),
     favorites_only: bool = Query(False, description="Nur Favoriten."),
     sort: DataSheetSortKey = Query("tool_id", description="Sortierspalte."),

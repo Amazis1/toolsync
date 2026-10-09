@@ -1357,4 +1357,70 @@ Belege: Browser-Test „zeigt die Maschine mit dem Farbpunkt aus den Stammdaten"
 
 ---
 
+# DEC-068 – `has_pdf` folgt der Dateiliste, nicht der Spalte
+**Status:** Verbindlich
+**Bezug:** DEC-065 (Datenblatt), DEC-062 (Dateien sind gleichartig), Anforderung
+6.3 (nur die Endung wird geprüft)
+**Anlass:** Fehlerbericht des Projektinhabers „alle einträge in Datenblatt sind
+leer".
+
+## Ausgangslage
+
+Beim Datenblatt gibt es dieselbe Angabe zweimal:
+
+- die **Dateien im Ordner** `uploads/data_sheets/<id>/` – sie sind die Wahrheit
+  für `plans` und `images`,
+- die Spalte **`pdf_path`** – sie zeigt auf den ersten Plan und trägt das Feld
+  `has_pdf` (Property am Modell).
+
+Der Service führt `pdf_path` bei jedem Schreiben und Löschen nach. Ein Fehler in
+`sheet_dir` ließ ihn die vorhandenen Dateien trotzdem nicht finden und leerte den
+Verweis; die Oberfläche zeigte daraufhin bei **jedem** Datenblatt eine leere
+Dateiliste, während `has_pdf` aus der Datenbank weiterhin `true` meldete – eine
+Antwort, die sich selbst widerspricht. Genau an `has_pdf` hängt außerdem die
+Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10): sie hätte das
+vorhandene Dokument nicht geöffnet.
+
+## Regel
+
+1. **Eine Wahrheit für „gibt es ein Datenblatt?": der Ordner.** `_to_read()` in
+   `routers/data_sheets.py` setzt `has_pdf = bool(plans)`, also aus derselben
+   Liste, die die Antwort als `plans` mitliefert.
+2. **`pdf_path` bleibt** – als Ablage-Notiz für den Listenfilter `has_pdf` und als
+   Angabe, welcher Plan der erste ist. Es ist **kein** zweiter Wahrheitswert für
+   die Anzeige.
+3. **Der Listenfilter `has_pdf` darf nachlaufen.** Er fragt die Spalte ab und ist
+   damit eine Vorfilterung; die Antwort ist maßgeblich. Die Oberfläche nutzt den
+   Filter nicht.
+
+## Begründung
+
+- Die Anzeige darf sich nicht selbst widersprechen: `has_pdf: true` neben
+  `plans: []` ist für den Benutzer ein Fehler, den er nicht auflösen kann.
+- Dateien können sich außerhalb der Anwendung ändern (Ordner kopiert, Datei
+  gelöscht, Sicherung zurückgespielt). Eine Spalte, die nur beim Schreiben
+  nachgeführt wird, kann das nicht mitbekommen – die Dateiliste schon.
+- Derselbe Grundsatz gilt schon für die Dateiliste selbst: „Die Dateiliste wird
+  aus dem Ordner gelesen; es gibt keine eigenen Spalten dafür."
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** Schreiben bei jedem Lesen (`GET` repariert `pdf_path` **nicht**) – ein
+  Lesezugriff bleibt ein Lesezugriff.
+- **Keine** neue Spalte `has_pdf` in der Datenbank: das wäre eine dritte Angabe
+  derselben Sache.
+- **Keine** Änderung am Serienartikel: dort ist der Ordner nach der
+  Artikelnummer benannt und `resolve_pdf_path()` liefert die Datei selbst
+  (DEC-057/DEC-062) – der Fall stellt sich dort anders.
+
+## Umsetzung
+
+**Umgesetzt.** `routers/data_sheets.py` (`_to_read`, Beschreibung des
+Query-Parameters `has_pdf`), `docs/20-datenblatt.md` (Abschnitt 3 und 5).
+Belege: `tests/test_data_sheets.py` – „Die Antwort meldet `has_pdf` genau dann,
+wenn eine Datei da ist" und „Verschwindet die Datei außerhalb der Anwendung,
+bleibt keine Lüge übrig".
+
+---
+
 # Ende der Projektentscheidungen

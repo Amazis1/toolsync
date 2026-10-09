@@ -82,9 +82,16 @@ Tabelle `data_sheets` (`class DataSheet(Base, AuditMixin)`); `id`, `created_at`,
 Beziehungen `plant` und `machine` sind `lazy="joined"` – sie stehen als Spalten in
 der Liste und in der Antwort.
 
-> **Wichtig:** Die Antwort enthält **nicht** `pdf_path`, sondern **`has_pdf`**
-> (Property am Modell) und die Dateiliste `plans` (Name, Größe) – der Speicherpfad
-> bleibt intern, wie beim Serienartikel.
+> **Wichtig:** Die Antwort enthält **nicht** `pdf_path`, sondern **`has_pdf`** und
+> die Dateiliste `plans` (Name, Größe) – der Speicherpfad bleibt intern, wie beim
+> Serienartikel.
+>
+> **`has_pdf` kommt aus der Dateiliste**, nicht aus der Spalte `pdf_path`
+> (`_to_read` in `routers/data_sheets.py`): gezählt wird, was im Ordner liegt.
+> Beides kann auseinanderlaufen, wenn eine Datei außerhalb der Anwendung
+> verschwindet – eine Antwort mit `has_pdf: true` und leerer `plans`-Liste wäre
+> in sich widersprüchlich, und die Zeilenaktion „Datenblatt" in der Werkzeugliste
+> hängt an diesem Feld.
 
 > **Wichtig:** Es gibt **keine** Fremdschlüsselbindung an `tools.id`. Eine
 > Werkzeug-ID darf laut DEC-052 mehrfach existieren (mehrere Exemplare) und laut
@@ -130,6 +137,11 @@ unbekannter Spaltenname ergibt **HTTP 422**, nie eine Abfrage mit beliebigem
 Spaltennamen. Sortierung mit **NULLS LAST** in beide Richtungen und `id` als
 Tiebreaker.
 
+> **`has_pdf` als Filter** fragt die Spalte `pdf_path` ab, das **Ergebnis** meldet
+> `has_pdf` aus der Dateiliste. Normalerweise geht das zusammen – nur wenn eine
+> Datei außerhalb der Anwendung verschwindet, läuft der Filter der Anzeige kurz
+> nachher. Die Oberfläche nutzt den Filter nicht.
+
 **Formularwerte bei `PUT`:** ein **fehlendes** Feld bedeutet „unverändert", ein
 **leerer** Wert bedeutet „Feld leeren" (Werkzeug-ID, Name, Beschreibung, Maschine).
 Das **Werk** ist Pflicht und wird nie geleert. Mitgeschickte Dateien **kommen
@@ -155,8 +167,8 @@ hinzu**; entfernt wird einzeln über `DELETE /{id}/files/{name}`.
 | Ordneranlage | beim **Anlegen**, auch ohne Datei |
 | Dateinamen | erster Plan `plan.pdf` (Altbestand), weitere `plan-2.pdf`, `plan-3.pdf` … |
 | Anzahl | **mehrere Datenblätter je Datensatz** erlaubt (DEC-065 Punkt 7); die Nummer im Namen bestimmt die Reihenfolge |
-| `pdf_path` | zeigt immer auf den **ersten** Plan und wird nach jedem Schreiben/Löschen nachgeführt; ohne Plan ist es leer (`has_pdf` = false) |
-| Auslieferung | `resolve_pdf_path()` löst relativ zur Ablage auf und prüft, dass die Datei **innerhalb** der Wurzel liegt – sonst `None` → HTTP 404 |
+| `pdf_path` | zeigt auf den **ersten** Plan und wird nach jedem Schreiben/Löschen nachgeführt; ohne Plan ist es leer. Es ist die **Ablage-Notiz** für die Suche – die Antwort meldet `has_pdf` aus der Dateiliste (siehe Abschnitt 3) |
+| Auslieferung | `resolve_file()` löst relativ zur Ablage auf und prüft, dass die Datei **innerhalb** der Wurzel liegt – sonst `None` → HTTP 404 |
 | Löschen | erst die Dateien, dann der Ordner, dann die Datenbankzeile |
 
 > **Wichtig:** Es gibt **keinen** statischen Mount für `uploads/`. Dateien werden
