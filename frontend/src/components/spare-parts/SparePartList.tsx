@@ -43,8 +43,11 @@ const DEFAULT_ORDER: 'asc' | 'desc' = 'asc'
 
 // Spaltenreihenfolge (Entscheidung des Projektinhabers): erst **was** es ist
 // (Artikelnummer), dann **wie** es heisst (Name/Typ), dann **wie viel** daliegt
-// (Menge), dann **wo** (Lagerort), zuletzt die Zuordnung (Werk, Maschine).
-// Favorit und Aktionen stehen rechts aussen – wie in der Datenblattliste.
+// (Menge), dann **wo** (Lagerort), zuletzt die Zuordnung (Werk, Maschine) und
+// die Aktionen.
+//
+// Der **Favorit** steht nicht in dieser Liste: er ist eine eigene erste Spalte
+// (siehe Tabellenkopf), genau wie in der Serienartikel- und Datenblattliste.
 const COLUMNS: { key: SparePartSortKey | null; label: string; className?: string }[] = [
   { key: 'article_number', label: 'Artikelnummer' },
   { key: 'name', label: 'Name / Typ' },
@@ -53,7 +56,6 @@ const COLUMNS: { key: SparePartSortKey | null; label: string; className?: string
   { key: 'storage_place', label: 'Lagerort' },
   { key: 'plant', label: 'Werk' },
   { key: 'machine', label: 'Maschine' },
-  { key: null, label: 'Favorit', className: 'w-16 text-center' },
   { key: null, label: 'Aktionen', className: 'w-14 text-right' },
 ]
 
@@ -396,6 +398,13 @@ export default function SparePartList({
         <table className="w-full min-w-[820px] text-left text-xs">
           <thead>
             <tr className="border-b border-white/70 text-left text-xs uppercase tracking-wider text-slate-600 bg-slate-200/40">
+              {/* Favorit als erste Spalte – wie in der Serienartikel- und
+                  Datenblattliste. Der Stern ohne Text: die Beschriftung wäre
+                  überflüssig, und Screenreader erreichen die Knöpfe über
+                  `aria-label`. */}
+              <th scope="col" className="w-7 px-1 py-2">
+                <StarIcon className="mx-auto h-4 w-4 text-slate-600" />
+              </th>
               {COLUMNS.map((column) => {
                 const isSorted = column.key !== null && sort === column.key
                 return (
@@ -488,7 +497,46 @@ export default function SparePartList({
             )}
 
             {items.map((part) => (
-              <tr key={part.id} className="table-row-glass even:bg-white/40 hover:bg-white/70">
+              <tr
+                key={part.id}
+                className={`table-row-glass transition-colors ${
+                  // Zebra über `even:bg-white/40`, Favoriten mit eigener
+                  // Amber-Tönung **statt** des Zebras – beides zusammen würde sich
+                  // aufheben (das `:nth-child(even)` wäre stärker als `bg-*`).
+                  // Genau wie in der Serienartikel- und Datenblattliste.
+                  part.is_favorite
+                    ? 'bg-amber-500/[0.08] hover:bg-amber-500/[0.14]'
+                    : 'even:bg-white/40 hover:bg-white/70'
+                }`}
+              >
+                {/* Favorit als **erste** Spalte – wie in der Serienartikel- und
+                    Datenblattliste. Er steht dort, wo der Blick beginnt, und die
+                    Tönung der Zeile gehört sichtbar zu dieser Spalte. */}
+                <td className="w-7 px-1 py-2">
+                  <button
+                    type="button"
+                    aria-label={
+                      part.is_favorite
+                        ? `Favorit für ${part.article_number} entfernen`
+                        : `Favorit für ${part.article_number} hinzufügen`
+                    }
+                    aria-pressed={part.is_favorite}
+                    title={part.is_favorite ? 'Favorit entfernen' : 'Zu den Favoriten'}
+                    disabled={busyFavoriteId === part.id}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void toggleFavorite(part)
+                    }}
+                    className="rounded-lg p-1 hover:bg-white/70 disabled:opacity-50"
+                  >
+                    <StarIcon
+                      filled={part.is_favorite}
+                      className={`mx-auto h-4 w-4 ${
+                        part.is_favorite ? 'text-amber-600' : 'text-slate-400'
+                      }`}
+                    />
+                  </button>
+                </td>
                 {/* Artikelnummer = Identität: heller Kasten in Mono, Teal-Kante –
                     dieselbe Markierung wie Werkzeug-ID und Serienartikel-Nummer. */}
                 <td className="px-3 py-2">
@@ -516,17 +564,17 @@ export default function SparePartList({
                     </span>
                   )}
                 </td>
-                {/* Menge: mittig und als **Zahl im Kasten** – der Bestand ist der
-                    häufigste Blick in dieser Liste, und eine nackte Ziffer geht
-                    zwischen den Textspalten unter. `tnum` hält die Ziffern
+                {/* Menge: mittig und als **Abzeichen** – der Bestand ist der
+                    häufigste Blick in dieser Liste, eine nackte Ziffer ginge
+                    zwischen den Textspalten aber unter. Bewusst ein ruhiges
+                    Badge statt eines Kastens mit grosser Zahl: die Spalte soll
+                    auffallen, nicht dominieren. `tnum` hält die Ziffern
                     untereinander gleich breit, damit die Spalte ruhig steht. */}
                 <td className="px-3 py-2 text-center">
-                  <span className="tnum inline-flex min-w-[3.25rem] items-baseline justify-center gap-1 rounded-lg border border-teal-600/25 bg-white/85 px-2 py-0.5">
-                    <span className="text-base font-bold leading-none text-slate-900">
-                      {part.quantity}
-                    </span>
+                  <span className="tnum inline-flex items-baseline justify-center gap-1 rounded-lg bg-slate-900/[0.06] px-2 py-0.5 text-xs font-semibold text-slate-900">
+                    {part.quantity}
                     {part.unit ? (
-                      <span className="text-xs text-slate-600">{part.unit}</span>
+                      <span className="font-normal text-slate-600">{part.unit}</span>
                     ) : null}
                   </span>
                 </td>
@@ -572,34 +620,6 @@ export default function SparePartList({
                       {part.machine?.name ?? <span className="text-slate-600">—</span>}
                     </span>
                   </span>
-                </td>
-                {/* Favorit: **global** (nicht pro Benutzer, DEC-063). Gefüllter
-                    Stern = gesetzt, offener Stern = nicht gesetzt – die Form
-                    trägt die Information, nicht nur die Farbe. */}
-                <td className="w-16 px-2 py-2 text-center">
-                  <button
-                    type="button"
-                    aria-label={
-                      part.is_favorite
-                        ? `Favorit für ${part.article_number} entfernen`
-                        : `Favorit für ${part.article_number} hinzufügen`
-                    }
-                    aria-pressed={part.is_favorite}
-                    title={part.is_favorite ? 'Favorit entfernen' : 'Zu den Favoriten'}
-                    disabled={busyFavoriteId === part.id}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void toggleFavorite(part)
-                    }}
-                    className="rounded-lg p-1 hover:bg-white/70 disabled:opacity-50"
-                  >
-                    <StarIcon
-                      filled={part.is_favorite}
-                      className={`mx-auto h-4 w-4 ${
-                        part.is_favorite ? 'text-amber-600' : 'text-slate-400'
-                      }`}
-                    />
-                  </button>
                 </td>
                 <td className="w-14 px-2 py-2 text-right">
                   <RowActionMenu

@@ -315,17 +315,20 @@ test.describe('Ersatzteile', () => {
     await expect(zeile).toContainText('25')
     await expect(zeile).toContainText('Stk')
 
-    // Spaltenreihenfolge (Entscheidung des Projektinhabers): Artikelnummer,
-    // Name/Typ, Menge, Lagerort, Werk, Maschine – dann Favorit und Aktionen.
+    // Spaltenreihenfolge (Entscheidung des Projektinhabers): Favorit als erste
+    // Spalte (wie in der Serienartikel- und Datenblattliste), dann
+    // Artikelnummer, Name/Typ, Menge, Lagerort, Werk, Maschine, Aktionen.
     const kopf = (await page.locator('thead th').allInnerTexts()).map((titel) =>
       titel.trim().toUpperCase(),
     )
+    expect(kopf[0]).toBe('') // Favoritenspalte: nur der Stern, kein Text
+    expect(kopf.indexOf('ARTIKELNUMMER')).toBe(1)
     expect(kopf.indexOf('NAME / TYP')).toBe(kopf.indexOf('ARTIKELNUMMER') + 1)
     expect(kopf.indexOf('MENGE')).toBe(kopf.indexOf('NAME / TYP') + 1)
     expect(kopf.indexOf('LAGERORT')).toBe(kopf.indexOf('MENGE') + 1)
     expect(kopf.indexOf('WERK')).toBe(kopf.indexOf('LAGERORT') + 1)
     expect(kopf.indexOf('MASCHINE')).toBe(kopf.indexOf('WERK') + 1)
-    expect(kopf.indexOf('FAVORIT')).toBe(kopf.indexOf('MASCHINE') + 1)
+    expect(kopf.indexOf('AKTIONEN')).toBe(kopf.indexOf('MASCHINE') + 1)
   })
 
   test('hebt Name und Maschinenfarbe hervor wie die anderen Listen', async ({ page }) => {
