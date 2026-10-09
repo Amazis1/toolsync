@@ -59,6 +59,13 @@ class ToolRead(ToolBase):
     is_favorite: bool = False
     # Lagerplatz-Code wie "01-A-25"; None bedeutet Ablage (kein fester Platz).
     position_code: Optional[str] = None
+    # Gibt es zu **dieser Werkzeug-ID** ein Datenblatt mit hinterlegter Datei?
+    # (DEC-065 Punkt 10 / DEC-068) Die Werkzeugliste zeigt dafür ein Symbol neben
+    # dem Aktionsmenü; ohne Datenblatt bleibt der Platz leer. Geprüft wird die
+    # **Datei im Ordner**, nicht nur die Spalte `pdf_path` – sonst führte das
+    # Symbol ins Leere. Die Suche läuft in einer Abfrage für die ganze Seite
+    # (`ToolService._tool_ids_with_data_sheet`).
+    has_data_sheet: bool = False
     # Für die Listenansicht direkt mitgelieferte Beziehungen
     plant: Optional[PlantRead] = None
     tool_type: Optional[ToolTypeRead] = None

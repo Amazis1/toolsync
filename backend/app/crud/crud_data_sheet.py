@@ -116,6 +116,19 @@ class CRUDDataSheet(CRUDBase):
 
         return items, total
 
+    async def get_by_tool_ids(self, tool_ids: List[str]) -> List[DataSheet]:
+        """Alle Datenblätter zu diesen Werkzeug-IDs – **eine** Abfrage.
+
+        Für die Werkzeugliste (DEC-068): sie zeigt je Zeile ein Symbol, wenn es
+        zu der ID ein Datenblatt **mit Datei** gibt. Statt je Zeile nachzufragen,
+        holt der Service die Datensätze der ganzen Seite in einem Zug.
+        """
+        if not tool_ids:
+            return []
+        query = select(DataSheet).where(DataSheet.tool_id.in_(list(tool_ids)))
+        result = await self.db.execute(query)
+        return list(result.scalars().unique().all())
+
     async def count_by_tool_id(
         self, tool_id: str, exclude_id: Optional[int] = None
     ) -> int:

@@ -1127,9 +1127,11 @@ Angaben liegen heute in PDFs ohne Ort in der Anwendung.
    **`require_admin`**. Verwaltung ist Administratoren vorbehalten; das Ausblenden
    von Knöpfen ist nicht die Sicherheitsmaßnahme.
 10. **Erreichbar auf zwei Wegen:** eigener Tab (Suche über die ganze Ablage) und
-    Zeilenaktion **„Datenblatt"** im Werkzeug-Zeilenmenü (`RowActionMenu`), die die
-    Datenblatt-Liste **auf diese Werkzeug-ID gefiltert** öffnet. Wer an der Maschine
+    die Zeilenaktion **„Datenblatt"** in der Werkzeugliste. Wer an der Maschine
     steht, kommt vom Werkzeug, nicht aus einer Liste.
+    > **Geändert durch DEC-069:** Die Aktion liegt nicht mehr im „…"-Menü und
+    > öffnet auch nicht mehr die gefilterte Liste, sondern das Dokument selbst –
+    > als eigenes Symbol neben dem Menü, und nur wenn es eines gibt.
 11. **Optik und Bedienung wie die Serienartikel-Liste** (DEC-063): Werk als
     Segmente, Suchfeld ohne sichtbare Beschriftung mit `aria-label`, Zebra +
     Glasverlauf, SVG-Sortierzeichen, Blätterleiste mit Bereichsangabe,
@@ -1420,6 +1422,101 @@ Query-Parameters `has_pdf`), `docs/20-datenblatt.md` (Abschnitt 3 und 5).
 Belege: `tests/test_data_sheets.py` – „Die Antwort meldet `has_pdf` genau dann,
 wenn eine Datei da ist" und „Verschwindet die Datei außerhalb der Anwendung,
 bleibt keine Lüge übrig".
+
+---
+
+# DEC-069 – Datenblatt-Symbol in der Werkzeugzeile, kein Umweg über die Suche
+**Status:** Verbindlich
+**Bezug:** DEC-065 Punkt 10 (Zeilenaktion „Datenblatt"), DEC-068 (`has_pdf` folgt
+der Dateiliste), DEC-063/§1.7 des UI-Guides (Icons), Anforderung 19 (Frontend/UX)
+**Auftrag des Projektinhabers:** „nur den button aus den aktionen dropdown
+rausholen und in die zelle neben aktion button packen mit svg. das datenblatt
+icon soll sich nur abbilden wenn es auch wirklich ein datenblatt für die ID gibt
+für das andere ausgrauen oder garnicht anzeigen. nicht auf die suche leiten im
+datenblatt."
+
+## Ausgangslage
+
+Die Zeilenaktion „Datenblatt" lag als Menüeintrag im „…"-Menü
+(`RowActionMenu`) und wechselte **immer** in den Bereich „Datenblätter": bei genau
+einem Datenblatt mit Datei öffnete sie das Dokument, sonst belegte sie dort die
+Suche mit der Werkzeug-ID vor. Zwei Folgen:
+
+- Das Menü sagte nichts über den Zustand: „Datenblatt" stand in jeder Zeile, auch
+  wenn es zu der ID gar keines gab.
+- Der Klick führte in eine **andere** Ansicht mit einer Suche, die der Benutzer
+  nicht gestellt hatte. Wer nur wissen wollte „gibt es hier ein Blatt?", landete
+  in der Ablage und musste zurück.
+
+## Regel
+
+1. **Eigenes Symbol in der Zeile.** Die Aktion steht als Knopf **neben** dem
+   „…"-Knopf in der Spalte „Aktionen", mit dem Lucide-Icon `FileText` als
+   Inline-SVG (dieselbe Kennzeichnung wie der Reiter „Datenblatt" im
+   Anlege-Formular). Im „…"-Menü gibt es „Datenblatt" **nicht mehr** – eine
+   Aktion, zwei Wege wäre genau die Doppelung, die dieses Projekt vermeidet.
+2. **Das Symbol steht nur, wenn es etwas zu öffnen gibt.** Bedingung ist
+   `has_data_sheet` aus der Werkzeugliste: ein Datenblatt zu **genau dieser**
+   Werkzeug-ID (DEC-052/055: exakter Vergleich) **mit hinterlegter Datei**
+   (DEC-068: gezählt wird der Ordner, nicht die Spalte `pdf_path`). Fehlt eines
+   von beidem, wird der Knopf **nicht gerendert** – ausgegraut wäre die
+   Alternative, gewählt ist „gar nicht anzeigen", damit keine toten Knöpfe in
+   einer dichten Tabelle stehen.
+3. **Der Klick öffnet das Dokument, sonst nichts.** Kein Bereichswechsel, keine
+   vorbelegte Suche. Gibt es mehrere Datenblätter zu der ID (DEC-065 Punkt 7),
+   öffnet das **erste** (sortiert nach Werkzeug-ID, dann Datensatz-ID) und ein
+   Hinweis nennt die Anzahl.
+4. **Die Liste liefert die Angabe mit.** `ToolRead.has_data_sheet` wird im
+   `ToolService` für die **ganze Seite in einer Abfrage** ermittelt (die IDs der
+   Seite, dann die Datenblätter dazu) – nicht je Zeile. Auch der Einzelsatz
+   (`GET /api/tools/{id}`) trägt das Feld, damit es nicht je Endpunkt etwas
+   anderes bedeutet.
+5. **Reihenfolge in der Zelle:** Datenblatt-Symbol links, „…" rechts, beide
+   rechtsbündig. Dadurch bleibt der „…"-Knopf in **jeder** Zeile an derselben
+   Stelle, auch in Zeilen ohne Symbol.
+
+## Begründung
+
+- Der Zustand gehört an die Stelle, an der die Entscheidung fällt: ein fehlendes
+  Symbol sagt „hier gibt es nichts" deutlicher als ein Menüeintrag, der danach
+  in eine leere Suche führt.
+- Das Symbol ist die **zweite** Aktion, die eine Zeile häufig braucht (nach
+  „Ausleihen") – sie verdient einen eigenen Knopf statt zwei Klicks im Menü.
+- Keine zweite Wahrheit: „gibt es ein Datenblatt?" wird **einmal** beantwortet
+  (dieselbe Prüfung wie in der Datenblatt-Antwort, DEC-068), aus derselben
+  Quelle, aus der auch die Liste ihre Dateien liest.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** Zurückschalten auf die gefilterte Liste als Rückfallweg. Fehlt das
+  Datenblatt zwischen Laden der Liste und Klick (gelöscht), gibt es eine Meldung
+  – keinen stillen Ansichtswechsel („Bitte die Werkzeugliste neu laden.").
+- **Kein** Zähler und keine Vorschau am Symbol: es sagt „es gibt eines", nicht
+  „wie viele" – die Anzahl nennt der Hinweis beim Öffnen.
+- **Keine** Änderung am Datei-Fenster (`PDFViewer`) und keine an der
+  Datenblatt-Liste außer dem Wegfall der vorbelegten Suche (`initialSearch`), die
+  es nur für diese Aktion gab.
+- **Keine** Pflicht: Werkzeuge **ohne** Werkzeug-ID (Abstreifer, Matrize –
+  DEC-055) können kein Datenblatt über die ID haben; dort fehlt das Symbol immer.
+
+## Umsetzung
+
+**Umgesetzt.**
+
+| Datei | Änderung |
+|---|---|
+| `crud/crud_data_sheet.py` | `get_by_tool_ids()` – alle Datenblätter zu den IDs einer Seite |
+| `schemas/tool.py` | `ToolRead.has_data_sheet` |
+| `services/tool_service.py` | `_tool_ids_with_data_sheet()`; gesetzt in `get_tools()` **und** `get_tool_read()` |
+| `components/tools/ToolTable.tsx` | Symbol links neben dem „…"-Knopf, Menüeintrag entfernt, Spalte „Aktionen" auf `w-[5.4rem]` |
+| `api/types.ts` | `Tool.has_data_sheet` |
+| `App.tsx` | `openDataSheetsForTool()` öffnet direkt; `dataSheetFilter` entfällt |
+| `components/data-sheets/DataSheetList.tsx` | Prop `initialSearch` entfällt (nur für diese Aktion) |
+
+Belege: `backend/tests/test_tools_list.py` (vier Fälle: mit Datei, ohne Datei,
+unscharfe ID, Einzelsatz), `frontend/tests/data-sheets.spec.ts` – „öffnet das
+Datenblatt direkt über das Symbol in der Zeile" (mit gemessener Lage der beiden
+Knöpfe und `svg`-Prüfung) und „zeigt kein Symbol, wenn es kein Datenblatt gibt".
 
 ---
 

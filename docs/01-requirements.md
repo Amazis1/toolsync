@@ -674,8 +674,9 @@ Administratoren vorbehalten. Suchen, Anzeigen und Herunterladen darf jeder aktiv
 Benutzer.
 
 Angelegt und bearbeitet wird im Sub-Reiter „Datenblatt" des Anlegeformulars sowie
-aus dem Bereich selbst. Zusätzlich führt eine Zeilenaktion **„Datenblatt"** in der
-Werkzeugliste direkt zu den Datenblättern dieser Werkzeug-ID.
+aus dem Bereich selbst. Zusätzlich öffnet ein Symbol in der Werkzeugzeile (neben
+dem Aktionsmenü) das Datenblatt dieser Werkzeug-ID direkt; es erscheint nur, wenn
+es zu der ID wirklich eines gibt (DEC-065 Punkt 10, DEC-068, DEC-069).
 
 Der **Inhalt** der PDF wird nicht analysiert und nicht in Datenbankfelder überführt
 (Abschnitt 6.3 gilt sinngemäß); die PDF ist die primäre Informationsquelle.

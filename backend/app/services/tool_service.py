@@ -2,13 +2,15 @@
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, List, Sequence
+from typing import Optional, List, Sequence, Set
 
 from ..models.tool import Tool
 from ..models.storage import Position, Cabinet, Drawer
 from ..models.enums import ToolCategory, ToolStatus
+from ..crud.crud_data_sheet import CRUDDataSheet
 from ..crud.crud_tool import CRUDTool, ToolSortKey, ToolSortOrder
 from ..schemas.tool import ToolRead
+from .data_sheet_service import DataSheetService
 
 
 def assert_tool_identity(
@@ -90,6 +92,12 @@ class ToolService:
             limit=limit,
         )
 
+        # Einmal für die ganze Seite, nicht je Zeile: welche Werkzeug-IDs haben
+        # ein Datenblatt mit Datei? (DEC-068)
+        mit_datenblatt = await self._tool_ids_with_data_sheet(
+            [tool.tool_id for tool, *_ in rows if tool.tool_id]
+        )
+
         items = []
         for tool, cabinet_name, drawer_name, position_name in rows:
             read = ToolRead.model_validate(tool)
@@ -98,15 +106,48 @@ class ToolService:
                     update={
                         "position_code": self._compose_position_code(
                             cabinet_name, drawer_name, position_name
-                        )
+                        ),
+                        "has_data_sheet": tool.tool_id in mit_datenblatt,
                     }
                 )
             )
 
         return {"items": items, "total": total, "skip": skip, "limit": limit}
 
+    async def _tool_ids_with_data_sheet(self, tool_ids: Sequence[str]) -> Set[str]:
+        """Werkzeug-IDs, zu denen es ein Datenblatt **mit Datei** gibt.
+
+        Gelesen wird der **Ordner** des Datensatzes (`DataSheetService.list_files`),
+        nicht die Spalte `pdf_path` – dieselbe Regel wie in der Datenblatt-Antwort
+        (DEC-068): sonst zeigte die Werkzeugliste ein Symbol, hinter dem nichts
+        liegt. Der Vergleich ist exakt und über die ganze Seite; Werkzeuge ohne
+        ID (Abstreifer, Matrize – DEC-055) können kein Datenblatt haben.
+        """
+        if not tool_ids:
+            return set()
+
+        sheets = await CRUDDataSheet(self.db).get_by_tool_ids(list(tool_ids))
+        if not sheets:
+            return set()
+
+        service = DataSheetService(self.db)
+        treffer: Set[str] = set()
+        for sheet in sheets:
+            if not sheet.tool_id or sheet.tool_id in treffer:
+                continue
+            plans, _ = service.list_files(sheet)
+            if plans:
+                treffer.add(sheet.tool_id)
+        return treffer
+
     async def get_tool_read(self, tool_id: int) -> Optional[ToolRead]:
-        """Einzelwerkzeug samt Lagerplatz-Code (None, wenn es nicht existiert)."""
+        """Einzelwerkzeug samt Lagerplatz-Code (None, wenn es nicht existiert).
+
+        `has_data_sheet` wird auch hier gefüllt: Das Feld steht in **jeder**
+        Werkzeug-Antwort, die über diese Methode läuft (Liste, Einzelsatz,
+        Favorit). Ein Feld, das je Endpunkt etwas anderes bedeutet, wäre genau
+        die zweite Wahrheit, die DEC-068 ausschließt.
+        """
         tool = await self.crud.get(tool_id)
         if not tool:
             return None
@@ -114,8 +155,14 @@ class ToolService:
         if tool.position_id is not None:
             position = await self._get_position(tool.position_id)
             code = await self._position_code(position) if position else None
+        mit_datenblatt = (
+            await self._tool_ids_with_data_sheet([tool.tool_id]) if tool.tool_id else set()
+        )
         return ToolRead.model_validate(tool).model_copy(
-            update={"position_code": code}
+            update={
+                "position_code": code,
+                "has_data_sheet": tool.tool_id in mit_datenblatt,
+            }
         )
 
     async def set_favorite(self, tool_id: int, is_favorite: bool) -> Optional[Tool]:

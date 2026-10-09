@@ -123,6 +123,12 @@ export interface Tool {
   is_favorite: boolean
   /** Lagerplatz-Code wie "01-A-25"; null = Ablage (kein fester Platz). */
   position_code: string | null
+  /**
+   * Gibt es zu **dieser Werkzeug-ID** ein Datenblatt mit hinterlegter Datei?
+   * Das Symbol in der Zeile steht nur dann (DEC-068) – es öffnet das Dokument
+   * direkt, ohne Umweg über den Datenblatt-Bereich.
+   */
+  has_data_sheet: boolean
   // Beziehungen werden vom Backend direkt mitgeliefert (lazy="joined")
   plant: Plant | null
   tool_type: ToolType | null

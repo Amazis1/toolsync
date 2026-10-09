@@ -56,4 +56,5 @@ backend/uploads/
 .audit/
 # pytest legt bei abgebrochenen Laeufen Cache-Verzeichnisse im Projekt an.
 pytest-cache-files-*
+.pytest_cache/
 

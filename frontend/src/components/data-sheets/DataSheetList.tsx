@@ -27,12 +27,6 @@ interface DataSheetListProps {
   refreshKey: number
   /** Nur Admins dürfen verwalten (DEC-065 Punkt 9); Lesen darf jeder. */
   canManage: boolean
-  /**
-   * Vorbelegte Suche – kommt aus der Zeilenaktion „Datenblatt" der
-   * Werkzeugliste (DEC-065 Punkt 10). Der Aufrufer gibt einen `key` mit, damit
-   * die Liste beim Wechsel des Werkzeugs neu aufgebaut wird.
-   */
-  initialSearch?: string
   /** Datei-Fenster öffnen (die Zeile selbst ist das Klickziel, DEC-059). */
   onOpenFiles: (sheet: DataSheet) => void
   onCreate: () => void
@@ -73,15 +67,14 @@ const SEGMENT_INPUT = 'absolute inset-0 h-full w-full cursor-pointer opacity-0'
 export default function DataSheetList({
   refreshKey,
   canManage,
-  initialSearch = '',
   onOpenFiles,
   onCreate,
   onEdit,
   onInfo,
   onError,
 }: DataSheetListProps) {
-  const [searchInput, setSearchInput] = useState(initialSearch)
-  const [search, setSearch] = useState(initialSearch)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const [plantId, setPlantId] = useState<number | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [busyFavoriteId, setBusyFavoriteId] = useState<number | null>(null)

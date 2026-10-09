@@ -123,13 +123,15 @@ const MainApp: React.FC = () => {
   >(null);
 
   // Datenblätter (DEC-065): eigener Bereich, Verwaltung durch Admins. Der
-  // Auftrag aus einer Werkzeugzeile filtert die Liste auf diese Werkzeug-ID.
+  // Auftrag aus einer Werkzeugzeile filtert die Liste **nicht** mehr: das Symbol
+  // öffnet das Datenblatt direkt (DEC-068). Die Übersicht bleibt beim Öffnen des
+  // Bereichs ungefiltert – eine vorbelegte Suche wäre eine zweite Wahrheit
+  // darüber, was der Benutzer sehen will.
   const canManageDataSheets = !!user?.is_admin;
   // Im Datei-Fenster dürfen Dateien nur Admins entfernen – in **beiden**
   // Bereichen (Serienartikel DEC-062, Datenblatt DEC-065).
   const canManageViewerFiles = !!user?.is_admin;
   const [dataSheetRefreshKey, setDataSheetRefreshKey] = useState(0);
-  const [dataSheetFilter, setDataSheetFilter] = useState<string | null>(null);
   const dataSheetToken = useRef(0);
   /**
    * Laufender Auftrag der Zeilenaktion „Datenblatt": eine späte Antwort einer
@@ -212,26 +214,22 @@ const MainApp: React.FC = () => {
   }
 
   /**
-   * Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10).
+   * Zeilenaktion „Datenblatt" in der Werkzeugliste (DEC-065 Punkt 10, DEC-068).
    *
-   * **Gibt es genau ein Datenblatt zu dieser ID, geht es direkt auf.** Wer an
-   * der Maschine steht, kommt vom Werkzeug: der Weg über den Bereich und die
-   * Liste wäre ein Umweg, den er nicht braucht.
+   * Das Symbol in der Zeile steht **nur**, wenn es zu dieser Werkzeug-ID ein
+   * Datenblatt mit hinterlegter Datei gibt (`has_data_sheet`). Der Klick öffnet
+   * es deshalb **direkt** – ohne Bereichswechsel, ohne vorbelegte Suche. Wer an
+   * der Maschine steht, kommt vom Werkzeug; ein Umweg über die Liste wäre keiner.
    *
-   * Sonst (kein Datenblatt, mehrere zu dieser ID, oder eines ohne hinterlegte
-   * Datei) wechselt die Ansicht in den Datenblatt-Bereich und filtert dort auf
-   * die ID – dann ist die Liste die richtige Antwort. Bei mehreren sagt ein
-   * Hinweis, warum.
+   * Gibt es mehrere Datenblätter zu der ID (DEC-065 Punkt 7: erlaubt, z. B. für
+   * eine andere Auflage), öffnet das erste – sortiert nach Werkzeug-ID und
+   * Datensatz-ID, also nachvollziehbar – und ein Hinweis nennt die Anzahl.
    */
   function openDataSheetsForTool(tool: { tool_id: string | null }) {
     const id = tool.tool_id?.trim();
-    // Ohne ID (Abstreifer, Matrize – DEC-055) gibt es nichts zu suchen; das
-    // Datenblatt ist dann nur über Werk und Maschine auffindbar.
-    if (!id) {
-      setDataSheetFilter('');
-      setActiveTab('datenblaetter');
-      return;
-    }
+    // Ohne ID (Abstreifer, Matrize – DEC-055) gibt es kein Datenblatt; das Symbol
+    // steht dort nicht, der Aufruf kann also nur über einen veralteten Stand kommen.
+    if (!id) return;
 
     // Ein Klick darf den vorigen Auftrag entwerten: kommt eine späte Antwort
     // nach einem zweiten Klick, öffnet sie sonst das falsche Datenblatt.
@@ -240,20 +238,26 @@ const MainApp: React.FC = () => {
     void getDataSheets({ toolId: id, limit: 200 })
       .then((seite) => {
         if (auftrag !== dataSheetRequestId.current) return;
-        const treffer = seite.items;
-        if (treffer.length === 1 && treffer[0].has_pdf) {
-          setViewingFiles(dataSheetViewer(treffer[0]));
-          return;
+
+        // Gezählt wird, was sich öffnen lässt: nur Datenblätter mit Datei.
+        const treffer = seite.items.filter((sheet) => sheet.has_pdf)
+        if (treffer.length === 0) {
+          // Zwischen Laden der Liste und Klick gelöscht – kein stiller Fehlschlag.
+          showToast(
+            'error',
+            `Zu „${id}“ gibt es kein Datenblatt mehr.`,
+            'Bitte die Werkzeugliste neu laden.',
+          )
+          return
         }
         if (treffer.length > 1) {
           showToast(
             'info',
             `Zu „${id}“ gibt es ${treffer.length} Datenblätter.`,
-            'Bitte das passende in der Liste wählen.',
-          );
+            'Angezeigt wird das erste.',
+          )
         }
-        setDataSheetFilter(id);
-        setActiveTab('datenblaetter');
+        setViewingFiles(dataSheetViewer(treffer[0]))
       })
       .catch((err: unknown) => {
         if (auftrag !== dataSheetRequestId.current) return;
@@ -262,8 +266,8 @@ const MainApp: React.FC = () => {
           'error',
           'Datenblatt konnte nicht geöffnet werden.',
           err instanceof Error ? err.message : undefined,
-        );
-      });
+        )
+      })
   }
 
   // Direktaufruf von /admin (Lesezeichen, Neuladen): Startwert kommt aus der
@@ -511,10 +515,8 @@ const MainApp: React.FC = () => {
                 {activeTab === 'datenblaetter' && (
                   <div className="app-content-block rounded-2xl p-5 shadow-xs space-y-4">
                     <DataSheetList
-                      key={dataSheetFilter ?? 'alle'}
                       refreshKey={dataSheetRefreshKey}
                       canManage={canManageDataSheets}
-                      initialSearch={dataSheetFilter ?? ''}
                       onOpenFiles={(sheet) => setViewingFiles(dataSheetViewer(sheet))}
                       onCreate={() => openDataSheetForm(null)}
                       onEdit={(sheet) => openDataSheetForm(sheet)}

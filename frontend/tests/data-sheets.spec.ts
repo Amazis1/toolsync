@@ -563,11 +563,27 @@ test.describe('Datenblätter – Weg vom Werkzeug', () => {
   test.beforeEach(() => requireSeed())
 
   /**
-   * **Gibt es genau ein Datenblatt zu dieser ID, geht es direkt auf**
-   * (DEC-065 Punkt 10). Wer an der Maschine steht, kommt vom Werkzeug: der
-   * Umweg über den Bereich und die Liste wäre unnoetig.
+   * Werkzeuge, die diese Tests nur für die Zeilenaktion anlegen.
+   *
+   * Sie werden **nach jedem Test** wieder entfernt (`afterEach` läuft auch nach
+   * einem Fehlschlag). Ohne das blieb je Lauf ein Werkzeug in der Liste stehen –
+   * die Werkzeugliste des Entwicklungsstands war voll von `DB-…`-Zeilen aus
+   * früheren Läufen.
    */
-  test('öffnet das Datenblatt direkt, wenn es genau eines gibt', async ({ page, request }) => {
+  const angelegteWerkzeuge: number[] = []
+
+  test.afterEach(async ({ request }) => {
+    for (const id of angelegteWerkzeuge.splice(0)) {
+      await request.delete(`/api/tools/${id}`, { headers: authHeaders() })
+    }
+  })
+
+  /**
+   * **Gibt es ein Datenblatt zu dieser ID, steht das Symbol in der Zeile und
+   * öffnet es direkt** (DEC-065 Punkt 10, DEC-068). Wer an der Maschine steht,
+   * kommt vom Werkzeug: weder Bereichswechsel noch vorbelegte Suche.
+   */
+  test('öffnet das Datenblatt direkt über das Symbol in der Zeile', async ({ page, request }) => {
     const werkzeugId = `${PREFIX}1075000`
 
     // Aufräumen **vor** dem Anlegen: ein Rest aus einem früheren Lauf würde das
@@ -614,35 +630,70 @@ test.describe('Datenblätter – Weg vom Werkzeug', () => {
       },
     })
     expect(angelegt.ok(), `Testwerkzeug anlegen: HTTP ${angelegt.status()}`).toBe(true)
+    angelegteWerkzeuge.push((await angelegt.json()).id)
 
     await openWithToken(page, adminToken)
     await page.getByRole('button', { name: 'Werkzeuge', exact: true }).click()
     // Auf der Werkzeuge-Seite heisst das Suchfeld anders als im Datenblatt-Bereich.
     await suche(page, werkzeugId, 'Werkzeuge durchsuchen')
 
-    // Die Zeile steht wirklich da, bevor das Menü geöffnet wird.
+    // Die Zeile steht wirklich da, bevor das Symbol geklickt wird.
     const zeile = page.locator('tbody tr').filter({ hasText: werkzeugId }).first()
     await expect(zeile).toBeVisible({ timeout: 10_000 })
+
+    const symbol = zeile.getByRole('button', {
+      name: `Datenblatt zu ${werkzeugId} öffnen`,
+    })
+    await expect(symbol).toBeVisible()
+
+    // Ein echtes Inline-SVG (Lucide, Guide §1.7) – kein Bild, keine Schrift, und
+    // ohne Netzzugriff: die Datei steht im Bundle.
+    await expect(symbol.locator('svg')).toHaveCount(1)
+
+    // Gerendert gemessen: Symbol und „…"-Knopf stehen in **einer** Zeile
+    // nebeneinander, das Symbol links davon (die Zelle ist rechtsbündig).
+    const lage = await zeile.evaluate((row) => {
+      const knoepfe = row.querySelectorAll('td:last-child button')
+      const links = knoepfe[0].getBoundingClientRect()
+      const rechts = knoepfe[1].getBoundingClientRect()
+      return {
+        linksRechts: links.right,
+        rechtsLinks: rechts.left,
+        linksOben: Math.round(links.top),
+        rechtsOben: Math.round(rechts.top),
+      }
+    })
+    expect(lage.linksRechts).toBeLessThanOrEqual(lage.rechtsLinks + 1)
+    expect(lage.linksOben).toBe(lage.rechtsOben)
+
+    // „Datenblatt" steht **nicht** mehr im „…"-Menü: die Aktion liegt jetzt als
+    // eigenes Symbol daneben.
     await oeffneZeilenmenue(page, werkzeugId)
-    await page.getByRole('menuitem', { name: 'Datenblatt' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Datenblatt' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    await symbol.click()
 
     // Kein Bereichswechsel: das Datei-Fenster geht auf und nennt die ID.
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 15_000 })
     await expect(dialog).toContainText(werkzeugId)
     await dialog.getByRole('button', { name: 'Schließen' }).click()
+
+    // Danach steht weiterhin die Werkzeugliste – die Suche dort ist unverändert.
+    await expect(page.getByLabel('Werkzeuge durchsuchen')).toHaveValue(werkzeugId)
   })
 
   /**
-   * **Ohne Datenblatt zur ID** wechselt die Ansicht in den Bereich und filtert –
-   * dann ist die Liste die richtige Antwort (dort laesst sich eines anlegen).
+   * **Ohne Datenblatt zur ID gibt es kein Symbol** (DEC-068) – und der Klick
+   * kann schon deshalb nicht in den Datenblatt-Bereich führen.
    *
    * Das Testwerkzeug wird hier angelegt, nicht aus dem Bestand genommen: die
    * Testdaten dieser Spec enthalten selbst ein Datenblatt zu ihrer ID, ein
    * beliebiges vorhandenes Werkzeug kann also eines haben – der Test wäre dann
    * vom Zufall abhaengig.
    */
-  test('wechselt in den Bereich, wenn es kein Datenblatt gibt', async ({ page, request }) => {
+  test('zeigt kein Symbol, wenn es kein Datenblatt gibt', async ({ page, request }) => {
     const werkzeugId = `${PREFIX}OHNE-BLATT`
 
     const typen = await (
@@ -670,18 +721,28 @@ test.describe('Datenblätter – Weg vom Werkzeug', () => {
       },
     })
     expect(angelegt.ok(), `Testwerkzeug anlegen: HTTP ${angelegt.status()}`).toBe(true)
+    angelegteWerkzeuge.push((await angelegt.json()).id)
 
     await openWithToken(page, adminToken)
     await page.getByRole('button', { name: 'Werkzeuge', exact: true }).click()
     await suche(page, werkzeugId, 'Werkzeuge durchsuchen')
-    await oeffneZeilenmenue(page, werkzeugId)
-    await page.getByRole('menuitem', { name: 'Datenblatt' }).click()
 
-    // Kein Datenblatt: der Bereich wechselt und die Suche steht auf der ID.
+    const zeile = page.locator('tbody tr').filter({ hasText: werkzeugId }).first()
+    await expect(zeile).toBeVisible({ timeout: 10_000 })
+
+    // Kein Datenblatt: kein Symbol. (Ausgegraut wäre die Alternative; gewählt ist
+    // „gar nicht anzeigen", damit keine toten Knöpfe in der Liste stehen.)
     await expect(
-      page.getByRole('heading', { name: 'Datenblätter', exact: true }),
-    ).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByLabel('Datenblätter durchsuchen')).toHaveValue(werkzeugId)
+      zeile.getByRole('button', { name: `Datenblatt zu ${werkzeugId} öffnen` }),
+    ).toHaveCount(0)
+
+    // Das „…"-Menü enthält die Aktion auch nicht mehr – es gibt sie nur als Symbol.
+    await oeffneZeilenmenue(page, werkzeugId)
+    await expect(page.getByRole('menuitem', { name: 'Datenblatt' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    // Und die Ansicht bleibt die Werkzeugliste (kein Wechsel in die Suche).
+    await expect(page.getByLabel('Werkzeuge durchsuchen')).toBeVisible()
   })
 })
 

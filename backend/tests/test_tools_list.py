@@ -15,16 +15,25 @@ Ausführen im backend-Verzeichnis:
     python -m pytest tests/test_tools_list.py -q
 """
 
+import io
+import shutil
+import uuid
+from pathlib import Path
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from starlette.datastructures import Headers, UploadFile
 
 from app.models.base import Base
+from app.models.data_sheet import DataSheet  # noqa: F401  (Modell registrieren)
 from app.models.master_data import Plant, ToolType
 from app.models.storage import Cabinet, Drawer, Position
 from app.models.tool import Tool
 from app.models.movement import ToolMovement  # noqa: F401  (Model registrieren)
 from app.models.enums import ToolCategory, ToolStatus
+from app.schemas.data_sheet import DataSheetCreate
+from app.services.data_sheet_service import DataSheetService
 from app.services.tool_service import ToolService
 
 pytestmark = pytest.mark.asyncio
@@ -349,3 +358,120 @@ async def test_favorites_are_global_and_filterable(session, workspace):
 async def test_favorite_of_unknown_tool_returns_none(session, workspace):
     """Ein unbekanntes Werkzeug liefert None -> der Router antwortet 404."""
     assert await ToolService(session).set_favorite(999999, True) is None
+
+
+# --------------------------------------------------------------------------
+# Datenblatt-Symbol je Zeile (DEC-068)
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def datenblatt_ablage(monkeypatch):
+    """Temporäre Ablage für Datenblätter – im Projektordner, nicht im System-Temp.
+
+    Der `ToolService` baut seinen `DataSheetService` selbst und nimmt dessen
+    Standardwurzel. Beide müssen dieselbe Ablage sehen, deshalb wird sie über
+    `TOOLSYNC_UPLOAD_DIR` gesetzt (wie in `test_data_sheets.py` über den
+    `root`-Parameter).
+    """
+    base = Path(__file__).resolve().parent / "_uploads_tmp" / uuid.uuid4().hex
+    base.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("TOOLSYNC_UPLOAD_DIR", str(base))
+    try:
+        yield base
+    finally:
+        shutil.rmtree(base.parent, ignore_errors=True)
+
+
+def _pdf_upload(name: str = "plan.pdf"):
+    return UploadFile(
+        file=io.BytesIO(b"%PDF-1.4 Testinhalt"),
+        filename=name,
+        headers=Headers({"content-type": "application/pdf"}),
+    )
+
+
+async def _datenblatt(session, workspace, tool_id: str, mit_datei: bool):
+    """Datenblatt anlegen – mit oder ohne hinterlegte Datei."""
+    service = DataSheetService(session)
+    return await service.create(
+        DataSheetCreate(
+            tool_id=tool_id,
+            plant_id=workspace["plant"].id,
+            name=f"Blatt {tool_id}",
+        ),
+        pdf_files=_pdf_upload() if mit_datei else None,
+    )
+
+
+async def test_has_data_sheet_nur_mit_datei(session, workspace, datenblatt_ablage):
+    """Das Symbol steht nur, wenn zu der ID ein Datenblatt **mit Datei** gehört.
+
+    Drei Fälle in einer Liste: mit Datei (Symbol), Datensatz ohne Datei (kein
+    Symbol – das Symbol führte sonst ins Leere) und ohne jeden Datensatz.
+    """
+    await _datenblatt(session, workspace, "01025000", mit_datei=True)
+    await _datenblatt(session, workspace, "01060000", mit_datei=False)
+
+    items = (await ToolService(session).get_tools(limit=50))["items"]
+    flag = {t.tool_id: t.has_data_sheet for t in items if not t.is_storage}
+
+    assert flag["01025000"] is True
+    assert flag["01060000"] is False
+
+
+async def test_has_data_sheet_ist_exakt_und_nicht_unscharf(
+    session, workspace, datenblatt_ablage
+):
+    """„188" ist nicht „1880" – verglichen wird die ganze ID.
+
+    Dieselbe Überlegung wie beim Filter der Zeilenaktion (DEC-065 Punkt 10): eine
+    unscharfe Zuordnung ließe die Werkzeugliste ein Symbol für ein fremdes
+    Datenblatt zeigen.
+    """
+    await _datenblatt(session, workspace, "1880", mit_datei=True)
+    session.add(
+        Tool(
+            tool_id="188",
+            category=ToolCategory.STEMPEL,
+            status=ToolStatus.AVAILABLE,
+            measure_a="7,00",
+            plant_id=workspace["plant"].id,
+            tool_type_id=workspace["round_type"].id,
+        )
+    )
+    await session.commit()
+
+    items = (await ToolService(session).get_tools(limit=50))["items"]
+    flag = {t.tool_id: t.has_data_sheet for t in items}
+    assert flag["188"] is False
+
+
+async def test_has_data_sheet_auch_beim_einzelnen_werkzeug(
+    session, workspace, datenblatt_ablage
+):
+    """Einzelsatz und Favoriten-Endpunkt tragen dasselbe Feld wie die Liste."""
+    tool = workspace["on_place"]
+    await _datenblatt(session, workspace, "01025000", mit_datei=True)
+
+    einzeln = await ToolService(session).get_tool_read(tool.id)
+    assert einzeln is not None
+    assert einzeln.has_data_sheet is True
+
+
+async def test_has_data_sheet_falsch_ohne_werkzeug_id(session, workspace):
+    """Ohne Werkzeug-ID gibt es kein Datenblatt (DEC-055) – kein Symbol."""
+    ohne_id = Tool(
+        tool_id=None,
+        category=ToolCategory.ABSTREIFER,
+        status=ToolStatus.AVAILABLE,
+        measure_a="7,00",
+        plant_id=workspace["plant"].id,
+        tool_type_id=workspace["round_type"].id,
+    )
+    session.add(ohne_id)
+    await session.commit()
+
+    einzeln = await ToolService(session).get_tool_read(ohne_id.id)
+    assert einzeln is not None
+    assert einzeln.has_data_sheet is False

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  FileTextIcon,
   SortAscIcon,
   SortDescIcon,
   SortableIcon,
@@ -24,7 +25,9 @@ interface ToolTableProps {
   onLend: (tool: Tool) => void
   /**
    * Datenblätter dieses Werkzeugs öffnen (DEC-065 Punkt 10): wer an der Maschine
-   * steht, kommt vom Werkzeug – nicht aus einer Liste.
+   * steht, kommt vom Werkzeug – nicht aus einer Liste. Das Symbol in der Zeile
+   * steht nur, wenn es zu der ID wirklich ein Datenblatt **mit Datei** gibt
+   * (`has_data_sheet`, DEC-068).
    */
   onOpenDataSheets: (tool: Tool) => void
 }
@@ -220,10 +223,10 @@ export default function ToolTable({
               <th
                 scope="col"
                 // Ausgeschrieben statt „…"-Symbol: die Überschrift soll sagen,
-                // was in der Spalte steht. Der Zeilenknopf bleibt der „…"-Knopf,
-                // damit die Spalte schmal und jede Zeile gleich breit ist
-                // („Ausleihen" steht als erster Menüeintrag).
-                className="w-[4.6rem] px-1.5 py-2.5 text-right font-semibold uppercase tracking-wider text-slate-600"
+                // was in der Spalte steht. In der Zeile stehen zwei Knöpfe – das
+                // Datenblatt-Symbol (nur mit Datenblatt) und der schmale „…"-Knopf
+                // für alle übrigen Aktionen.
+                className="w-[5.4rem] px-1.5 py-2.5 text-right font-semibold uppercase tracking-wider text-slate-600"
               >
                 Aktionen
               </th>
@@ -373,42 +376,52 @@ export default function ToolTable({
                     </span>
                   </td>
 
-                  {/* Aktionen: nur „…" – das Menü fährt nach links aus. */}
-                  <td className="w-12 px-1.5 py-2 text-right">
-                    <RowActionMenu
-                      label={toolLabel(tool.tool_id)}
-                      actions={[
-                        // Ausleihen für alles, was nicht bereits draußen ist:
-                        // Ein Status wird selten gepflegt, „schon verliehen"
-                        // ist der einzige Zustand, der das Ausleihen sperrt.
-                        ...(tool.status === 'lent'
-                          ? []
-                          : [
-                              {
-                                key: 'lend',
-                                label: 'Ausleihen',
-                                primary: true,
-                                onSelect: () => onLend(tool),
-                              },
-                            ]),
-                        {
-                          key: 'sheets',
-                          label: 'Datenblatt',
-                          onSelect: () => onOpenDataSheets(tool),
-                        },
-                        {
-                          key: 'edit',
-                          label: 'Bearbeiten',
-                          onSelect: () => onEdit(tool),
-                        },
-                        {
-                          key: 'delete',
-                          label: 'Löschen',
-                          danger: true,
-                          onSelect: () => onDelete(tool),
-                        },
-                      ]}
-                    />
+                  {/* Aktionen: Datenblatt-Symbol (nur wenn es eines gibt) und
+                      „…"-Menü. Das Menü fährt nach links aus. Beide Knöpfe sind
+                      rechtsbündig, deshalb bleibt der „…"-Knopf in jeder Zeile
+                      an derselben Stelle – auch in Zeilen ohne Symbol. */}
+                  <td className="w-[5.4rem] px-1.5 py-2">
+                    <div className="flex items-center justify-end gap-1">
+                      {tool.has_data_sheet && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenDataSheets(tool)}
+                          aria-label={`Datenblatt zu ${toolLabel(tool.tool_id)} öffnen`}
+                          className="ui-btn ui-btn-secondary ui-btn-sm"
+                        >
+                          <FileTextIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <RowActionMenu
+                        label={toolLabel(tool.tool_id)}
+                        actions={[
+                          // Ausleihen für alles, was nicht bereits draußen ist:
+                          // Ein Status wird selten gepflegt, „schon verliehen"
+                          // ist der einzige Zustand, der das Ausleihen sperrt.
+                          ...(tool.status === 'lent'
+                            ? []
+                            : [
+                                {
+                                  key: 'lend',
+                                  label: 'Ausleihen',
+                                  primary: true,
+                                  onSelect: () => onLend(tool),
+                                },
+                              ]),
+                          {
+                            key: 'edit',
+                            label: 'Bearbeiten',
+                            onSelect: () => onEdit(tool),
+                          },
+                          {
+                            key: 'delete',
+                            label: 'Löschen',
+                            danger: true,
+                            onSelect: () => onDelete(tool),
+                          },
+                        ]}
+                      />
+                    </div>
                   </td>
                 </tr>
               )

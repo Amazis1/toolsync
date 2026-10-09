@@ -236,12 +236,22 @@ Serienartikel-Formular (DEC-056 Punkt 5) mit diesen Abweichungen:
 
 ## 10. Erreichbarkeit
 
-Ein Datenblatt ist auf **zwei** Wegen erreichbar (DEC-065 Punkt 10):
+Ein Datenblatt ist auf **zwei** Wegen erreichbar (DEC-065 Punkt 10, DEC-069):
 
 1. **Tab „Datenblätter"** – die Ablage, durchsuchbar über alle Datensätze.
-2. **Zeilenaktion „Datenblatt"** im Werkzeug-Zeilenmenü (`RowActionMenu`) – öffnet
-   die Datenblatt-Liste **auf diese Werkzeug-ID gefiltert**. Wer an der Maschine
-   steht, kommt vom Werkzeug, nicht aus einer Liste.
+2. **Symbol in der Werkzeugzeile** – neben dem „…"-Knopf der Spalte „Aktionen".
+   Es steht **nur**, wenn es zu dieser Werkzeug-ID ein Datenblatt **mit Datei**
+   gibt (`has_data_sheet`, DEC-068), und öffnet das Dokument **direkt** im
+   Datei-Fenster. Kein Bereichswechsel, keine vorbelegte Suche: wer an der
+   Maschine steht, kommt vom Werkzeug, nicht aus einer Liste. Gibt es mehrere
+   Datenblätter zu der ID, öffnet das erste und ein Hinweis nennt die Anzahl.
+
+> **Warum kein Weg über die gefilterte Liste mehr:** Bis DEC-069 wechselte die
+> Zeilenaktion in den Bereich „Datenblätter" und belegte die Suche mit der ID
+> vor – auch dann, wenn es gar kein Datenblatt gab. Der Benutzer landete in einer
+> fremden Ansicht mit einer Suche, die er nicht gestellt hatte. Jetzt sagt das
+> Symbol selbst, ob es etwas zu öffnen gibt (es fehlt sonst), und der Klick
+> öffnet genau das.
 
 ## 11. Bekannte Grenzen
 
