@@ -187,8 +187,18 @@ class DataSheetService:
     # Pfade und Ordner
     # ------------------------------------------------------------------
     def sheet_dir(self, sheet_id: int) -> Path:
-        """Ordner eines Datensatzes (nach der **ID**, siehe Modulkopf)."""
-        return self.root / UPLOAD_SUBDIR.name / str(sheet_id)
+        """Ordner eines Datensatzes (nach der **ID**, siehe Modulkopf).
+
+        **`self.root` ist die Wurzel der Ablage**, nicht der Bereichsordner: der
+        Standardwert ist `backend/uploads/data_sheets`. Hier darf deshalb
+        **kein** `UPLOAD_SUBDIR.name` mehr angehängt werden – sonst entsteht
+        `uploads/data_sheets/data_sheets/<id>`. Genau das war der Fall, nachdem
+        der `root`-Parameter zu wirken begann: Die Dateien lagen in einem
+        doppelten Ordner, das Auflisten fand sie nicht, und die Oberfläche zeigte
+        bei jedem Datenblatt eine leere Dateiliste (`plans: []`), während
+        `has_pdf` aus der Datenbank weiterhin `true` meldete.
+        """
+        return self.root / str(sheet_id)
 
     def _is_inside_root(self, path: Path) -> bool:
         try:
