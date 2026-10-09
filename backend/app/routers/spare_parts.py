@@ -11,6 +11,7 @@ from ..crud.crud_spare_part import SparePartSortKey, SparePartSortOrder
 from ..models.spare_part import SparePart
 from ..schemas.spare_part import (
     SparePartCreate,
+    SparePartFavoriteUpdate,
     SparePartPage,
     SparePartRead,
     SparePartUpdate,
@@ -57,6 +58,9 @@ async def get_spare_parts(
     plant_id: Optional[int] = Query(None, description="Nur dieses Werk."),
     machine_id: Optional[int] = Query(None, description="Nur diese Maschine."),
     type: Optional[str] = Query(None, description="Nur dieser Typ (genau)."),
+    favorites_only: bool = Query(
+        False, description="Nur favorisierte Ersatzteile (global, DEC-063)."
+    ),
     sort: SparePartSortKey = Query("article_number", description="Sortierspalte."),
     order: SparePartSortOrder = Query("asc", description="Sortierrichtung."),
     skip: int = Query(0, ge=0, description="Übersprungene Datensätze (Offset)."),
@@ -83,6 +87,7 @@ async def get_spare_parts(
         plant_id=plant_id,
         machine_id=machine_id,
         type=type,
+        favorites_only=favorites_only,
         sort=sort,
         order=order,
         skip=skip,
@@ -179,6 +184,26 @@ async def update_spare_part(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     if not part:
+        raise HTTPException(status_code=404, detail="Ersatzteil nicht gefunden")
+    return await _to_read(part, service)
+
+
+@router.put("/{id}/favorite", response_model=SparePartRead)
+async def set_spare_part_favorite(
+    id: int,
+    data: SparePartFavoriteUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active),
+):
+    """Favoriten-Markierung setzen (global, ohne Admin-Recht – wie DEC-063).
+
+    Eigener Endpunkt: so setzt ein normales Bearbeiten (PUT /{id}) die
+    Markierung nicht zurueck, weil `is_favorite` nicht in `SparePartUpdate`
+    steht.
+    """
+    service = SparePartService(db)
+    part = await service.set_favorite(id, data.is_favorite)
+    if part is None:
         raise HTTPException(status_code=404, detail="Ersatzteil nicht gefunden")
     return await _to_read(part, service)
 

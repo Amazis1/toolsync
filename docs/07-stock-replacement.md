@@ -301,7 +301,7 @@ Werkzeuge liegen danach in der **Werkzeug-Ablage** (DEC-050). Die Antwort enthä
 |---|---|---|
 | `Lager/Ersatz`-Tab (Variante B, **abgelöst**) | `GET /api/storage/?search=…` | `storage_id`, `name`, `article_number` (jeweils `ilike`) |
 | Werkzeugliste (Variante A) | `GET /api/tools/?tool_id=…&is_storage=…` | `tool_id` (`ilike`), `category`, `plant_id`, `is_storage` |
-| Tab `Ersatzteile` (**geplant, DEC-064**) | `GET /api/spare-parts/?search=…` | `article_number`, `name`, `type`, `storage_place` + `plant_id` |
+| Tab `Ersatzteile` (**umgesetzt**, DEC-064/066) | `GET /api/spare-parts/?search=…` | `article_number`, `name`, `type`, `storage_place`, `description` sowie Werk- und Maschinenname (`ilike`); Filter `plant_id`, `machine_id`, `type`, `favorites_only` |
 
 - `StorageItemList.tsx`: Suchfeld mit Platzhalter „Lager/Ersatz durchsuchen
   (ID, Name, Typ, Artikelnummer) …", **300 ms Debounce**, `limit` serverseitig mit

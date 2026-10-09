@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { getPlants } from '../../api/tools'
-import { deleteSparePart, getSpareParts } from '../../api/spareParts'
+import {
+  deleteSparePart,
+  getSpareParts,
+  setSparePartFavorite,
+} from '../../api/spareParts'
 import type { Plant } from '../../api/types'
 import type { SparePart, SparePartPage, SparePartSortKey } from '../../types/spare-part'
 import { pageCount } from '../../lib/toolQuery'
@@ -14,6 +18,7 @@ import {
   SortableIcon,
   SortAscIcon,
   SortDescIcon,
+  StarIcon,
   XIcon,
 } from '../icons'
 
@@ -36,16 +41,19 @@ const SEARCH_DEBOUNCE_MS = 350
 const DEFAULT_SORT: SparePartSortKey = 'article_number'
 const DEFAULT_ORDER: 'asc' | 'desc' = 'asc'
 
-// Spaltenreihenfolge nach Wichtigkeit (Entscheidung des Projektinhabers):
-// erst **was** es ist (Artikelnummer, Menge), dann **wie** es heißt (Name/Typ)
-// und **wo** es liegt (Lagerort), zuletzt die Zuordnung (Werk, Maschine).
+// Spaltenreihenfolge (Entscheidung des Projektinhabers): erst **was** es ist
+// (Artikelnummer), dann **wie** es heisst (Name/Typ), dann **wie viel** daliegt
+// (Menge), dann **wo** (Lagerort), zuletzt die Zuordnung (Werk, Maschine).
+// Favorit und Aktionen stehen rechts aussen – wie in der Datenblattliste.
 const COLUMNS: { key: SparePartSortKey | null; label: string; className?: string }[] = [
   { key: 'article_number', label: 'Artikelnummer' },
-  { key: 'quantity', label: 'Menge', className: 'text-right' },
   { key: 'name', label: 'Name / Typ' },
+  // Menge mittig: die Zahl ist der haeufigste Blick in dieser Liste.
+  { key: 'quantity', label: 'Menge', className: 'text-center' },
   { key: 'storage_place', label: 'Lagerort' },
   { key: 'plant', label: 'Werk' },
   { key: 'machine', label: 'Maschine' },
+  { key: null, label: 'Favorit', className: 'w-16 text-center' },
   { key: null, label: 'Aktionen', className: 'w-14 text-right' },
 ]
 
@@ -76,6 +84,7 @@ export default function SparePartList({
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [plantId, setPlantId] = useState<number | null>(null)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [sort, setSort] = useState<SparePartSortKey>(DEFAULT_SORT)
   const [order, setOrder] = useState<'asc' | 'desc'>(DEFAULT_ORDER)
   const [page, setPage] = useState(1)
@@ -89,6 +98,8 @@ export default function SparePartList({
 
   const [partToDelete, setPartToDelete] = useState<SparePart | null>(null)
   const [deleting, setDeleting] = useState(false)
+  /** Welcher Stern gerade gespeichert wird (Knopf ist so lange gesperrt). */
+  const [busyFavoriteId, setBusyFavoriteId] = useState<number | null>(null)
 
   // Läuft die Tabelle seitlich über? Nur dann erscheint der Hinweis (gemessen).
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -139,6 +150,7 @@ export default function SparePartList({
       getSpareParts({
         search,
         plantId: plantId ?? undefined,
+        favoritesOnly,
         sort,
         order,
         skip: (page - 1) * pageSize,
@@ -164,16 +176,67 @@ export default function SparePartList({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [search, plantId, sort, order, page, pageSize, refreshKey, reload])
+  }, [search, plantId, favoritesOnly, sort, order, page, pageSize, refreshKey, reload])
+
+  /** Favorit umschalten – optimistisch, mit Rücknahme bei einem Fehler. */
+  async function toggleFavorite(part: SparePart) {
+    const gewuenscht = !part.is_favorite
+    setBusyFavoriteId(part.id)
+    setData((current) =>
+      current === null
+        ? current
+        : {
+            ...current,
+            items: current.items.map((eintrag) =>
+              eintrag.id === part.id ? { ...eintrag, is_favorite: gewuenscht } : eintrag,
+            ),
+          },
+    )
+    try {
+      await setSparePartFavorite(part.id, gewuenscht)
+      // Bei „Nur Favoriten" fällt die Zeile nach dem Entfernen aus der Ansicht.
+      if (favoritesOnly && !gewuenscht) {
+        setData((current) =>
+          current === null
+            ? current
+            : {
+                ...current,
+                items: current.items.filter((eintrag) => eintrag.id !== part.id),
+                total: Math.max(0, current.total - 1),
+              },
+        )
+      }
+    } catch (err) {
+      // Rücknahme: der Stern steht wieder wie vorher.
+      setData((current) =>
+        current === null
+          ? current
+          : {
+              ...current,
+              items: current.items.map((eintrag) =>
+                eintrag.id === part.id ? { ...eintrag, is_favorite: !gewuenscht } : eintrag,
+              ),
+            },
+      )
+      onError(
+        err instanceof Error
+          ? err.message
+          : 'Die Favoriten-Markierung konnte nicht gesetzt werden.',
+      )
+    } finally {
+      setBusyFavoriteId(null)
+    }
+  }
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
-  const filterActive = search.trim() !== '' || plantId !== null
+  const filterActive = search.trim() !== '' || plantId !== null || favoritesOnly
 
   function resetFilters() {
     setSearchInput('')
     setSearch('')
     setPlantId(null)
+    setFavoritesOnly(false)
     setPage(1)
   }
 
@@ -254,6 +317,30 @@ export default function SparePartList({
               </div>
             </div>
           )}
+
+          {/* Favoriten-Filter wie in der Datenblattliste: derselbe Stern, der
+              auch in der Spalte steht, damit die Verbindung sichtbar ist. */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-600">Favoriten</span>
+            <div className="ui-segments">
+              <label>
+                <input
+                  type="checkbox"
+                  className={SEGMENT_INPUT}
+                  checked={favoritesOnly}
+                  onChange={(event) => {
+                    setFavoritesOnly(event.target.checked)
+                    setPage(1)
+                  }}
+                />
+                <StarIcon
+                  filled={favoritesOnly}
+                  className={`h-3.5 w-3.5 ${favoritesOnly ? 'text-amber-600' : 'text-slate-600'}`}
+                />
+                Nur Favoriten
+              </label>
+            </div>
+          </div>
 
           {filterActive && (
             <button type="button" onClick={resetFilters} className="ui-btn ui-btn-ghost ui-btn-sm">
@@ -409,12 +496,6 @@ export default function SparePartList({
                     {part.article_number}
                   </span>
                 </td>
-                {/* Menge direkt nach der Artikelnummer: die Zahl gehört zur
-                    Identität des Teils (Bestand). */}
-                <td className="tnum px-3 py-2 text-right text-slate-900">
-                  {part.quantity}
-                  {part.unit ? <span className="ml-1 text-slate-500">{part.unit}</span> : null}
-                </td>
                 {/* Name = zweite Kennung: heller Kasten in Mono mit **Sky-Kante**,
                     genau wie in der Serienartikel- und Datenblatt-Liste (DEC-063).
                     Die Artikelnummer trägt die Teal-Kante – unterschieden wird nur
@@ -434,6 +515,20 @@ export default function SparePartList({
                       {part.type}
                     </span>
                   )}
+                </td>
+                {/* Menge: mittig und als **Zahl im Kasten** – der Bestand ist der
+                    häufigste Blick in dieser Liste, und eine nackte Ziffer geht
+                    zwischen den Textspalten unter. `tnum` hält die Ziffern
+                    untereinander gleich breit, damit die Spalte ruhig steht. */}
+                <td className="px-3 py-2 text-center">
+                  <span className="tnum inline-flex min-w-[3.25rem] items-baseline justify-center gap-1 rounded-lg border border-teal-600/25 bg-white/85 px-2 py-0.5">
+                    <span className="text-base font-bold leading-none text-slate-900">
+                      {part.quantity}
+                    </span>
+                    {part.unit ? (
+                      <span className="text-xs text-slate-600">{part.unit}</span>
+                    ) : null}
+                  </span>
                 </td>
                 {/* Lagerort – **deutlich** wie der Lagerplatz in der Werkzeugliste:
                     der Matrix-Platz als Mono-Kasten mit **Sky-Kante** (Ort = Info),
@@ -477,6 +572,34 @@ export default function SparePartList({
                       {part.machine?.name ?? <span className="text-slate-600">—</span>}
                     </span>
                   </span>
+                </td>
+                {/* Favorit: **global** (nicht pro Benutzer, DEC-063). Gefüllter
+                    Stern = gesetzt, offener Stern = nicht gesetzt – die Form
+                    trägt die Information, nicht nur die Farbe. */}
+                <td className="w-16 px-2 py-2 text-center">
+                  <button
+                    type="button"
+                    aria-label={
+                      part.is_favorite
+                        ? `Favorit für ${part.article_number} entfernen`
+                        : `Favorit für ${part.article_number} hinzufügen`
+                    }
+                    aria-pressed={part.is_favorite}
+                    title={part.is_favorite ? 'Favorit entfernen' : 'Zu den Favoriten'}
+                    disabled={busyFavoriteId === part.id}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void toggleFavorite(part)
+                    }}
+                    className="rounded-lg p-1 hover:bg-white/70 disabled:opacity-50"
+                  >
+                    <StarIcon
+                      filled={part.is_favorite}
+                      className={`mx-auto h-4 w-4 ${
+                        part.is_favorite ? 'text-amber-600' : 'text-slate-400'
+                      }`}
+                    />
+                  </button>
                 </td>
                 <td className="w-14 px-2 py-2 text-right">
                   <RowActionMenu

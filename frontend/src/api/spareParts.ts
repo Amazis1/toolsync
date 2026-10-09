@@ -19,6 +19,8 @@ export interface SparePartListQuery {
   plantId?: number
   machineId?: number
   type?: string
+  /** Nur favorisierte Teile (globaler Stern, DEC-063). */
+  favoritesOnly?: boolean
   sort?: SparePartSortKey
   order?: SparePartSortOrder
   skip?: number
@@ -34,6 +36,7 @@ export async function getSpareParts(
   if (query.plantId != null) params.set('plant_id', String(query.plantId))
   if (query.machineId != null) params.set('machine_id', String(query.machineId))
   if (query.type?.trim()) params.set('type', query.type.trim())
+  if (query.favoritesOnly) params.set('favorites_only', 'true')
   if (query.sort) params.set('sort', query.sort)
   if (query.order) params.set('order', query.order)
   params.set('skip', String(query.skip ?? 0))
@@ -73,4 +76,19 @@ export async function updateSparePart(
 /** Ersatzteil löschen (nur Admin). Es hängt nichts daran – keine Dateien, keine Bewegungen. */
 export async function deleteSparePart(id: number): Promise<void> {
   return http.delete<void>(`/spare-parts/${id}`)
+}
+
+/**
+ * Favoriten-Markierung setzen.
+ *
+ * Sie gilt **global** (für alle Benutzer), deshalb gibt es keinen Bezug zum
+ * angemeldeten Konto – wie bei Werkzeug, Serienartikel und Datenblatt
+ * (DEC-063). Eigener Endpunkt, damit Bearbeiten die Markierung nicht
+ * zurücksetzt.
+ */
+export async function setSparePartFavorite(
+  id: number,
+  isFavorite: boolean,
+): Promise<SparePart> {
+  return http.put<SparePart>(`/spare-parts/${id}/favorite`, { is_favorite: isFavorite })
 }

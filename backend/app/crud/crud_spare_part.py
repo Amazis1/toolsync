@@ -32,6 +32,7 @@ class CRUDSparePart(CRUDBase):
         plant_id: Optional[int] = None,
         machine_id: Optional[int] = None,
         type: Optional[str] = None,
+        favorites_only: bool = False,
         sort: SparePartSortKey = "article_number",
         order: SparePartSortOrder = "asc",
         skip: int = 0,
@@ -77,6 +78,8 @@ class CRUDSparePart(CRUDBase):
             conditions.append(SparePart.machine_id == machine_id)
         if type is not None and type.strip():
             conditions.append(SparePart.type == type.strip())
+        if favorites_only:
+            conditions.append(SparePart.is_favorite.is_(True))
 
         sort_columns = {
             "article_number": (SparePart.article_number,),
@@ -176,6 +179,23 @@ class CRUDSparePart(CRUDBase):
         """
         for key, value in values.items():
             setattr(part, key, value)
+        await self.db.commit()
+        await self.db.refresh(part)
+        return part
+
+    async def set_favorite(
+        self, part_id: int, is_favorite: bool
+    ) -> Optional[SparePart]:
+        """Favoriten-Markierung setzen (global).
+
+        `None`, wenn es den Datensatz nicht gibt. Die Markierung laeuft bewusst
+        nicht ueber `apply_update`: sie kommt aus einem eigenen Endpunkt, damit
+        ein normales Bearbeiten sie nicht zuruecksetzt (DEC-063).
+        """
+        part = await self.get(part_id)
+        if part is None:
+            return None
+        part.is_favorite = is_favorite
         await self.db.commit()
         await self.db.refresh(part)
         return part

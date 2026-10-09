@@ -89,12 +89,23 @@ class SparePartRead(SparePartBase):
     # Platz-Code wie „01-A-25" (Schrank, Schublade, Platzname) für die Anzeige.
     # `None` = kein Matrix-Platz gewählt (nur Freitext oder gar nichts).
     position_code: Optional[str] = None
+    # GLOBALER Favorit (nicht pro Benutzer, DEC-063). Bewusst **nur** hier und
+    # nicht in `SparePartBase`: gesetzt wird er ausschliesslich ueber
+    # `PUT /{id}/favorite`, damit ein normales Bearbeiten (PUT /{id}) die
+    # Markierung nicht zuruecksetzt.
+    is_favorite: bool = False
     # Für die Listenansicht mitgelieferte Stammdaten (Werk ist Pflicht).
     plant: Optional[PlantRead] = None
     machine: Optional[MachineRead] = None
 
     class Config:
         from_attributes = True
+
+
+class SparePartFavoriteUpdate(BaseModel):
+    """Favoriten-Markierung setzen (global für alle Benutzer, DEC-063)."""
+
+    is_favorite: bool
 
 
 class SparePartPage(BaseModel):

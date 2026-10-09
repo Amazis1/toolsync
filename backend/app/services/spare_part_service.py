@@ -37,6 +37,7 @@ class SparePartService:
         plant_id: Optional[int] = None,
         machine_id: Optional[int] = None,
         type: Optional[str] = None,
+        favorites_only: bool = False,
         sort: SparePartSortKey = "article_number",
         order: SparePartSortOrder = "asc",
         skip: int = 0,
@@ -47,11 +48,18 @@ class SparePartService:
             plant_id=plant_id,
             machine_id=machine_id,
             type=type,
+            favorites_only=favorites_only,
             sort=sort,
             order=order,
             skip=skip,
             limit=limit,
         )
+
+    async def set_favorite(
+        self, id: int, is_favorite: bool
+    ) -> Optional[SparePart]:
+        """Favoriten-Markierung setzen (global, DEC-063)."""
+        return await self.crud.set_favorite(id, is_favorite)
 
     async def count_by_article_number(
         self, article_number: str, exclude_id: Optional[int] = None

@@ -1028,6 +1028,7 @@ Gemessener Ist-Stand der Datenbank (`backend/toolsync.db`, nur lesend geprüft):
 | `storage_place` | `String(50)` | ja | Freitext (Schütten, Fächer) |
 | `position_id` | FK → `positions.id`, `SET NULL` | ja | Matrix-Platz; gilt als **belegt** (Nachtrag) |
 | `description` | `Text` | ja | – |
+| `is_favorite` | `Boolean` | nein | Default `false`, **global** (wie DEC-063); eigener Endpunkt `PUT /{id}/favorite` |
 | `created_at` / `updated_at` | `AuditMixin` | – | wie projektweit üblich |
 
 ## Was ausdrücklich NICHT gilt

@@ -47,6 +47,12 @@ export interface SparePart {
   description: string | null
   created_at: string
   updated_at: string
+  /**
+   * GLOBALER Favorit (nicht pro Benutzer, DEC-063) – wie bei Werkzeug,
+   * Serienartikel und Datenblatt. Gesetzt wird er über den eigenen Endpunkt
+   * `PUT /spare-parts/{id}/favorite`, nicht über das Bearbeiten-Formular.
+   */
+  is_favorite: boolean
   // Für die Liste mitgelieferte Stammdaten (Werk ist Pflicht).
   plant: Plant | null
   machine: Machine | null

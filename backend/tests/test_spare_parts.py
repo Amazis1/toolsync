@@ -398,3 +398,71 @@ async def test_quantity_zero_counts_as_existing(session, workspace):
     items, total = await service.get_all(search="8020")
     assert total == 1
     assert items[0].quantity == 0
+
+
+# --------------------------------------------------------------------------
+# Favoriten (global, DEC-063)
+# --------------------------------------------------------------------------
+
+
+async def test_favorite_defaults_to_false(session, workspace):
+    """Neue Teile sind keine Favoriten – die Spalte kommt mit `false`."""
+    service = SparePartService(session)
+    part = await service.get(workspace["parts"][0].id)
+    assert part.is_favorite is False
+
+
+async def test_set_favorite_and_filter_by_it(session, workspace):
+    """Markieren, filtern, wieder abwählen – der Filter folgt der Markierung."""
+    service = SparePartService(session)
+    erste, zweite = workspace["parts"][0], workspace["parts"][2]
+
+    # Ohne Markierung ist der Filter leer.
+    items, total = await service.get_all(favorites_only=True)
+    assert total == 0
+
+    markiert = await service.set_favorite(erste.id, True)
+    assert markiert.is_favorite is True
+
+    items, total = await service.get_all(favorites_only=True)
+    assert total == 1
+    assert items[0].id == erste.id
+
+    # Eine zweite Markierung – der Filter liefert beide.
+    await service.set_favorite(zweite.id, True)
+    _, total = await service.get_all(favorites_only=True)
+    assert total == 2
+
+    # Abwählen entfernt sie wieder aus dem Filter.
+    await service.set_favorite(erste.id, False)
+    items, total = await service.get_all(favorites_only=True)
+    assert total == 1
+    assert items[0].id == zweite.id
+
+
+async def test_update_does_not_reset_the_favorite(session, workspace):
+    """Ein normales Bearbeiten lässt die Markierung stehen (DEC-063).
+
+    `is_favorite` steht bewusst **nicht** in `SparePartUpdate`: sonst würde
+    jedes Speichern aus dem Formular den Stern zurücksetzen.
+    """
+    service = SparePartService(session)
+    part = workspace["parts"][0]
+    await service.set_favorite(part.id, True)
+
+    geaendert = await service.update(
+        part.id,
+        SparePartUpdate(
+            article_number=part.article_number,
+            plant_id=part.plant_id,
+            quantity=7,
+        ),
+    )
+    assert geaendert.quantity == 7
+    assert geaendert.is_favorite is True, "Der Stern darf nicht verloren gehen"
+
+
+async def test_set_favorite_unknown_id(session):
+    """Unbekannte ID: keine Markierung (HTTP 404 im Router)."""
+    service = SparePartService(session)
+    assert await service.set_favorite(999_999, True) is None

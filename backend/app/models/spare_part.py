@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, Text, text
+from sqlalchemy import ForeignKey, Integer, String, Text, false, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, AuditMixin
@@ -78,6 +78,15 @@ class SparePart(Base, AuditMixin):
     )
 
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Favorit wie in der Werkzeug-, Serienartikel- und Datenblattliste:
+    # **global**, nicht pro Benutzer (DEC-063). Die Markierung sitzt bewusst in
+    # `SparePartRead` und nicht in `SparePartBase`: gesetzt wird sie
+    # ausschliesslich ueber `PUT /{id}/favorite`, damit ein normales Bearbeiten
+    # (PUT /{id}) sie nicht zuruecksetzt.
+    is_favorite: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default=false()
+    )
 
     # joined eager loading: Werk und Maschine stehen als Spalten in der Liste.
     # Beides sind n:1-Beziehungen – es entstehen keine doppelten Zeilen, aber

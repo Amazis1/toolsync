@@ -242,8 +242,7 @@ test.afterAll(async ({ request }) => {
 
 function requireSeed() {
   test.skip(!adminToken, 'Admin-Konto (admin1/123) nicht vorhanden – Spec übersprungen')
-  test.skip(seededIds.length === 0, 'Testdaten konnten nicht angelegt werden – Spec übersprungen')
-}
+  test.skip(seededIds.length === 0, 'Testdaten konnten nicht angelegt werden – Spec übersprungen')}
 
 /** Sitzung mit Token starten und in den Ersatzteil-Bereich wechseln. */
 async function openWithToken(page: Page, token: string) {
@@ -316,13 +315,17 @@ test.describe('Ersatzteile', () => {
     await expect(zeile).toContainText('25')
     await expect(zeile).toContainText('Stk')
 
-    // Spaltenreihenfolge (Entscheidung des Projektinhabers): Menge direkt nach
-    // der Artikelnummer, Lagerort direkt nach Name/Typ.
+    // Spaltenreihenfolge (Entscheidung des Projektinhabers): Artikelnummer,
+    // Name/Typ, Menge, Lagerort, Werk, Maschine – dann Favorit und Aktionen.
     const kopf = (await page.locator('thead th').allInnerTexts()).map((titel) =>
       titel.trim().toUpperCase(),
     )
-    expect(kopf.indexOf('MENGE')).toBe(kopf.indexOf('ARTIKELNUMMER') + 1)
-    expect(kopf.indexOf('LAGERORT')).toBe(kopf.indexOf('NAME / TYP') + 1)
+    expect(kopf.indexOf('NAME / TYP')).toBe(kopf.indexOf('ARTIKELNUMMER') + 1)
+    expect(kopf.indexOf('MENGE')).toBe(kopf.indexOf('NAME / TYP') + 1)
+    expect(kopf.indexOf('LAGERORT')).toBe(kopf.indexOf('MENGE') + 1)
+    expect(kopf.indexOf('WERK')).toBe(kopf.indexOf('LAGERORT') + 1)
+    expect(kopf.indexOf('MASCHINE')).toBe(kopf.indexOf('WERK') + 1)
+    expect(kopf.indexOf('FAVORIT')).toBe(kopf.indexOf('MASCHINE') + 1)
   })
 
   test('hebt Name und Maschinenfarbe hervor wie die anderen Listen', async ({ page }) => {
@@ -458,6 +461,45 @@ test.describe('Ersatzteile', () => {
     })
     await suche(page, `${PREFIX}4711`)
     await expect(page.locator('tbody tr').filter({ hasText: '42' })).toHaveCount(1)
+  })
+
+  test('Favorit setzen und darauf filtern', async ({ page, request }) => {
+    await openAsAdmin(page)
+    await suche(page, `${PREFIX}4711`)
+
+    // Zwei Zeilen mit derselben Artikelnummer; markiert wird die mit „Regal B3".
+    const zeile = page.locator('tbody tr').filter({ hasText: 'Regal B3' }).first()
+    await expect(zeile).toBeVisible()
+
+    const stern = zeile.getByRole('button', { name: /Favorit für .* (hinzufügen|entfernen)/ })
+    await expect(stern).toHaveAttribute('aria-pressed', 'false')
+
+    await stern.click()
+    // Der Stern ist gesetzt: die Form traegt die Information (`aria-pressed`),
+    // nicht nur die Farbe.
+    await expect(stern).toHaveAttribute('aria-pressed', 'true')
+
+    // Die Markierung ist **global** – sie steht auch in der Datenbank (DEC-063).
+    const daten = await (
+      await request.get(`/api/spare-parts/?search=${encodeURIComponent(`${PREFIX}4711`)}`, {
+        headers: authHeaders(),
+      })
+    ).json()
+    const markiert = (daten.items as { storage_place: string | null; is_favorite: boolean }[])
+      .filter((eintrag) => eintrag.is_favorite)
+    expect(markiert).toHaveLength(1)
+    expect(markiert[0].storage_place).toBe('Regal B3 / Fach 2')
+
+    // „Nur Favoriten" zeigt genau diese Zeile.
+    await page.getByText('Nur Favoriten').click()
+    await expect(page.locator('tbody tr').filter({ hasText: 'Regal B3' })).toHaveCount(1)
+    await expect(page.locator('tbody tr').filter({ hasText: 'Regal B4' })).toHaveCount(0)
+
+    // Wieder abwählen: der Filter ist dann leer.
+    await page.locator('tbody tr').filter({ hasText: 'Regal B3' }).first()
+      .getByRole('button', { name: /Favorit für .* entfernen/ })
+      .click()
+    await expect(page.getByText(/Keine Treffer für/)).toBeVisible({ timeout: 10_000 })
   })
 
   test('Löschen mit Bestätigung – nur als Admin', async ({ page }) => {
