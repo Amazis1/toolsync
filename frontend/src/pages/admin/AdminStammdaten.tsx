@@ -16,8 +16,12 @@ import {
   createToolType,
   updateToolType,
   deleteToolType,
+  getCoatings,
+  createCoating,
+  updateCoating,
+  deleteCoating,
 } from '../../api/admin'
-import type { Plant, Customer, Machine, ToolType } from '../../api/types'
+import type { Plant, Customer, Machine, ToolType, Coating } from '../../api/types'
 import IconTipButton, { Tip } from './IconTipButton'
 
 // ------------------------------------------------------------
@@ -171,6 +175,7 @@ const btnClass = 'admin-btn'
 // ------------------------------------------------------------
 function TableEditor<T extends { id: number; name: string }>({
   title,
+  hint,
   items,
   onCreate,
   onUpdate,
@@ -182,6 +187,8 @@ function TableEditor<T extends { id: number; name: string }>({
   onEditStart,
 }: {
   title: string
+  /** Eine Zeile unter der Überschrift, die den Block einordnet (z. B. Dachmarke). */
+  hint?: string
   items: T[]
   onCreate: (name: string) => Promise<void>
   onUpdate: (id: number, name: string) => Promise<void>
@@ -261,9 +268,13 @@ function TableEditor<T extends { id: number; name: string }>({
 
   return (
     <section className="admin-card p-3 flex flex-col h-full">
-      <h3 className="mb-3 text-sm font-bold shrink-0" style={{ color: 'var(--admin-text)' }}>
+      <h3
+        className={`text-sm font-bold shrink-0 ${hint ? 'mb-0.5' : 'mb-3'}`}
+        style={{ color: 'var(--admin-text)' }}
+      >
         {title}
       </h3>
+      {hint && <p className="admin-hint mb-3 shrink-0">{hint}</p>}
 
       <form onSubmit={handleCreate} className="mb-3 shrink-0">
         <div className="flex items-center gap-2">
@@ -387,6 +398,7 @@ export default function AdminStammdaten() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
   const [toolTypes, setToolTypes] = useState<ToolType[]>([])
+  const [coatings, setCoatings] = useState<Coating[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Eingaben für Anlegen/Bearbeiten (Kundenfarbe, Maschinen-Werk und -Farbe)
@@ -397,14 +409,19 @@ export default function AdminStammdaten() {
   // Maschinenfarbe – dieselbe Pflege wie bei Kunden (Farbpunkt in den Listen).
   const [newMachineColor, setNewMachineColor] = useState<string | null>(null)
   const [editMachineColor, setEditMachineColor] = useState<string | null>(null)
+  // Werkfarbe (DEC-076) – dieselbe Pflege wie bei Kunden und Maschinen. Die Farbe
+  // färbt die Oberfläche des Arbeitswerks, nicht nur einen Punkt in der Liste.
+  const [newPlantColor, setNewPlantColor] = useState<string | null>(null)
+  const [editPlantColor, setEditPlantColor] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([getPlants(), getCustomers(), getMachines(), getToolTypes()])
-      .then(([p, c, m, t]) => {
+    Promise.all([getPlants(), getCustomers(), getMachines(), getToolTypes(), getCoatings()])
+      .then(([p, c, m, t, coat]) => {
         setPlants(p)
         setCustomers(c)
         setMachines(m)
         setToolTypes(t)
+        setCoatings(coat)
       })
       .catch(console.error)
   }, [refreshKey])
@@ -434,14 +451,47 @@ export default function AdminStammdaten() {
         placeholder="Neuer Typ, z. B. 01 Rund"
       />
 
-      {/* Werke */}
+      {/* Stempel-Beschichtung (Dachmarke MultiDur): Die Liste füllt das
+          Dropdown im Anlege-/Bearbeitungs-Formular des Werkzeugs – dort nur bei
+          der Kategorie Stempel. „Standard" ist dort vorausgewählt. Werkzeuge
+          hängen an der Zeile (`coating_id`); ein Löschen nimmt sie also nicht mit,
+          sie verlieren nur die Zuordnung. */}
+      <TableEditor<Coating>
+        title="Stempel-Beschichtung"
+        hint="Beschichtungen unter der Dachmarke MultiDur – auswählbar im Werkzeug-Formular bei Kategorie Stempel."
+        items={coatings}
+        onCreate={(name) => createCoating(name).then(refresh)}
+        onUpdate={(id, name) => updateCoating(id, name).then(refresh)}
+        onDelete={(id) => deleteCoating(id).then(refresh)}
+        placeholder="Neue Beschichtung, z. B. MultiDur TiCN"
+      />
+
+      {/* Werke inkl. Werkfarbe (DEC-076): Die Farbe färbt Knöpfe, aktiven Reiter
+          und Tabellenzeilen des Arbeitswerks – ohne Farbe gilt die Primärfarbe. */}
       <TableEditor<Plant>
         title="Werke (Plants)"
         items={plants}
-        onCreate={(name) => createPlant(name).then(refresh)}
-        onUpdate={(id, name) => updatePlant(id, name).then(refresh)}
+        onCreate={(name) => createPlant(name, newPlantColor).then(refresh)}
+        onUpdate={(id, name) => updatePlant(id, name, editPlantColor).then(refresh)}
         onDelete={(id) => deletePlant(id).then(refresh)}
         placeholder="Neues Werk, z. B. Werk 1"
+        onEditStart={(w) => setEditPlantColor(w.color ?? null)}
+        renderCreateFields={() => (
+          <ColorPicker value={newPlantColor} onChange={setNewPlantColor} />
+        )}
+        renderEditFields={() => (
+          <ColorPicker value={editPlantColor} onChange={setEditPlantColor} />
+        )}
+        renderExtra={(w) => (
+          <span className="flex items-center gap-2 text-xs">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ background: w.color || '#0f766e' }}
+            />
+            <span className="admin-text-subtle">{w.color || 'Primärfarbe'}</span>
+          </span>
+        )}
       />
 
       {/* Kunden inkl. Farbe */}

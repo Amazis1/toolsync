@@ -841,6 +841,9 @@ export default function AdminStorageLocations() {
         description: tool.description,
         plant_id: tool.plant_id,
         tool_type_id: tool.tool_type_id,
+        // Beschichtung mitsenden, damit das Bearbeiten im Admin sie nicht
+        // stillschweigend verliert (nur Stempel tragen eine).
+        coating_id: tool.coating_id ?? null,
         position_id: tool.position_id,
         machine_id: tool.machine_id,
         customer_id: tool.customer_id,

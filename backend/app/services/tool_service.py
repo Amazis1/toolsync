@@ -295,9 +295,13 @@ class ToolService:
 
         tool = await self.crud.create(data)
 
-        # Position-Tool-Sync: tool_id an der Position setzen
+        # Position-Tool-Sync: beide Seiten der Platz-Beziehung gehören in
+        # **eine** Transaktion. `crud.create()` hat das Werkzeug committet, um
+        # seine id zu erhalten – der Platz folgt deshalb direkt danach; mehr als
+        # diese zwei Schritte gibt es hier nicht.
         if data.position_id:
             await self._set_position_tool(data.position_id, tool.id)
+            await self.db.commit()
 
         return tool
 
@@ -344,12 +348,23 @@ class ToolService:
         old_position_id = old_tool.position_id
         new_position_id = payload.get("position_id", old_position_id)
 
+        # Welche Plätze hält dieses Werkzeug laut **Platz-Seite**? Normalerweise
+        # ist das genau `old_tool.position_id`. Die beiden Seiten können aber
+        # auseinandergelaufen sein (`Position.tool_id` zeigt auf das Werkzeug,
+        # `Tool.position_id` steht auf NULL oder woanders) – dann würde ein
+        # reiner Vergleich der Werkzeug-Seite den alten Platz stehen lassen und
+        # dort einen Geist hinterlassen. Deshalb wird die Antwort der Platz-Seite
+        # mitgelesen und beim Wechsel mit freigegeben.
+        besetzte_plaetze = await self._positions_holding(tool_id)
+        if old_position_id is not None:
+            besetzte_plaetze.add(old_position_id)
+
         # Neuer Platz: existiert er und ist er frei?
         if new_position_id and new_position_id != old_position_id:
             position = await self._get_position(new_position_id)
             if not position:
                 raise ValueError("Angegebener Platz existiert nicht.")
-            if position.tool_id is not None:
+            if position.tool_id is not None and position.id not in besetzte_plaetze:
                 raise ValueError(f"Platz {position.name} ist bereits belegt.")
             if position.spare_part is not None:
                 raise ValueError(
@@ -362,27 +377,47 @@ class ToolService:
         # unmöglich — Status, Beschreibung, Maß B, Maschine, Kunde und
         # position_id ließen sich so nie zurücksetzen (gemeldeter Fall: Status
         # blieb nach dem Zurückstellen auf „ohne Status" erhalten).
+        #
+        # Beide Seiten der Platz-Beziehung werden hier verändert und **einmal**
+        # am Ende committet: Werkzeug, alter Platz und neuer Platz gehören in
+        # dieselbe Transaktion. Vorher committete jeder Schritt für sich – brach
+        # es dazwischen ab, zeigte `Tool.position_id` auf einen Platz, der das
+        # Werkzeug nicht (mehr) führte („zwei Wahrheiten", siehe
+        # docs/14-architecture.md, Abschnitt 10). Abgesichert durch
+        # tests/test_platz_konsistenz.py.
         for field, value in payload.items():
+            if field == "position_id":
+                continue
             setattr(old_tool, field, value)
-        await self.db.commit()
-        await self.db.refresh(old_tool)
 
-        tool = old_tool
-
-        # Alten Platz freigeben, wenn sich die Position geändert hat
-        if old_position_id and old_position_id != new_position_id:
-            await self._release_position(old_position_id)
+        # Alte Plätze freigeben: alle, die dieses Werkzeug laut Platz-Seite noch
+        # hält und die nicht der neue Platz sind. Ein bereits freigegebener Platz
+        # ist harmlos (das Setzen auf None ändert nichts).
+        for position_id in besetzte_plaetze:
+            if position_id != new_position_id:
+                await self._release_position(position_id)
 
         # Neuen Platz belegen (None = Ablage, nichts zu belegen)
         if new_position_id:
-            await self._set_position_tool(new_position_id, tool.id)
+            await self._set_position_tool(new_position_id, old_tool.id)
 
-        return tool
+        # Werkzeug-Seite **zuletzt** und aus dem wirksamen Wert: zu diesem
+        # Zeitpunkt ist der alte Platz frei und der neue belegt – danach trägt
+        # `Tool.position_id` genau dasselbe wie der Platz. In der Schleife oben
+        # läuft `position_id` deshalb nicht mit (siehe `continue`), damit die
+        # Platz-Prüfungen weiter mit dem Stand **vor** der Änderung arbeiten.
+        old_tool.position_id = new_position_id
+
+        await self.db.commit()
+        await self.db.refresh(old_tool)
+
+        return old_tool
 
     async def delete_tool(self, tool_id: int) -> None:
         tool = await self.crud.get(tool_id)
         if tool and tool.position_id:
             await self._release_position(tool.position_id)
+            await self.db.commit()
         await self.crud.delete(tool_id)
 
     # ---------------------------------------------------------
@@ -394,17 +429,34 @@ class ToolService:
         )
         return result.scalar_one_or_none()
 
+    async def _positions_holding(self, tool_id: int) -> Set[int]:
+        """Alle Platz-IDs, deren `tool_id` auf dieses Werkzeug zeigt.
+
+        Die Gegenrichtung zu `Tool.position_id`. Im Normalfall ist das genau ein
+        Platz (oder keiner); sind beide Seiten auseinandergelaufen, kann die
+        Platz-Seite einen Platz nennen, den die Werkzeug-Seite nicht kennt.
+        """
+        result = await self.db.execute(
+            select(Position.id).where(Position.tool_id == tool_id)
+        )
+        return set(result.scalars().all())
+
     async def _set_position_tool(self, position_id: int, tool_id: int) -> None:
+        """Platz-Seite der Beziehung setzen. **Ohne** Commit.
+
+        Der Commit gehört dem Aufrufer: Werkzeug-Seite und Platz-Seite müssen
+        gemeinsam bestätigt werden, sonst bleibt bei einem Abbruch dazwischen
+        eine halbe Beziehung stehen.
+        """
         position = await self._get_position(position_id)
         if position:
             position.tool_id = tool_id
-            await self.db.commit()
 
     async def _release_position(self, position_id: int) -> None:
+        """Platz-Seite der Beziehung freigeben. **Ohne** Commit (siehe oben)."""
         position = await self._get_position(position_id)
         if position:
             position.tool_id = None
-            await self.db.commit()
 
     # ---------------------------------------------------------
     # Hilfsfunktionen für die Fundort-Anzeige (Lager/Ersatz)

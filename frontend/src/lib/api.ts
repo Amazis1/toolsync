@@ -13,8 +13,17 @@ export interface UserInfo {
   last_name: string
   display_name?: string | null
   is_active: boolean
-    is_admin: boolean
-  }
+  is_admin: boolean
+  /**
+   * Vorgabe für das Arbeitswerk aus dem Benutzerkonto (DEC-070).
+   * Kein Pflichtfeld – das Personal rotiert zwischen den Werken.
+   */
+  default_plant_id?: number | null
+  /** Aufgelöstes Arbeitswerk dieses Requests (Server-Antwort von `/auth/me`). */
+  plant_id?: number | null
+  plant_name?: string | null
+  plant_color?: string | null
+}
 
 export interface LoginResponse {
   access_token: string

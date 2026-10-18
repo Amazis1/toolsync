@@ -149,17 +149,40 @@ async def test_search_is_case_insensitive_and_partial(session, workspace):
 
 
 async def test_status_and_category_filters_accept_multiple_values(session, workspace):
-    """Status und Kategorie sind mehrfach wählbar (OR innerhalb eines Filters)."""
+    """Status und Kategorie sind mehrfach wählbar (OR innerhalb eines Filters).
+
+    „Ohne Status" zählt als **verfügbar** (DEC-080) – das Lager/Ersatz-Werkzeug
+    aus dem Fixture hat keinen Status und erscheint deshalb mit.
+    """
     service = ToolService(session)
 
     both = await service.get_tools(statuses=[ToolStatus.AVAILABLE, ToolStatus.LENT])
-    assert both["total"] == 2
+    assert both["total"] == 3
 
     single = await service.get_tools(statuses=[ToolStatus.LENT])
     assert [t.tool_id for t in single["items"]] == ["01060000"]
 
     categories = await service.get_tools(categories=[ToolCategory.MATRIZE])
     assert categories["total"] == 0
+
+
+async def test_ohne_status_gilt_als_verfuegbar(session, workspace):
+    """`status = NULL` heißt „nichts Abweichendes bekannt" – also verfügbar (DEC-080).
+
+    Der Bestand aus dem Altsystem hat keinen gepflegten Status; ohne diese Regel
+    fände der Filter „Verfügbar" ihn nie, und die Ausleihe würde ihn abweisen.
+    """
+    service = ToolService(session)
+
+    verfuegbar = await service.get_tools(statuses=[ToolStatus.AVAILABLE])
+    assert [t.id for t in verfuegbar["items"]] == [
+        workspace["on_place"].id,
+        workspace["storage_spare"].id,
+    ], "verfügbar und ohne Status gemeinsam"
+
+    # Andere Zustände bleiben getrennt: „ausgeliehen" meint nur `lent`.
+    ausgeliehen = await service.get_tools(statuses=[ToolStatus.LENT])
+    assert [t.id for t in ausgeliehen["items"]] == [workspace["in_tray"].id]
 
 
 async def test_filters_combine_as_and(session, workspace):
@@ -230,7 +253,8 @@ async def test_empty_values_sort_last_in_both_directions(session, workspace):
 async def test_status_sort_uses_fachliche_order(session, workspace):
     """Status wird fachlich sortiert, nicht alphabetisch nach Speicherwert.
 
-    Verfügbar → Ausgeliehen → In Transit → In Wartung → Defekt → ohne Status.
+    Verfügbar (und „ohne Status", DEC-080) → Ausgeliehen → In Transit →
+    In Wartung → Defekt.
     """
     session.add_all(
         [
@@ -264,15 +288,15 @@ async def test_status_sort_uses_fachliche_order(session, workspace):
 
     assert order == [
         ToolStatus.AVAILABLE,  # aus dem Fixture
+        None,  # Lager/Ersatz ohne Status – gleicher Rang wie „verfügbar" (DEC-080)
         ToolStatus.LENT,  # aus dem Fixture
         ToolStatus.IN_TRANSIT,
         ToolStatus.MAINTENANCE,
         ToolStatus.DEFECTIVE,
-        None,  # Lager/Ersatz ohne Status steht am Ende
     ]
 
     reversed_order = await ToolService(session).get_tools(sort="status", order="desc")
-    assert reversed_order["items"][0].status is None
+    assert reversed_order["items"][0].status == ToolStatus.DEFECTIVE
 
 
 async def test_pagination_reports_total_and_slices(session, workspace):
@@ -326,9 +350,11 @@ async def test_order_is_stable_across_page_borders(session, workspace):
         )
         collected.extend(t.id for t in result["items"])
 
-    # 12 neue Datensätze plus das verfügbare Werkzeug aus dem Fixture.
-    assert len(collected) == 13
-    assert len(set(collected)) == 13, "Keine Zeile darf doppelt erscheinen"
+    # 12 neue Datensätze plus die beiden Werkzeuge aus dem Fixture, die als
+    # verfügbar gelten (eines mit Status `available`, eines **ohne** Status –
+    # DEC-080).
+    assert len(collected) == 14
+    assert len(set(collected)) == 14, "Keine Zeile darf doppelt erscheinen"
 
 
 async def test_favorites_are_global_and_filterable(session, workspace):

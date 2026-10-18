@@ -2,6 +2,7 @@ from sqlalchemy import ForeignKey, String, Enum as SQLAlchemyEnum, DateTime, fun
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 from .enums import MovementType, MovementStatus
+from .master_data import Plant  # noqa: F401  (Modell-Registrierung)
 
 
 class ToolMovement(Base):
@@ -27,8 +28,21 @@ class ToolMovement(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    # Arbeitswerk, in dem gehandelt wurde (DEC-070): bezeugt, wer **für welches Werk**
+    # ausgeliehen bzw. zurückgegeben hat. NULL bei Altdaten (vor TASK-030).
+    plant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("plants.id", ondelete="SET NULL"), nullable=True
+    )
+    # Verbindet den Verlauf mit dem Logistik-Auftrag (DEC-072); NULL bei Ausleihe,
+    # Rückgabe und Umbuchung.
+    transport_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transport_orders.id", ondelete="SET NULL"), nullable=True
+    )
     tool: Mapped["Tool"] = relationship(back_populates="movements")
-    user: Mapped["User | None"] = relationship(back_populates="movements")
+    user: Mapped["User | None"] = relationship(
+        back_populates="movements", foreign_keys=[user_id]
+    )
+    plant: Mapped["Plant | None"] = relationship(foreign_keys=[plant_id], lazy="joined")
 
     @property
     def tool_code(self) -> str | None:

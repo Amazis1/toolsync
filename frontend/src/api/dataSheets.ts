@@ -87,7 +87,8 @@ function toFormData(
 ): FormData {
   const form = new FormData()
   form.append('tool_id', input.tool_id?.trim() ?? '')
-  form.append('plant_id', String(input.plant_id))
+  // Leer = kein Werk = gilt für alle Werke (DEC-085).
+  form.append('plant_id', input.plant_id != null ? String(input.plant_id) : '')
   form.append('machine_id', input.machine_id != null ? String(input.machine_id) : '')
   form.append('name', input.name?.trim() ?? '')
   if (input.description !== undefined) {

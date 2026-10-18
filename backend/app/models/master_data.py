@@ -7,9 +7,18 @@ class Plant(Base, AuditMixin):
     __tablename__ = "plants"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    # Werkfarbe als Hex-Code (DEC-076). Dieselbe Idee wie `Customer.color` und
+    # `Machine.color`: Die Farbe des Arbeitswerks färbt Knöpfe, aktiven Reiter und
+    # Tabellenzeilen – beim Werkswechsel weiß man sofort, in welchem Werk man ist.
+    # Ohne Farbe gilt die Primärfarbe `#0f766e`; pflegbar im Admin-Panel.
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     machines: Mapped[list["Machine"]] = relationship(back_populates="plant")
     cabinets: Mapped[list["Cabinet"]] = relationship(back_populates="plant")
-    tools: Mapped[list["Tool"]] = relationship(back_populates="plant")
+    # `tools` hat seit DEC-071 zwei Fremdschlüssel auf plants (Heimatwerk und
+    # aktueller Ort) – deshalb muss das Heimatwerk hier ausdrücklich genannt werden.
+    tools: Mapped[list["Tool"]] = relationship(
+        back_populates="plant", foreign_keys="Tool.plant_id"
+    )
 
 
 class Customer(Base, AuditMixin):
@@ -40,3 +49,19 @@ class ToolType(Base, AuditMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     tools: Mapped[list["Tool"]] = relationship(back_populates="tool_type")
+
+
+class Coating(Base, AuditMixin):
+    """Stempel-Beschichtung – gepflegt im Admin-Panel (Stammdaten).
+
+    Die Beschichtungen laufen unter der **Dachmarke MultiDur**; gepflegt wird
+    jeweils der vollständige Name („MultiDur TiCN"). Bewusst nur ein Name und
+    keine Marken-Tabelle: solange es **eine** Dachmarke gibt, wäre eine zweite
+    Ebene eine leere Spalte in jeder Zeile. „Standard" steht für den Stempel
+    ohne besondere Beschichtung – der ist im Anlege-Formular vorausgewählt.
+    """
+
+    __tablename__ = "coatings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    tools: Mapped[list["Tool"]] = relationship(back_populates="coating")

@@ -14,7 +14,7 @@ class DataSheet(Base, AuditMixin):
     |---|---|---|
     | Beantwortet | **was** braucht der Auftrag | **wie** wird das Werkzeug eingerichtet |
     | Kennung | Artikelnummer (eindeutig) | **Werkzeug-ID** (empfohlen, nicht Pflicht) |
-    | Zuordnung | Werk, Kunde, Maschine | Werk (Pflicht), Maschine |
+    | Zuordnung | Werk, Kunde, Maschine | Werk (**freiwillig**, DEC-085), Maschine |
     | Fachbereich | `docs/06-serial-articles.md` | `docs/20-datenblatt.md` |
 
     Wichtig – **keine** Fremdschlüsselbindung an `tools.id`: eine Werkzeug-ID darf
@@ -32,9 +32,11 @@ class DataSheet(Base, AuditMixin):
     # (DEC-052: mehrere Exemplare derselben ID).
     tool_id: Mapped[str | None] = mapped_column(String(50), index=True, nullable=True)
 
-    # Werk ist Pflicht: ohne Werk ist das Datenblatt nicht auffindbar.
-    plant_id: Mapped[int] = mapped_column(
-        ForeignKey("plants.id", ondelete="RESTRICT"), nullable=False
+    # Werk ist **freiwillig** (DEC-085): Ohne Werk gilt das Datenblatt für **alle**
+    # Werke – eine allgemeine Info (Bedienungsanleitung, Prozesshinweis) gehört
+    # keinem Werk allein. Mit Werk ist es der bisherige Fall.
+    plant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("plants.id", ondelete="RESTRICT"), nullable=True
     )
     # Die Maschine, für die die Einstellwerte gelten (freiwillig).
     machine_id: Mapped[int | None] = mapped_column(

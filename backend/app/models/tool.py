@@ -2,6 +2,8 @@ from sqlalchemy import ForeignKey, String, false, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base, AuditMixin
 from .enums import ToolCategory, ToolStatus
+# Für die Typprüfung (lazy="selectin" lädt zur Laufzeit trotzdem erst bei Zugriff).
+from .master_data import Plant, Coating  # noqa: F401  (Modell-Registrierung, zyklische Auflösung)
 
 
 class Tool(Base, AuditMixin):
@@ -28,11 +30,26 @@ class Tool(Base, AuditMixin):
     is_favorite: Mapped[bool] = mapped_column(
         nullable=False, default=False, server_default=false()
     )
+    # Heimatwerk: wem das Werkzeug gehört. Die Werkzeug-ID ist je Heimatwerk
+    # eindeutig (DEC-052/055) – zwei Werke dürfen dieselbe ID führen. Dieses Feld
+    # ändert die Logistik **nicht** (DEC-071).
     plant_id: Mapped[int] = mapped_column(
         ForeignKey("plants.id", ondelete="RESTRICT"), nullable=False
     )
+    # Aktueller Ort (DEC-071): NULL = das Werkzeug liegt in seinem Heimatwerk.
+    # Geschrieben ausschließlich vom bestätigten Empfang eines Transports.
+    current_plant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("plants.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     tool_type_id: Mapped[int] = mapped_column(
         ForeignKey("tool_types.id", ondelete="RESTRICT"), nullable=False
+    )
+    # Beschichtung des Stempels (Stammdaten „Stempel-Beschichtung", Dachmarke
+    # MultiDur). Freiwillig und nur für die Kategorie Stempel gedacht; das
+    # Formular blendet das Feld für Abstreifer und Matrize aus. `SET NULL`, damit
+    # das Löschen einer Beschichtung keinen Stempel mitnimmt.
+    coating_id: Mapped[int | None] = mapped_column(
+        ForeignKey("coatings.id", ondelete="SET NULL"), nullable=True
     )
     position_id: Mapped[int | None] = mapped_column(
         ForeignKey("positions.id", ondelete="SET NULL"), nullable=True
@@ -44,8 +61,19 @@ class Tool(Base, AuditMixin):
         ForeignKey("customers.id", ondelete="SET NULL"), nullable=True
     )
     # joined eager loading: plant/tool_type immer direkt mitladen (benötigt für Listenansicht)
-    plant: Mapped["Plant"] = relationship(back_populates="tools", lazy="joined")
+    plant: Mapped["Plant"] = relationship(
+        back_populates="tools", lazy="joined", foreign_keys=[plant_id]
+    )
+    # Aktueller Ort – nur geladen, wenn ihn jemand braucht (Anzeige „Heimat W1 · aktuell W2")
+    current_plant: Mapped["Plant | None"] = relationship(
+        foreign_keys=[current_plant_id], lazy="selectin"
+    )
     tool_type: Mapped["ToolType"] = relationship(back_populates="tools", lazy="joined")
+    # joined eager loading wie bei Werkzeugtyp und Kunde: die Liste bekommt den
+    # Beschichtungsnamen ohne Nachfrage je Zeile.
+    coating: Mapped["Coating | None"] = relationship(
+        back_populates="tools", lazy="joined"
+    )
     machine: Mapped["Machine | None"] = relationship(
         back_populates="tools", lazy="joined"
     )

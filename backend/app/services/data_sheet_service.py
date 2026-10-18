@@ -525,17 +525,18 @@ class DataSheetService:
     async def _assert_master_data(
         self, plant_id: Optional[int], machine_id: Optional[int]
     ) -> None:
-        """Werk muss existieren; die Maschine, wenn sie angegeben ist.
+        """Werk und Maschine prüfen, **wenn** sie angegeben sind (DEC-085).
 
-        Ohne diese Prüfung käme bei einer gelöschten Maschine ein
-        Fremdschlüsselfehler aus der Datenbank als HTTP 500 zurück.
+        Ohne Werk gilt das Datenblatt für alle Werke – das ist der Fall
+        „allgemeine Info" und ausdrücklich erlaubt. Geprüft wird nur, dass ein
+        *angegebenes* Werk bzw. eine angegebene Maschine noch existiert; sonst
+        käme bei einem gelöschten Datensatz ein Fremdschlüsselfehler als HTTP 500
+        zurück.
         """
-        if plant_id is None:
-            raise ValueError("Bitte ein Werk auswählen.")
-
-        plant = await self.db.get(Plant, plant_id)
-        if plant is None:
-            raise ValueError("Das gewählte Werk gibt es nicht mehr. Lade die Seite neu.")
+        if plant_id is not None:
+            plant = await self.db.get(Plant, plant_id)
+            if plant is None:
+                raise ValueError("Das gewählte Werk gibt es nicht mehr. Lade die Seite neu.")
 
         if machine_id is not None:
             machine = await self.db.get(Machine, machine_id)

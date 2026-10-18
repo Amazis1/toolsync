@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import List, Optional
 from ..models.enums import ToolCategory, ToolStatus
-from .master_data import CustomerRead, MachineRead, PlantRead, ToolTypeRead
+from .master_data import CoatingRead, CustomerRead, MachineRead, PlantRead, ToolTypeRead
 
 
 # ============================================================
@@ -22,6 +22,10 @@ class ToolBase(BaseModel):
     description: Optional[str] = None
     plant_id: int
     tool_type_id: int
+    # Beschichtung des Stempels (Stammdaten „Stempel-Beschichtung"). Freiwillig;
+    # None = keine Beschichtung eingetragen. Gilt fachlich nur für Stempel –
+    # die Auswahl dafür ist im Formular an die Kategorie gebunden.
+    coating_id: Optional[int] = None
     position_id: Optional[int] = None
     machine_id: Optional[int] = None
     customer_id: Optional[int] = None
@@ -59,6 +63,10 @@ class ToolRead(ToolBase):
     is_favorite: bool = False
     # Lagerplatz-Code wie "01-A-25"; None bedeutet Ablage (kein fester Platz).
     position_code: Optional[str] = None
+    # Aktueller Ort (DEC-071): NULL = am Heimatwerk. Die Logistik arbeitet damit,
+    # die Liste zeigt bei Abweichung „Heimat W1 · aktuell W2".
+    current_plant_id: Optional[int] = None
+    current_plant: Optional[PlantRead] = None
     # Gibt es zu **dieser Werkzeug-ID** ein Datenblatt mit hinterlegter Datei?
     # (DEC-065 Punkt 10 / DEC-068) Die Werkzeugliste zeigt dafür ein Symbol neben
     # dem Aktionsmenü; ohne Datenblatt bleibt der Platz leer. Geprüft wird die
@@ -69,6 +77,9 @@ class ToolRead(ToolBase):
     # Für die Listenansicht direkt mitgelieferte Beziehungen
     plant: Optional[PlantRead] = None
     tool_type: Optional[ToolTypeRead] = None
+    # Beschichtung samt Name („MultiDur TiCN"), damit die Oberfläche den Namen
+    # nicht aus einer zweiten Liste nachschlagen muss.
+    coating: Optional[CoatingRead] = None
     customer: Optional[CustomerRead] = None
     machine: Optional[MachineRead] = None
 

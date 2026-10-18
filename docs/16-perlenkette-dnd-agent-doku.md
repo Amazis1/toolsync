@@ -17,6 +17,15 @@ Plätze sind unveränderbar fix. Nur die Zuordnung Werkzeug ↔ Platz wird geän
 
 Beide Seiten werden **immer atomar in einer Transaktion** aktualisiert.
 
+> **Nachgetragen (2026-10):** Das gilt auch für den zweiten Schreibweg derselben
+> Beziehung, den `ToolService`. `update_tool` committete früher dreimal
+> (Werkzeug, alter Platz, neuer Platz) – jetzt einmal, und es liest zusätzlich
+> die Platz-Seite, damit ein auseinandergelaufener Bestand beim Bearbeiten
+> zusammengeführt wird statt einen Geist auf dem alten Platz zu hinterlassen.
+> Nach jeder Operation wird in **beide** Richtungen geprüft, dass Platz und
+> Werkzeug dieselbe Aussage treffen:
+> `backend/tests/test_platz_konsistenz.py` (17 Tests).
+
 ## 2. Operationen
 
 | Aktion | Auslöser | Verhalten |

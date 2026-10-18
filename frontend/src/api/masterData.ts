@@ -1,7 +1,7 @@
 // API-Funktionen für Kunden und Maschinen (Stammdaten)
 // Lesen ist für alle aktiven Benutzer freigegeben, Schreiben nur für Admins.
 import { http } from './client'
-import type { Customer, Machine } from './types'
+import type { Coating, Customer, Machine } from './types'
 
 // ------------------------------------------------------------
 // Customers (Kunden)
@@ -56,4 +56,25 @@ export async function updateMachine(
 
 export async function deleteMachine(id: number): Promise<void> {
   return http.delete<void>(`/machines/${id}`)
+}
+
+// ------------------------------------------------------------
+// Coatings (Stempel-Beschichtung, Dachmarke MultiDur)
+// Lesen für alle aktiven Benutzer – das Anlege-Formular des Werkzeugs braucht
+// die Liste; Anlegen/Ändern/Löschen ist Admin-Sache.
+// ------------------------------------------------------------
+export async function getCoatings(): Promise<Coating[]> {
+  return http.get<Coating[]>('/coatings')
+}
+
+export async function createCoating(name: string): Promise<Coating> {
+  return http.post<Coating>('/coatings', { name })
+}
+
+export async function updateCoating(id: number, name: string): Promise<Coating> {
+  return http.put<Coating>(`/coatings/${id}`, { name })
+}
+
+export async function deleteCoating(id: number): Promise<void> {
+  return http.delete<void>(`/coatings/${id}`)
 }

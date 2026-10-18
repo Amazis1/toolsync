@@ -187,6 +187,18 @@ verwendet (DEC-053, ersetzt die frühere Vorgabe „natives HTML5" aus DEC-048).
 > **Wichtig:** `move` und `swap` pflegen **beide** Seiten der Beziehung
 > (`Position.tool_id` und `Tool.position_id`); `insert_at` synchronisiert nach dem
 > Shift alle Plätze der Ziel-Schublade in einer Schleife nach.
+>
+> **Zwei Wahrheiten (Stand 2026-10):** Beide Seiten zu führen ist die einzige
+> Stelle im Datenmodell, an der dieselbe Aussage doppelt gespeichert wird. Ein
+> DB-Constraint dafür gibt es nicht (`positions` hat keinen Unique-Index auf
+> `tool_id`, `tools` keinen auf `position_id`, siehe unten). Schreibwege sind
+> ausschließlich `LocationService` (die fünf Operationen hier plus
+> `_release_tools_from_positions` beim Löschen) und `ToolService`
+> (`create_tool`, `update_tool`, `delete_tool`) – je **eine** Transaktion.
+> Der frühere Satz „`insert_at` synchronisiert nicht in jedem Fall" ist
+> überholt. Geprüft wird das automatisch in
+> `backend/tests/test_platz_konsistenz.py` (beide Richtungen nach jeder
+> Operation).
 
 ## 6. Werkzeug-Ablage (`Tool.position_id = NULL`)
 

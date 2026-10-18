@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { loginUser, loginAdmin, getCurrentUser, ApiError } from '../lib/api'
 import type { UserInfo } from '../lib/api'
 import { decodeTokenExp, isTokenExpired, pingSession } from '../lib/session'
+import { clearPlantChoice, setPlantContext, setPlantReloader } from '../lib/plantContext'
 
 interface AuthContextType {
   user: UserInfo | null
@@ -25,6 +26,8 @@ interface AuthContextType {
   extendSession: () => Promise<void>
   isAuthenticated: boolean
   isLoading: boolean
+  /** Arbeitswerk neu laden (`/auth/me` mit der aktuellen Wahl, DEC-070/076). */
+  refreshPlant: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -103,7 +106,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(storedToken)
     setExpiresAt(decodeTokenExp(storedToken))
     getCurrentUser()
-      .then((currentUser) => setUser(currentUser))
+      .then((currentUser) => {
+        setUser(currentUser)
+        // Arbeitswerk-Kontext übernehmen: die Wahl aus dem Browser geht beim
+        // `/auth/me`-Aufruf bereits mit, der Server nennt das gültige Werk.
+        setPlantContext({
+          userId: currentUser.id,
+          serverPlantId: currentUser.plant_id ?? null,
+        })
+      })
       .catch((error: unknown) => {
         // Token ungültig oder abgelaufen → aufräumen
         if (error instanceof ApiError) {
@@ -116,6 +127,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false))
   }, [])
 
+  /**
+   * Nach einem Werkswechsel: `/auth/me` mit der neuen Wahl holen. Der Server
+   * antwortet mit dem aufgelösten Arbeitswerk (`plant_id`, `plant_name`,
+   * `plant_color`); damit kommt die Werkfarbe überall an (DEC-076).
+   */
+  const refreshPlant = useCallback(async () => {
+    try {
+      const aktuell = await getCurrentUser()
+      setUser(aktuell)
+      setPlantContext({ userId: aktuell.id, serverPlantId: aktuell.plant_id ?? null })
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.warn('Arbeitswerk konnte nicht neu geladen werden:', error.message)
+      }
+    }
+  }, [])
+
+  // Die App meldet an, wie nach einem Werkswechsel neu geladen wird.
+  useEffect(() => {
+    setPlantReloader(refreshPlant)
+    return () => setPlantReloader(null)
+  }, [refreshPlant])
+
   const login = async (personalNumber: string, isAdmin: boolean, password?: string) => {
     const response = isAdmin
       ? await loginAdmin(personalNumber, password ?? '')
@@ -126,6 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setExpiresAt(decodeTokenExp(response.access_token))
     setSessionExpired(false)
     localStorage.setItem('token', response.access_token)
+    // Arbeitswerk-Kontext für den Anfrageweg setzen (DEC-070): ab der nächsten
+    // Anfrage geht die Wahl des Benutzers als Header `X-Plant-Id` mit.
+    setPlantContext({
+      userId: response.user.id,
+      serverPlantId: response.user.plant_id ?? null,
+    })
   }
 
   const logout = useCallback(() => {
@@ -135,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionExpired(false)
     localStorage.removeItem('token')
     localStorage.removeItem('token_expires_at')
+    clearPlantChoice()
   }, [])
 
   /**
@@ -160,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         extendSession,
         isAuthenticated: !!user,
         isLoading,
+        refreshPlant,
       }}
     >
       {children}

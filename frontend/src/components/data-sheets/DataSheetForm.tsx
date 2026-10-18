@@ -67,8 +67,9 @@ function isBild(file: File): boolean {
  *
  * Aufbau wie das Serienartikel-Formular – **Innenlabel** (`.ui-field`,
  * Guide §1.9), Meldungen direkt am Feld, Speichern unabhängig vom Werkzeug.
- * Felder: **Werkzeug-ID** (freiwillig), Werk (Pflicht), Maschine, Name und
- * Dateien (Datenblätter als PDF **und** Bilder).
+ * Felder: **Werkzeug-ID** (freiwillig), **Werk** (freiwillig – ohne Werk gilt der
+ * Datensatz für **alle** Werke, DEC-085), Maschine, Name und Dateien
+ * (Datenblätter als PDF **und** Bilder).
  *
  * Es gibt bewusst **kein** Beschreibungsfeld und **keinen** Kunden: Ein
  * Datenblatt ist über Werkzeug-ID, Name, Werk und Maschine auffindbar; eine
@@ -251,14 +252,10 @@ export default function DataSheetForm({
     event.preventDefault()
     setError(null)
 
-    if (!plantId) {
-      setError('Bitte ein Werk auswählen.')
-      return
-    }
-
     const payload: DataSheetInput = {
       tool_id: toolId.trim() || null,
-      plant_id: Number(plantId),
+      // Kein Werk = gilt für **alle** Werke (DEC-085).
+      plant_id: plantId ? Number(plantId) : null,
       machine_id: machineId ? Number(machineId) : null,
       name: name.trim() || null,
       description: description.trim() || null,
@@ -401,9 +398,8 @@ export default function DataSheetForm({
 
         <div className="min-w-0">
           <div className="ui-field">
-            <FieldLabel htmlFor={`${uid}-plant`} required>
-              Werk
-            </FieldLabel>
+            {/* Werk ist **freiwillig** (DEC-085): leer = gilt für alle Werke. */}
+            <FieldLabel htmlFor={`${uid}-plant`}>Werk</FieldLabel>
             <select
               id={`${uid}-plant`}
               value={plantId}
@@ -411,10 +407,8 @@ export default function DataSheetForm({
                 setPlantId(event.target.value)
                 setMachineId('')
               }}
-              required
-              aria-required
             >
-              <option value="">Werk wählen</option>
+              <option value="">Alle Werke (allgemein)</option>
               {plants.map((plant) => (
                 <option key={plant.id} value={plant.id}>
                   {plant.name}
@@ -433,7 +427,9 @@ export default function DataSheetForm({
               onChange={(event) => setMachineId(event.target.value)}
               disabled={!plantId}
             >
-              <option value="">{plantId ? 'keine Maschine' : 'zuerst Werk wählen'}</option>
+              <option value="">
+                {plantId ? 'keine Maschine' : 'nur mit Werk wählbar'}
+              </option>
               {machines.map((machine) => (
                 <option key={machine.id} value={machine.id}>
                   {machine.name}

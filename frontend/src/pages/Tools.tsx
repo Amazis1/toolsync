@@ -4,6 +4,7 @@ import ToolForm from '../components/tools/ToolForm'
 import ToolQuickFilters from '../components/tools/ToolQuickFilters'
 import ConfirmDialog from '../components/ConfirmDialog'
 import LendModal from '../components/movements/LendModal'
+import ReturnModal from '../components/movements/ReturnModal'
 import { KeyboardIcon, PencilIcon, XIcon } from '../components/icons'
 import type { ToastVariant } from '../lib/useToasts'
 import {
@@ -166,6 +167,9 @@ export default function Tools({
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [lendTool, setLendTool] = useState<Tool | null>(null)
+  // Rückgabe (DEC-078): ein Werkzeug wird **einzeln** über das Zeilenmenü
+  // zurückgegeben – eigener Dialog, damit der Vorgang klar erkennbar ist.
+  const [returningTool, setReturningTool] = useState<Tool | null>(null)
 
   // Welche Art von Verlaufseintrag die nächste Änderung erzeugt: Tippen
   // ersetzt den Eintrag (sonst stünde nach „Stempel“ viermal im Verlauf),
@@ -645,6 +649,7 @@ export default function Tools({
         onEdit={openEditForm}
         onDelete={setToolToDelete}
         onLend={setLendTool}
+        onReturn={setReturningTool}
         onOpenDataSheets={(tool) => onOpenDataSheets?.(tool)}
         onCreate={openCreateForm}
       />
@@ -668,6 +673,21 @@ export default function Tools({
           onSuccess={() => {
             showToast('success', `Werkzeug „${toolLabel(lendTool.tool_id)}“ ausgeliehen`)
             setLendTool(null)
+            reload()
+          }}
+        />
+      )}
+
+      {returningTool && (
+        <ReturnModal
+          tool={returningTool}
+          onClose={() => setReturningTool(null)}
+          onSuccess={() => {
+            showToast(
+              'success',
+              `Werkzeug „${toolLabel(returningTool.tool_id)}“ zurückgegeben`,
+            )
+            setReturningTool(null)
             reload()
           }}
         />

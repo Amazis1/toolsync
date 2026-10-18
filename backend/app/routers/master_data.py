@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.dependencies.permissions import require_active, require_admin
 from app.models.user import User
 from app.utils.database import get_db
-from app.models.master_data import Customer, Machine, Plant
+from app.models.master_data import Customer, Machine, Plant, Coating
 from app.schemas.master_data import (
     CustomerCreate,
     CustomerUpdate,
@@ -14,6 +14,9 @@ from app.schemas.master_data import (
     MachineCreate,
     MachineUpdate,
     MachineRead,
+    CoatingCreate,
+    CoatingUpdate,
+    CoatingRead,
 )
 
 router = APIRouter()
@@ -153,5 +156,90 @@ async def delete_machine(
     if not machine:
         raise HTTPException(status_code=404, detail="Maschine nicht gefunden")
     await db.delete(machine)
+    await db.commit()
+    return None
+
+
+# --------------------------------------------------------------
+# COATING – Stempel-Beschichtung (Dachmarke MultiDur)
+# Lesen für alle aktiven Benutzer (das Anlege-Formular braucht die Liste),
+# Schreiben nur Admin – wie bei Kunden und Maschinen.
+# --------------------------------------------------------------
+@router.get("/coatings", response_model=List[CoatingRead])
+async def get_coatings(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active),
+):
+    """Alle Beschichtungen auflisten (Lesen für alle aktiven Benutzer)."""
+    query = select(Coating).order_by(Coating.name).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.post("/coatings", response_model=CoatingRead, status_code=201)
+async def create_coating(
+    data: CoatingCreate,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Beschichtung anlegen (nur Admin)."""
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Name ist erforderlich")
+    existing = await db.execute(select(Coating).where(Coating.name == name))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Beschichtung existiert bereits")
+    coating = Coating(name=name)
+    db.add(coating)
+    await db.commit()
+    await db.refresh(coating)
+    return coating
+
+
+@router.put("/coatings/{id}", response_model=CoatingRead)
+async def update_coating(
+    id: int,
+    data: CoatingUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Beschichtung umbenennen (nur Admin).
+
+    Die Werkzeuge zeigen weiter auf die Zeile (`coating_id` bleibt), eine
+    Umbenennung ändert also nur die Bezeichnung in der Liste.
+    """
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Name ist erforderlich")
+    coating = await db.get(Coating, id)
+    if not coating:
+        raise HTTPException(status_code=404, detail="Beschichtung nicht gefunden")
+    if name != coating.name:
+        existing = await db.execute(select(Coating).where(Coating.name == name))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Beschichtung existiert bereits")
+    coating.name = name
+    await db.commit()
+    await db.refresh(coating)
+    return coating
+
+
+@router.delete("/coatings/{id}", status_code=204)
+async def delete_coating(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(require_admin),
+):
+    """Beschichtung löschen (nur Admin).
+
+    Werkzeuge verlieren dabei nur die Zuordnung (`SET NULL`) – sie bleiben
+    vollständig erhalten.
+    """
+    coating = await db.get(Coating, id)
+    if not coating:
+        raise HTTPException(status_code=404, detail="Beschichtung nicht gefunden")
+    await db.delete(coating)
     await db.commit()
     return None

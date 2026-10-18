@@ -6,10 +6,276 @@
 > **Hinweis:** Die manuellen Browser-Prüfungen aus TASK-012 (AdminPanel) sind
 > weiterhin offen, aber nicht die aktive Aufgabe – sie stehen am Ende der Datei.
 
-**Stand:** Serienartikel sind fertig umgebaut: eigener Bereich mit Stammdatenbezug,
-Verwaltung nur durch Admins, Artikelordner je Artikelnummer, Bilder mit
-Vorschaubildern und Split-Screen-Viewer (DEC-056 bis DEC-059; TASK-016 bis TASK-018
-abgeschlossen). Offen bleibt nur die Verifikation im AdminPanel (TASK-012).
+**Nachtrag DEC-085:** Ein **Datenblatt ohne Werk** gilt für alle Werke (allgemeine Info) – `data_sheets.plant_id` ist nullable (Migration `f4c9a2d7b158`), das Formular bietet „Alle Werke (allgemein)", die Liste schreibt „Alle Werke". Serienartikel und Ersatzteile behalten die Werk-Pflicht.
+
+**Stand:** Die Werkzeug-Logistik zwischen den Werken ist umgesetzt (DEC-072/074–079;
+TASK-025b). Damit sind Arbeitswerk (TASK-030), Rückgabe an Personen (TASK-025a) und
+Transport/Empfang (TASK-025b) fertig; als nächster Schritt bleibt der echte
+Historie-Reiter (TASK-029, DEC-066). Zuletzt ergänzt: die Stempel-Beschichtung als
+Stammdatenliste samt Dropdown im Werkzeug-Formular (TASK-031, DEC-083). Offen aus
+TASK-012 sind weiterhin die manuellen Browser-Prüfungen im AdminPanel.
+
+---
+
+## TASK-031 – Stempel-Beschichtung (MultiDur) in Stammdaten und Werkzeug-Formular (COMPLETED)
+
+**Entscheidung:** DEC-083 · **Doku:** `docs/09-admin-panel.md` (Stammdaten),
+`docs/05-tools.md` (Werkzeugfelder), `docs/02-domain-model.md` (`Coating`)
+
+**Auslöser (Projektinhaber):** „In AdminPanel soll noch form für Stammdaten angelegt
+werden ‚Stempel Beschichtung' – Beschichtungen unter der Dachmarke MultiDur: MultiDur
+TiCN, MultiDur Performance und MultiDur Alu. Und ein Dropdownmenü in dem Anlege-Formular
+in Werkzeuge Stempel neben dem Lager/Ersatz mit trennen." Nachtrag: „Kannst du sofort
+anlegen – und eins ‚Standard' und vorauswählen."
+
+**Erledigt (Backend):**
+
+| Änderung | Ort |
+|---|---|
+| `Coating` (Tabelle `coatings`, Name eindeutig) | `models/master_data.py` |
+| `Tool.coating_id` (FK → `coatings.id`, `SET NULL`) + `ToolRead.coating` | `models/tool.py`, `schemas/tool.py` |
+| `/api/coatings` (GET für alle aktiven Benutzer; POST/PUT/DELETE nur Admin) | `routers/master_data.py`, `schemas/master_data.py` |
+| Migration `b5e2d8c41f97` – Tabelle, Spalte, Fremdschlüssel, Index; Startdaten (nur wenn leer); auf/ab/auf geprüft | `alembic/versions/` |
+| 5 Tests (Anlegen mit/ohne Beschichtung, Update behält/entfernt sie, Löschen der Zeile) | `tests/test_coatings.py` (neu) |
+
+**Erledigt (Frontend):**
+
+| Änderung | Ort |
+|---|---|
+| Coating-Typ und `coating_id` in `Tool`/`ToolInput` | `api/types.ts` |
+| CRUD in `getCoatings`/`createCoating`/`updateCoating`/`deleteCoating` (Re-Export über `api/admin.ts`) | `api/masterData.ts` |
+| Block „Stempel-Beschichtung" im Stammdaten-Grid, mit Hinweiszeile (`hint` an `TableEditor`) | `pages/admin/AdminStammdaten.tsx` |
+| Dropdown „Beschichtung" mit eigener Trennlinie **neben „Lager/Ersatz"** (eine Zeile ab ~1840 px Fensterbreite), **nur** bei Kategorie Stempel, **voller** Name, „Standard" vorausgewählt, keine Option „Ohne Beschichtung" | `components/tools/ToolForm.tsx` |
+| `coating_id` in den beiden übrigen `ToolInput`-Bauplätzen mitführen | `pages/admin/AdminStorageLocations.tsx`, `components/ToolFormModal.tsx` |
+| Beschichtung in der **Werkzeugliste** in der Kategorie-Zeile, voller Name („Stempel · MultiDur TiCN") – zweizeilige Zeilen | `components/tools/ToolTable.tsx` |
+| **Seitenraster:** Inhalt `xl:col-span-10`, Statistik-Sidebar `xl:col-span-2`, **kein `max-w`-Deckel** mehr; Rasterlücke `gap-6` = Seitenpolster 24 px, vertikal überall `space-y-4` | `App.tsx` |
+
+**Prüfung:**
+
+| Prüfung | Ergebnis |
+|---|---|
+| Backend-Tests | **269 passed** (5 neu) |
+| TypeScript | `npx tsc -b` ohne Fehler |
+| Migration | auf `d7a1c4f93e26 → b5e2d8c41f97` angewandt, auf/ab/auf geprüft, Startdaten nach dem Downgrade wieder gesetzt, 76 Werkzeuge unverändert |
+| API-Rauchtest (isolierte DB-Kopie, Port 8002) | 14 Prüfungen grün: Startdaten, Anlegen, doppelter Name 400, leere Eingabe 400, Umbenennen, Stempel mit `coating_id` samt `coating.name`, Aufräumen |
+| Browser (Playwright, Dev-Server 5173) | 4 Läufe grün: Admin-Block mit allen vier Beschichtungen; Feld mit „Standard", verschwindet bei Abstreifer/Matrize; **volle Namen im Dropdown** (297 px Feld, längster Eintrag paßt), Kopfzeile wieder zweigruppig und einzeilig |
+| Messung (Playwright, Fenster 1280–2560) | **Abstände jetzt 24 / 24 / 24 px** (Nav→Inhalt, Inhalt→Statistik, Statistik→Rand) und zwischen allen Blöcken 16 px – vorher 24 / 20 / 24 px, ab 1840 px außen 64 bzw. 384 px bei festen 20 px innen, Karten 12 px gegen Blöcke 16 px. Formular-Kopfzeile 688 px (1440) · **1008 px (1920)** · 1434 px (2560) – einzeilig ab ca. 1700 px; Werkzeugliste ohne Überlauf; alle sechs Reiter ohne Konsolenfehler |
+| Seitenraster | Inhalt 1020 / 1152 / 1353 / 1620 / 2153 px bei 1280 / 1440 / 1600 / 1920 / 2560 px Fenster; Statistik-Karten 82 px hoch (bei 1280 eine 98 px, weil „Verfügbare Werkzeuge" auf 149 px Spalte zweizeilig wird) |
+
+---
+
+## TASK-025b – Werkzeug-Logistik zwischen den Werken (COMPLETED)
+
+**Plan:** `docs/21-werkzeug-logistik.md` · **Entscheidungen:** DEC-072, DEC-073, DEC-074,
+DEC-075, DEC-076, DEC-077, DEC-078, DEC-079 · **Umsetzung:** `tasks/25b-werkzeug-logistik.md`
+
+**Auslöser (Projektinhaber):** „Werkzeug Logistik: Auftrags-Nr. als Freitext, Suche im
+eigenen Werk, Mehrfachauswahl, Info-Feld, optional mehrere Aufträge. Der Heimatplatz darf
+sich **nicht** ändern – nur unterwegs melden, das empfangende Werk bestätigt, zurück über
+‚Zurück schicken'. In allen Werken gleich." Danach zur Oberfläche: „sehr unübersichtlich,
+zu viel belastet – die Aufträge sollen als Dropdown sein … mit Modal arbeiten" (DEC-075).
+
+**Erledigt (Backend):**
+
+| Änderung | Ort |
+|---|---|
+| Zustände `draft/sent/partly_received/received/cancelled` | `models/enums.py` |
+| `TransportOrder`, `TransportItem` (Empfang je Zeile, Heimatplatz als Nachweis) | `models/transport.py` (neu) |
+| Migration `d7a1c4f93e26` – objektweise idempotent, auf/ab/auf geprüft | `alembic/versions/` |
+| Service mit allen Regeln (einzige Schreibstelle) | `services/transport_service.py` (neu) |
+| `/api/transport/orders` (Liste, Anlegen, Ändern, senden, stornieren, empfangen, Rückweg), `/candidates`, `/away` | `routers/transport.py` (neu) |
+| 41 neue Tests | `tests/test_transport.py` (neu) |
+
+**Erledigt (Frontend):**
+
+| Änderung | Ort |
+|---|---|
+| Reiter **Logistik** mit Aufträge · Eingang (Zähler) · Wo ist was | `pages/Logistics.tsx` (neu) |
+| Auftrag als Dropdown-Zeile, Positionen und Aktionen erst beim Aufklappen | `components/logistics/OrderList.tsx` |
+| Eingang-Karten („n von m noch nicht bestätigt") | `components/logistics/IncomingCards.tsx` |
+| „Wo ist was" mit Segmenten (DEC-077) | `components/logistics/AwayTable.tsx` |
+| Fenster: Neuer Auftrag, Empfang, Zurück schicken, Auftrag öffnen | `components/logistics/*Modal.tsx` |
+| Werkfarbe: aktiver Reiter, `.ui-btn-werk`, Werk-Namen, ganze Zeile 14 %/20 % | `index.css`, `components/logistics/logistikTeile.tsx` |
+| „aktuell Werk 2" in der Werkzeugliste (DEC-071) | `components/tools/ToolTable.tsx` |
+| Basis-Adresse für Browser-Läufe über `PLAYWRIGHT_BASE_URL` | `playwright.config.ts` |
+| 6 neue Browser-Tests | `tests/logistics.spec.ts` (neu) |
+
+**Belege:** Backend **255 passed** (vorher 214). Browser **100 passed** (vorher 94) gegen
+eine **Kopie** der Produktivdaten (`toolsync-ui-test.db`, DEC-079 Punkt 7 – Aufträge sind
+Nachweise und werden nicht gelöscht). Migration auf der Dev-Datenbank angewandt, rückwärts
+und wieder vorwärts geprüft; Sicherung vorher unter
+`.backup-history/toolsync-vor-025b-*.db`. Produktivbestand danach unverändert: 2 Werke,
+3 Benutzer, 16 Werkzeuge, 104 Bewegungen, keine Ausleihe offen.
+
+**Zwei Fehler, die erst die Tests gezeigt haben** (beide behoben): `get_order` lieferte
+nach dem Schreiben veraltete Beziehungen („verschickt von: –", fehlendes
+`populate_existing`), und `return_order` hielt den **teilweise** empfangenen Auftrag für
+ein Hindernis seiner eigenen Werkzeuge (`exclude_order_id`).
+
+**Offen (nicht Teil dieser Aufgabe):** Karten der rechten Spalte füllen; Matrix-Karte
+„ausgeliehen nach W2" im Admin-Panel; Zeilenaktion „In Logistik öffnen". Der Reiter
+„Historie" bleibt Platzhalter bis TASK-029.
+
+---
+
+## TASK-030 – Arbeitswerk, Werkfarbe und aktueller Ort (COMPLETED)
+
+**Plan:** `docs/21-werkzeug-logistik.md` · **Entscheidungen:** DEC-070, DEC-071, DEC-076
+
+**Auslöser (Projektinhaber):** „ok das sieht schon gut aus lass uns es in die App reinbringen."
+Das Arbeitswerk ist das Fundament der Werkzeug-Logistik: ohne es weiß kein Vorgang, wer
+für welches Werk handelt. Drei Punkte des Inhabers sind eingearbeitet:
+- Werkfarben müssen **änderbar** sein → Farbwähler in den Stammdaten (wie Kunden/Maschinen).
+- Rückgabe erfolgt **je Werkzeug** über das Zeilenmenü (TASK-025a).
+- Der Werksumschalter kommt **nicht** als neuer Tab (Umsetzung: Leiste über der Tab-Leiste).
+
+**Erledigt (Backend – mit echten Daten geprüft):**
+
+| Änderung | Ort |
+|---|---|
+| `plants.color`, `users.default_plant_id`, `tools.current_plant_id` | `models/master_data.py`, `models/user.py`, `models/tool.py` |
+| Migration `b3d7e1a95c42` – idempotent, auf- und abwärts geprüft; setzt Werk 1 = `#0f766e`, Werk 2 = `#4338ca` | `alembic/versions/b3d7e1a95c42_workplant.py` |
+| Farbprüfung (`#RRGGBB`, leer = keine Farbe) für Werke/Kunden/Maschinen | `schemas/master_data.py` |
+| Arbeitswerk auflösen: Header `X-Plant-Id` → Konto-Vorgabe → erstes Werk; unbekannt = **400** | `dependencies/plant.py` (neu) |
+| `/auth/me` und beide Anmeldungen liefern `plant_id`, `plant_name`, `plant_color` | `routers/auth.py` |
+| Farbe beim Anlegen/Ändern eines Werks, Leeren erlaubt | `routers/locations.py` |
+| `ToolRead` mit `current_plant_id` / `current_plant` | `schemas/tool.py` |
+| 13 neue Tests (Auflösung, kein Filter, Farbe, aktueller Ort) | `tests/test_active_plant.py` |
+
+**Erledigt (Frontend – Typprüfung grün):**
+
+| Änderung | Ort |
+|---|---|
+| Merkzettel-Arbeitswerk (drei Stufen, `localStorage`), reaktiv über `useSyncExternalStore` | `lib/activePlant.ts` (neu) |
+| Kontext für den Anfrageweg + `choosePlant` | `lib/plantContext.ts` (neu) |
+| Header `X-Plant-Id` an **jeder** Anfrage | `lib/transport.ts` |
+| Werkfarbe als CSS-Variablen (`--werk`, `--werk-soft`, `--werk-line`) | `lib/plantTheme.ts` (neu) |
+| **Werksumschalter als Leiste über der Tab-Leiste** (Farbpunkt je Werk) | `components/PlantBar.tsx` (neu), `App.tsx` |
+| Arbeitswerk neu laden nach Wechsel (`refreshPlant` in `AuthContext`) | `context/AuthContext.tsx` |
+| Farbwähler + Farbpunkt für Werke | `pages/admin/AdminStammdaten.tsx` |
+| Feld „Arbeitswerk (Vorgabe)" im Benutzerformular | `pages/admin/AdminUsers.tsx` |
+
+**Belege:** Backend **203 passed** (vorher 190; 13 neue). Migration auf der Dev-Datenbank
+angewandt, rückwärts und wieder vorwärts geprüft; Sicherung vorher unter
+`.backup-history/toolsync-vor-030-*.db`. Gegen das **laufende** Backend geprüft:
+Anmeldung liefert `plant_id=1 · Werk 1 · #0f766e`; `/auth/me` mit `X-Plant-Id: 2` liefert
+`Werk 2 · #4338ca`; `X-Plant-Id: 99` → **400** „Arbeitswerk 99 existiert nicht.";
+`X-Plant-Id: abc` → **400** ungültig; `/locations/plants` liefert beide Farben; die
+Werkzeugliste bleibt mit Header werk-übergreifend (`total=16`).
+
+**Browser-Prüfung (Playwright, Chromium, `--workers=1`): 91 passed.** Neu:
+`tests/plant-bar.spec.ts` (5 Tests) – Leiste über der Tab-Leiste (gemessene Lage und kein
+eigener Tab), Wechsel ändert `aria-pressed` **und** `--werk`, Wahl überlebt ein Neuladen,
+**Werkfarbe über den Bedienweg** im Admin-Panel geändert und in der Oberfläche sichtbar,
+Benutzerformular speichert die Vorgabe. Die Specs räumen auf: Test-Benutzer wird gelöscht,
+Werkfarben werden auf den **vorher festgehaltenen** Stand zurückgesetzt (nicht auf einen
+angenommenen Wert). Bestand danach unverändert: 16 Werkzeuge, 104 Bewegungen,
+Werk 1 `#0f766e` · Werk 2 `#4338ca`.
+
+**Zwei bestehende Tests mussten robuster werden** (durch die neue Leiste aufgedeckt):
+`data-sheets.spec.ts` (Favoriten-Hover) und `tools-list.spec.ts` (Favoriten-Zeile) holten
+die Zeile nicht in den Sichtbereich – bei 720 px Fensterhöhe lag sie am unteren Rand, der
+Mauszeiger traf daneben. Jetzt scrollen beide die Zeile vorher in die Mitte; die
+Werkzeugliste wartet zusätzlich auf die neue Zeilenfarbe (optimistisches Umschalten ist
+erst im nächsten Bild zu sehen). Gegenprobe mit dem alten Stand (Frontend auf HEAD): der
+Test war dort grün, also eine Testschwäche, kein Fehler der App.
+
+**Offen:**
+- Randfall: `default_plant_id` lässt sich im Formular setzen, aber (wegen
+  `CRUDBase.update` = „None heißt unverändert") noch nicht wieder **leeren**.
+- Die Leiste sitzt im Inhaltsbereich (9 von 12 Spalten) – auf schmalen Fenstern rutscht sie
+  nicht unter die rechte Spalte, ist aber sichtbar, sobald die Spalte umbricht.
+
+**Nacharbeit (Wunsch des Inhabers, umgesetzt):** Das Arbeitswerk sitzt **in der Sidebar**
+unter dem Benutzerblock (nicht als Leiste über dem Inhalt, kein eigener Tab) –
+`components/PlantSwitch.tsx`. Die Spec prüft die Lage jetzt so (`.app-sidebar`), und die
+beiden Hover-Tests brauchen den zusätzlichen Platz deshalb nicht mehr zu umgehen.
+
+**Abschluss (TASK-025b):** Die Werkfarbe wird inzwischen auch **verbraucht**: aktiver
+Reiter (`var(--werk)`), `.ui-btn-werk`, Werk-Namen und ganze Tabellenzeilen in
+`rgba(Werkfarbe, .14)` (DEC-076/079). Der offene Randfall `default_plant_id` (setzen, aber
+nicht leeren) bleibt bestehen.
+
+---
+
+## TASK-025a – Rückgabe eines Werkzeugs an eine Person (COMPLETED)
+
+**Plan:** DEC-078 in `docs/13-decisions.md`
+
+**Auslöser (Projektinhaber):** „Rückgabe über das Zeilenmenü. Werkzeuge sollen auch einzeln
+zurückgegeben werden." Vorher gab es **keine** Rückgabe in der Oberfläche: Ein ausgeliehenes
+Werkzeug blieb für immer auf `lent` (`docs/08` §7), und die Ausleihe schrieb die
+Personalnummer als Klartext in die Notiz, während `user_id` leer blieb.
+
+**Erledigt:**
+
+| Änderung | Ort |
+|---|---|
+| `tool_movements.plant_id` (Arbeitswerk je Bewegung) | Modell + Migration `c5e9f2b71d84` (idempotent, auf/ab geprüft) |
+| `ReturnService.return_tool()` – Status, Bewegung, Ausgangsort, Benutzer, Werk in **einer** Transaktion; `list_active_loans()` | `services/return_service.py` (neu) |
+| `POST /api/movements/return/{tool_id}` (Body freiwillig), `GET /api/movements/active` | `routers/movements.py` |
+| Ausleihe: Benutzer **aus dem Token**, Arbeitswerk aus dem Header (nicht mehr aus dem Body) | `routers/movements.py`, `services/movement_service.py` |
+| Bewegung wird **frisch geladen** zurückgegeben (behebt `MissingGreenlet` im Antwort-Aufbau) | `services/movement_service.py` |
+| Zeilenmenü: „Zurückgeben" bei `status = lent`, sonst „Ausleihen" | `components/tools/ToolTable.tsx`, `ToolList.tsx`, `pages/Tools.tsx` |
+| Rückgabe-Dialog (Werkzeug, Kategorie, Heimatplatz, Notiz freiwillig) | `components/movements/ReturnModal.tsx` (neu) |
+| `returnTool()`, `getActiveLoans()`, Typen `ActiveLoan`/`plant_id` | `api/movements.ts`, `types/movement.ts` |
+| 11 neue Backend-Tests | `tests/test_tool_return.py` |
+| 3 neue Browser-Tests | `tests/tool-return.spec.ts` |
+
+**Belege:** Backend **214 passed** (vorher 203; 11 neue). Browser-Suite **94 passed**
+(vorher 91; 3 neue). Ende-zu-Ende gegen das laufende Backend geprüft: Ausleihe → `/active`
+zeigt das Werkzeug mit Platz und Ausleiher → Rückgabe → `/active` leer, Verlauf
+`return · 01-B-04 → Werk 1 · Werk Werk 1 · Max Mustermann`. Rückgabe eines nicht
+ausgeliehenen Werkzeugs → **400** „nicht ausgeliehen" **ohne** Bewegung. Bestand danach
+unverändert (16 Werkzeuge, 3 Benutzer, Werkfarben wie vorher).
+
+**Hinweis zum Prüflauf:** Der auf Port 8000 laufende Backend-Prozess ist ein **alter** Stand
+(kennt die neuen Endpunkte nicht) und ließ sich hier nicht beenden. Die Prüfläufe liefen
+deshalb gegen einen frisch gestarteten Stand auf Port 8002 (mit temporärer Vite- und
+Playwright-Konfiguration, danach entfernt). **Bitte den eigenen Backend-Prozess einmal neu
+starten**, damit die Rückgabe auch auf 8000 verfügbar ist.
+
+**Offen (bewusst):**
+- Keine Sammel-Rückgabe (DEC-078 Punkt „Was ausdrücklich NICHT gilt").
+- Kein eigener Bildschirm „Was ist draußen" – die Liste `/movements/active` liefert die
+  Daten dafür bereits.
+- Der Randfall „Vorgabe leeren" im Benutzerformular bleibt offen (siehe TASK-030).
+
+---
+
+## TASK-028 – Zwei Wahrheiten: Konsistenz-Test und Doku-Korrektur (COMPLETED)
+
+**Auslöser (Projektinhaber):** „prüfe die docs, wo wir gerade sind, was noch gemacht
+werden muss – zwei Wahrheiten." Geprüft wurde die Stelle aus
+`docs/18-context-lagerverschiebung.md` (Abschnitt 5, Punkt 5): wo `Position.tool_id`
+und `Tool.position_id` gehalten und synchronisiert werden.
+
+**Befund:** beide Seiten werden von genau zwei Diensten geschrieben – `LocationService`
+(move / swap / insert_at / place-tool / release-tool / Freigeben beim Löschen) und
+`ToolService` (anlegen / bearbeiten / löschen). Kein Schreibweg geht daran vorbei.
+Widerspruch zur Doku: `docs/14-architecture.md` behauptete „`insert_at` synchronisiert
+nicht in jedem Fall" – **überholt**.
+
+**Erledigt:**
+
+| Änderung | Ort |
+|---|---|
+| Widersprüchlichen Satz korrigiert, technische Schuld präzisiert (offen bleibt: kein DB-Constraint) | `docs/14-architecture.md` § 10 |
+| Test-Tabelle ergänzt, „Testabdeckung ist dünn" korrigiert (12 Dateien, 190 Tests) | `docs/14-architecture.md` § 8 |
+| „Offen"-Hinweis zur beidseitigen Modellierung auf den Stand gebracht | `docs/02-domain-model.md` § 7 |
+| Abschnitt „Zwei Wahrheiten" mit den Schreibwegen ergänzt | `docs/04-warehouse.md` § 5 |
+| Nachtrag zur atomaren Transaktion | `docs/16-perlenkette-dnd-agent-doku.md` § 1 |
+| **`ToolService.update_tool` auf *eine* Transaktion** (vorher drei Commits) und Freigabe über die **Platz-Seite**, damit ein auseinandergelaufener Bestand beim Bearbeiten zusammengeführt wird | `backend/app/services/tool_service.py` |
+| **`ToolService.create_tool` / `delete_tool`**: Platz-Seite wird im selben Zug committet | `backend/app/services/tool_service.py` |
+| **Neue Konsistenz-Tests** (17): beide Richtungen nach jeder Operation, dazu ein Test, der absichtlich eine Seite stehen lässt und belegt, dass die Prüfung anschlägt | `backend/tests/test_platz_konsistenz.py` |
+
+**Belege:** Backend **190 passed** (vorher 173), darunter 17 neue. Bestand der
+Dev-Datenbank einmalig gegengeprüft (`.audit/probe-bestand-plaetze.py`): 16 Werkzeuge,
+281 Plätze, 13 belegte Plätze, 13 eingelagerte Werkzeuge, **0 Abweichungen**.
+
+**Bewusst offen (nicht Teil dieser Aufgabe):** ein DB-seitiger Constraint
+(partieller Unique-Index) als letzte Absicherung – `docs/04-warehouse.md`,
+„Offene Fragen" 1.
 
 ---
 
@@ -995,6 +1261,11 @@ Die vollständigen Checklisten liegen in `tasks/archive/completed-tasks.md`.
 | TASK-020 | Bildansicht: Zoom, Drehen, größeres Fenster | COMPLETED |
 | TASK-021 | Mehrere Einrichtepläne und Dateiverwaltung in der Bearbeitung | COMPLETED |
 | TASK-022 | Serienartikel-Liste in Werkzeug-Optik (Favoriten, Zebra, SVG) | COMPLETED |
+| TASK-028 | Zwei Wahrheiten: Konsistenz-Test und Doku-Korrektur | COMPLETED |
+| TASK-030 | Arbeitswerk, Werkfarbe und aktueller Ort | COMPLETED |
+| TASK-025a | Rückgabe eines Werkzeugs an eine Person | COMPLETED |
+| TASK-025b | Werkzeug-Logistik zwischen den Werken | COMPLETED |
+| TASK-031 | Stempel-Beschichtung (MultiDur) in Stammdaten und Werkzeug-Formular | COMPLETED |
 
 ---
 
@@ -1002,11 +1273,11 @@ Die vollständigen Checklisten liegen in `tasks/archive/completed-tasks.md`.
 
 | Bereich | Stand |
 |---|---|
-| Backend-Router | `auth`, `users`, `roles`, `tools`, `locations`, `movements`, `master_data`, `serial_articles`, `spare_parts` |
-| Backend-Modelle | `user`, `tool`, `master_data`, `storage`, `spare_part`, `movement`, `serial_article` |
-| Migrationen | 9 (`f5b7b5192461` initial, `c7d9e2f3a1b8` Lager-Matrix, `d1a4f6b2c9e3` Kundenfarbe, `b2e8c1a4d9f7` Maß/Beschreibung, `e4c7a15b8d20` Favorit, `c1d5f7a2e903` Werkzeug-ID optional, `a7c3e19f4b21` Serienartikel-Stammdaten, `b6f2c8d41a77` Serienartikel-Favorit, `a8f4c2d6e130` Ersatzteile) |
+| Backend-Router | `auth`, `users`, `roles`, `tools`, `locations`, `movements`, `master_data`, `serial_articles`, `spare_parts`, `data_sheets` |
+| Backend-Modelle | `user`, `tool`, `master_data`, `storage`, `spare_part`, `data_sheet`, `movement`, `serial_article` |
+| Migrationen | **13** (`f5b7b5192461` initial, `c7d9e2f3a1b8` Lager-Matrix, `d1a4f6b2c9e3` Kundenfarbe, `b2e8c1a4d9f7` Maß/Beschreibung, `e4c7a15b8d20` Werkzeug-Favorit, `c1d5f7a2e903` Werkzeug-ID optional, `a7c3e19f4b21` Serienartikel-Stammdaten, `b6f2c8d41a77` Serienartikel-Favorit, `a8f4c2d6e130` Ersatzteile, `c4b9e7a15f28` Datenblätter, `e7d1b9c34a52` Maschinenfarbe, `f2a6c8d15b74` Ersatzteil-Platz, `a1c4e8f2b903` Ersatzteil-Favorit) |
 | Frontend-Seiten | `Tools.tsx`, `pages/admin/*` |
-| Frontend-Tests | `login.spec.ts`, `admin-storage.spec.ts`, `tools-list.spec.ts`, `serial-articles.spec.ts`, `spare-parts.spec.ts` |
-| Backend-Tests | `test_tool_id_check.py`, `test_tool_id_optional.py`, `test_session_middleware.py`, `test_location_service.py`, `test_tools_list.py`, `test_tool_update.py`, `test_serial_articles.py`, `test_spare_parts.py` |
+| Frontend-Tests | `login.spec.ts`, `admin-storage.spec.ts`, `tools-list.spec.ts`, `serial-articles.spec.ts`, `spare-parts.spec.ts`, `data-sheets.spec.ts`, `session-expiry.spec.ts` (86 Tests deklariert; der letzte belegte Lauf meldete 84 passed) |
+| Backend-Tests | **12 Dateien, 190 Tests** – zuletzt `pytest tests -q`: **190 passed** (`.venv-1`, `-p no:cacheprovider`, weil `backend/.pytest_cache` gesperrt ist) |
 | Design-Systeme | Glas (`index.css`) und Split-Tone (`admin.css`) vollständig umgesetzt |
 | SAP | nicht implementiert — bewusst, Core läuft ohne SAP |

@@ -1,6 +1,6 @@
 from .base import Base, AuditMixin
 from .enums import ToolCategory, ToolStatus, MovementType, MovementStatus
-from .master_data import Plant, Customer, Machine, ToolType
+from .master_data import Plant, Customer, Machine, ToolType, Coating
 from .storage import Cabinet, Drawer, Position
 from .tool import Tool
 from .movement import ToolMovement
@@ -8,6 +8,7 @@ from .user import User, Role, Permission, role_permissions
 from .serial_article import SerialArticle  # <- Import stimmt
 from .data_sheet import DataSheet
 from .spare_part import SparePart
+from .transport import TransportItem, TransportOrder
 
 __all__ = [
     "Base",
@@ -20,6 +21,7 @@ __all__ = [
     "Customer",
     "Machine",
     "ToolType",
+    "Coating",
     "Cabinet",
     "Drawer",
     "Position",
@@ -32,4 +34,6 @@ __all__ = [
     "SerialArticle",
     "DataSheet",
     "SparePart",
+    "TransportOrder",
+    "TransportItem",
 ]

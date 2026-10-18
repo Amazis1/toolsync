@@ -36,6 +36,8 @@ export interface User {
   display_name?: string | null
   is_active: boolean
   is_admin: boolean
+  /** Vorgabe für das Arbeitswerk (DEC-070); null = keine Vorgabe. */
+  default_plant_id?: number | null
   created_at: string
   updated_at: string
 }
@@ -48,6 +50,8 @@ export interface UserInput {
   is_active: boolean
   is_admin: boolean
   hashed_password?: string | null
+  /** Vorgabe für das Arbeitswerk (DEC-070) – kein Pflichtfeld. */
+  default_plant_id?: number | null
 }
 
 // ------------------------------------------------------------
@@ -57,6 +61,13 @@ export interface UserInput {
 export interface Plant {
   id: number
   name: string
+  /** Werkfarbe (DEC-076), Hex `#RRGGBB`; null = Primärfarbe `#0f766e`. */
+  color?: string | null
+}
+
+export interface PlantInput {
+  name: string
+  color?: string | null
 }
 
 export interface Customer {
@@ -79,6 +90,15 @@ export interface Machine {
 }
 
 export interface ToolType {
+  id: number
+  name: string
+}
+
+/**
+ * Stempel-Beschichtung (Stammdaten „Stempel-Beschichtung", Dachmarke MultiDur).
+ * Gepflegt wird der vollständige Name, z. B. „MultiDur TiCN" oder „Standard".
+ */
+export interface Coating {
   id: number
   name: string
 }
@@ -116,6 +136,12 @@ export interface Tool {
   description: string | null
   plant_id: number
   tool_type_id: number
+  /**
+   * Beschichtung des Stempels (`coatings`, Stammdaten). `null` = keine
+   * Beschichtung eingetragen. Fachlich gehört sie zum Stempel – das Formular
+   * zeigt die Auswahl nur bei dieser Kategorie.
+   */
+  coating_id: number | null
   position_id: number | null
   machine_id: number | null
   customer_id: number | null
@@ -123,6 +149,13 @@ export interface Tool {
   is_favorite: boolean
   /** Lagerplatz-Code wie "01-A-25"; null = Ablage (kein fester Platz). */
   position_code: string | null
+  /**
+   * Aktueller Ort (DEC-071): `null` = das Werkzeug liegt am Heimatwerk. Gesetzt
+   * wird er ausschließlich vom bestätigten Empfang eines Transports (DEC-072) –
+   * der Heimatplatz bleibt dabei reserviert.
+   */
+  current_plant_id?: number | null
+  current_plant?: Plant | null
   /**
    * Gibt es zu **dieser Werkzeug-ID** ein Datenblatt mit hinterlegter Datei?
    * Das Symbol in der Zeile steht nur dann (DEC-068) – es öffnet das Dokument
@@ -132,6 +165,8 @@ export interface Tool {
   // Beziehungen werden vom Backend direkt mitgeliefert (lazy="joined")
   plant: Plant | null
   tool_type: ToolType | null
+  /** Beschichtung samt Namen („MultiDur TiCN"); null = keine eingetragen. */
+  coating?: Coating | null
   customer?: Customer | null
   machine?: Machine | null
   created_at: string
@@ -172,6 +207,8 @@ export interface ToolInput {
   description: string | null
   plant_id: number
   tool_type_id: number
+  /** Beschichtung des Stempels; null = keine (Auswahl nur bei Kategorie Stempel). */
+  coating_id: number | null
   position_id: number | null
   machine_id: number | null
   customer_id: number | null

@@ -11,6 +11,7 @@ import { TOOL_CATEGORY_LABELS } from '../../api/types'
 import type { Tool, ToolCategory, ToolSortKey } from '../../api/types'
 import type { ToolQuery } from '../../lib/toolQuery'
 import { toolLabel } from '../../lib/toolLabel'
+import { useWerkFarben } from '../logistics/logistikTeile'
 import { formatMeasureMm } from './ToolForm'
 
 interface ToolTableProps {
@@ -23,6 +24,8 @@ interface ToolTableProps {
   onEdit: (tool: Tool) => void
   onDelete: (tool: Tool) => void
   onLend: (tool: Tool) => void
+  /** Rückgabe eines einzelnen Werkzeugs (DEC-078) – nur bei `status = lent`. */
+  onReturn: (tool: Tool) => void
   /**
    * Datenblätter dieses Werkzeugs öffnen (DEC-065 Punkt 10): wer an der Maschine
    * steht, kommt vom Werkzeug – nicht aus einer Liste. Das Symbol in der Zeile
@@ -146,10 +149,13 @@ export default function ToolTable({
   onEdit,
   onDelete,
   onLend,
+  onReturn,
   onOpenDataSheets,
 }: ToolTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [overflowing, setOverflowing] = useState(false)
+  // Werkfarbe für „aktuell W2" (DEC-076): fremde Werke in **ihrer** Farbe.
+  const farbeVon = useWerkFarben()
 
   // Läuft die Tabelle seitlich über? Nur dann ist ein Hinweis nötig. Gemessen
   // statt geraten, damit der Hinweis weder auf dem großen Bildschirm stört
@@ -305,9 +311,18 @@ export default function ToolTable({
                             {toolLabel(tool.tool_id)}
                           </span>
                         )}
-                        <span className="mt-1 block text-xs text-slate-600">
+                        <span
+                          className="mt-1 block text-xs text-slate-600"
+                          title={tool.coating ? `Beschichtung: ${tool.coating.name}` : undefined}
+                        >
                           {TOOL_CATEGORY_LABELS[tool.category] ?? tool.category}
                           {tool.is_storage ? ' · Lager/Ersatz' : ''}
+                          {/* Beschichtung mit vollem Namen („MultiDur TiCN", DEC-083).
+                              Eine eigene Zeile war zwischenzeitlich nötig, solange
+                              die Inhaltsspalte 9/12 breit war; mit 10/12 (mehr Platz
+                              rechts) paßt sie in die Kategorie-Zeile, ohne daß die
+                              Tabelle seitlich überläuft. */}
+                          {tool.coating ? ` · ${tool.coating.name}` : ''}
                         </span>
                       </span>
                     </div>
@@ -315,20 +330,53 @@ export default function ToolTable({
 
                   {/* Lagerplatz (wichtiger) / Werk */}
                   <td className="px-3 py-2">
-                    {tool.position_code ? (
-                      // Gleiche Markierung wie die Werkzeug-ID (Größe, Form,
-                      // Mono, fett) – nur mit anderer Kante: Die ID trägt Teal
-                      // (Primär = Identität), der Platz Sky (Info = Ort).
-                      <code className="inline-flex rounded-lg border border-sky-500/30 bg-white/85 px-2 py-0.5 font-mono text-sm font-bold tracking-tight text-slate-900">
-                        {tool.position_code}
-                      </code>
-                    ) : (
-                      <span className="inline-flex rounded-lg border border-slate-300/70 bg-white/85 px-2 py-0.5 text-xs font-bold text-slate-700">
-                        Ablage
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1.5">
+                      {tool.position_code ? (
+                        // Gleiche Markierung wie die Werkzeug-ID (Größe, Form,
+                        // Mono, fett) – nur mit anderer Kante: Die ID trägt Teal
+                        // (Primär = Identität), der Platz Sky (Info = Ort).
+                        <code className="inline-flex rounded-lg border border-sky-500/30 bg-white/85 px-2 py-0.5 font-mono text-sm font-bold tracking-tight text-slate-900">
+                          {tool.position_code}
+                        </code>
+                      ) : (
+                        <span className="inline-flex rounded-lg border border-slate-300/70 bg-white/85 px-2 py-0.5 text-xs font-bold text-slate-700">
+                          Ablage
+                        </span>
+                      )}
+                      {/* Wo ist das Werkzeug **jetzt** (DEC-071/072)? Unterwegs und
+                          ausgeliehen sieht man der Zeile sonst nicht an – die Tabelle
+                          führt keinen Status. Die Marke steht bei **diesem** Platz,
+                          nicht in der Werk-Spalte: dort wäre sie breiter als der
+                          verfügbare Raum (gemessen: 4 px Überlauf bei 1440). */}
+                      {tool.status === 'in_transit' && (
+                        <span className="inline-flex items-center rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-sky-800">
+                          unterwegs
+                        </span>
+                      )}
+                      {tool.status === 'lent' && (
+                        <span className="inline-flex items-center rounded-full bg-slate-500/15 px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-slate-700">
+                          ausgeliehen
+                        </span>
+                      )}
+                    </span>
                     <span className="mt-1 block text-xs text-slate-600">
                       {tool.plant?.name ?? '—'}
+                      {/* Liegt es woanders (nach bestätigtem Empfang), steht das
+                          Zielwerk in **seiner** Farbe (DEC-076); der Heimatplatz
+                          darüber bleibt reserviert. */}
+                      {tool.current_plant &&
+                        tool.current_plant_id !== undefined &&
+                        tool.current_plant_id !== tool.plant_id && (
+                          <>
+                            {' · aktuell '}
+                            <strong
+                              className="font-bold"
+                              style={{ color: farbeVon(tool.current_plant.id) }}
+                            >
+                              {tool.current_plant.name}
+                            </strong>
+                          </>
+                        )}
                     </span>
                   </td>
 
@@ -348,10 +396,12 @@ export default function ToolTable({
                   </td>
 
                   {/* Beschreibung – eigene Spalte, kein Rückfall auf den Typ.
-                      Gekürzt auf 10rem: sonst schiebt ein langer Freitext die
-                      ganze Tabelle über die Breite (gemessen: 1440×900 passt
-                      nur mit dieser Grenze ohne seitliches Scrollen). */}
-                  <td className="max-w-[10rem] truncate px-3 py-2 text-slate-700">
+                      Gekürzt: sonst schiebt ein langer Freitext die ganze Tabelle
+                      über die Breite. Grenze von 10rem auf 9rem gesenkt, als die
+                      Zustandsmarke (unterwegs/ausgeliehen) an die Platz-Spalte kam –
+                      gemessen: mit 10rem war die Tabelle bei 1440×900 vier Pixel
+                      breiter als ihr Bereich (TASK-025b, DEC-081). */}
+                  <td className="max-w-[9rem] truncate px-3 py-2 text-slate-700">
                     {tool.description || <span className="text-slate-600">—</span>}
                   </td>
 
@@ -395,11 +445,18 @@ export default function ToolTable({
                       <RowActionMenu
                         label={toolLabel(tool.tool_id)}
                         actions={[
-                          // Ausleihen für alles, was nicht bereits draußen ist:
-                          // Ein Status wird selten gepflegt, „schon verliehen"
-                          // ist der einzige Zustand, der das Ausleihen sperrt.
+                          // Ausgeliehen → zurückgeben (DEC-078); sonst ausleihen.
+                          // Ein Werkzeug wird **einzeln** zurückgegeben, über das
+                          // Menü seiner eigenen Zeile.
                           ...(tool.status === 'lent'
-                            ? []
+                            ? [
+                                {
+                                  key: 'return',
+                                  label: 'Zurückgeben',
+                                  primary: true,
+                                  onSelect: () => onReturn(tool),
+                                },
+                              ]
                             : [
                                 {
                                   key: 'lend',

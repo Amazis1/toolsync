@@ -44,7 +44,9 @@ class CRUDDataSheet(CRUDBase):
         machine = aliased(Machine)
 
         def with_joins(stmt):
-            return stmt.join(plant, DataSheet.plant_id == plant.id).outerjoin(
+            # Werk ist **freiwillig** (DEC-085): Ein LEFT JOIN, sonst fielen
+            # Datensätze „für alle Werke" (plant_id IS NULL) aus jeder Liste.
+            return stmt.outerjoin(plant, DataSheet.plant_id == plant.id).outerjoin(
                 machine, DataSheet.machine_id == machine.id
             )
 
@@ -69,7 +71,11 @@ class CRUDDataSheet(CRUDBase):
             # enthalten und die Liste zeigte ein fremdes Datenblatt.
             conditions.append(DataSheet.tool_id == tool_id.strip())
         if plant_id is not None:
-            conditions.append(DataSheet.plant_id == plant_id)
+            # Ein Datensatz **ohne** Werk gilt für alle Werke – er muss im Filter
+            # eines einzelnen Werks mit erscheinen (DEC-085).
+            conditions.append(
+                or_(DataSheet.plant_id == plant_id, DataSheet.plant_id.is_(None))
+            )
         if machine_id is not None:
             conditions.append(DataSheet.machine_id == machine_id)
         if has_pdf is not None:

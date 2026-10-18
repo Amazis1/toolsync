@@ -25,8 +25,8 @@ export interface DataSheet {
   id: number
   /** Werkzeug-ID – empfohlen, aber **nicht** Pflicht (DEC-055) und nicht eindeutig. */
   tool_id: string | null
-  /** Werk ist Pflicht (DEC-065). */
-  plant_id: number
+  /** Werk; **null** = gilt für alle Werke (DEC-085). */
+  plant_id: number | null
   machine_id: number | null
   name: string | null
   description: string | null
@@ -54,7 +54,8 @@ export interface DataSheet {
  */
 export interface DataSheetInput {
   tool_id: string | null
-  plant_id: number
+  /** **null** = gilt für alle Werke (DEC-085). */
+  plant_id: number | null
   machine_id: number | null
   name: string | null
   description?: string | null

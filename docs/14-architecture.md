@@ -199,12 +199,15 @@ Dadurch sind im Frontend keine absoluten Backend-URLs nötig.
 | Art | Ort | Werkzeug |
 |---|---|---|
 | Backend-Service | `backend/tests/test_location_service.py` | Pytest (15 Tests) |
+| Backend-Konsistenz | `backend/tests/test_platz_konsistenz.py` | Pytest (beide Seiten der Platz-Beziehung nach jeder Operation) |
 | E2E Login | `frontend/tests/login.spec.ts` | Playwright |
 | E2E Lagerstruktur | `frontend/tests/admin-storage.spec.ts` | Playwright |
 
-> **Offen:** Die Testabdeckung ist dünn. Nur die Lagerplatz-Logik hat
-> Backend-Tests. Kritische Logik ohne Test: ID-Eindeutigkeit, Ausleihe und
-> Rückgabe, Berechtigungen.
+> **Offen:** Die Testabdeckung ist **keine Lücke mehr** in der Breite: 8 Testdateien
+> im Backend (u. a. Werkzeugliste/-Update, Serienartikel, Ersatzteile, Lagerplatz,
+> ID-Regeln, Sitzung) mit zusammen **173 Tests**, dazu 7 Playwright-Specs im
+> Frontend. Kritische Logik **weiterhin ohne Test**: die **Ausleihe und Rückgabe**
+> (`POST /api/movements` nimmt `user_id` aus dem Body) – Teil von **TASK-025**.
 
 ## 9. SAP
 
@@ -221,7 +224,7 @@ Später ausschließlich über einen getrennten Integration Layer mit Adapter.
 | **`user_id` aus dem Body** | `POST /api/movements` nimmt `user_id` aus dem Request-Body statt aus dem Token. `LendModal.tsx` sendet `null` und schreibt die Personalnummer als Klartext in `note`. |
 | ~~**`storage_items` ohne Migration**~~ | **Erledigt (DEC-064, TASK-024):** Die Tabelle ist entfernt; Ersatzteile liegen in `spare_parts` und haben die Revision `a8f4c2d6e130`. Die Revision ist **idempotent** (`create_all` beim Start kann Tabellen vorwegnehmen). |
 | **`create_all` beim Start** | kann Migrationen verschleiern — siehe oben |
-| **Doppelte Platzführung** | `Position.tool_id` und `Tool.position_id` führen dieselbe Beziehung. `insert_at` synchronisiert nicht in jedem Fall. |
+| **Doppelte Platzführung** | `Position.tool_id` und `Tool.position_id` führen dieselbe Beziehung („zwei Wahrheiten"). **Beide Seiten werden heute überall mitgeschrieben** – `LocationService` (`move_position`, `swap_positions`, `insert_at_position`, `place_tool_at_position`, `_release_tools_from_positions`) und `ToolService` (`create_tool`, `update_tool`, `delete_tool`) sind die **einzigen** Schreibwege; die früher genannten unsicheren Endpunkte (`/positions/reorder`, `PATCH /positions/{id}/tool`, `PUT /positions/{id}`) existieren nicht mehr. Ein früherer Stand dieser Zeile („`insert_at` synchronisiert nicht in jedem Fall") war **überholt** – `insert_at` synchronisiert in einer Schleife nach. **Offen bleibt:** keine DB-seitige Garantie für Einzelbelegung, und `ToolService.update_tool` committet weiterhin zweimal (Werkzeug, dann Platz) statt in einer Transaktion wie `LocationService` – dazwischen ist ein Abbruch möglich. Abgesichert durch `backend/tests/test_platz_konsistenz.py`. |
 | **Kein DB-Constraint für ID-Eindeutigkeit** | `tools.tool_id` hat keinen Unique-Index; geprüft wird nur im Service. |
 | **Pagination** | `getTools()` ruft fest `limit=500`; Suche und Filter laufen im Browser. |
 | Testabdeckung | nur Lagerplatz-Logik hat Backend-Tests |

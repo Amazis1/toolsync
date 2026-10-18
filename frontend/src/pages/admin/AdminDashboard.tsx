@@ -39,7 +39,12 @@ export default function AdminDashboard() {
 
   const total = tools.length
   const borrowed = tools.filter((t) => t.status === 'lent').length
-  const available = tools.filter((t) => t.status === 'available').length
+  // **Ohne Status = verfügbar** (DEC-080): Der Altbestand hat keinen gepflegten
+  // Status. Ihn hier nicht mitzuzählen ließe „Frei" kleiner aussehen als es ist –
+  // und der Zustand wäre in zwei Ansichten verschieden erklärt.
+  const istFrei = (status: Tool['status'] | null | undefined) =>
+    status === null || status === undefined || status === 'available'
+  const available = tools.filter((t) => istFrei(t.status)).length
   const maintenance = tools.filter(
     (t) => t.status === 'maintenance' || t.status === 'defective',
   ).length
@@ -55,6 +60,10 @@ export default function AdminDashboard() {
 
   const getStatusBadge = (status: Tool['status']) => {
     switch (status) {
+      // Kein Status = frei (DEC-080) – nicht „—", denn das Feld ist nur dann
+      // leer, weil nichts Abweichendes bekannt ist.
+      case null:
+      case undefined:
       case 'available':
         return <span className="admin-badge admin-badge-success"><span className="admin-dot" /> Frei</span>
       case 'lent':

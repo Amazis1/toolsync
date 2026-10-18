@@ -63,6 +63,46 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 | Info | `#3b82f6` / `#1e3a8a` | Ausgeliehen, Info |
 | Background | `#c5cbd3` | Seitenhintergrund |
 
+**Werkfarbe (DEC-076, Ergänzung):** Die Primärfarbe ist ab der Werkzeug-Logistik **die
+Farbe des Arbeitswerks**. Sie kommt aus den Stammdaten (`plants.color`, wie
+`customers.color` und `machines.color`) und wird als CSS-Variable gesetzt:
+`--werk` (Vollton), `--werk-soft` (10 % für Flächen und den aktiven Filter),
+`--werk-line` (30 % für Fokusrahmen). Ohne gepflegte Farbe gilt weiterhin `#0f766e`.
+
+| Werk (Startpalette) | Wert | Kontrast auf Weiß |
+|---|---|---|
+| Werk 1 | `#0f766e` (Teal, bisheriges Primary) | 4,84:1 |
+| Werk 2 | `#4338ca` (Indigo) | 6,31:1 |
+| Werk 3 | `#a16207` (Ocker) | 5,51:1 |
+
+**Wo die Werkfarbe wirken darf – und wo nicht (verbindlich):**
+
+| Erlaubt | Nicht erlaubt |
+|---|---|
+| Knopf `.btn-primary` (Fläche) | **Farbige Kanten** an Karten, Tab-Leiste, Aufträgen, Dropdowns, Fenstern |
+| Aktiver Reiter (Text + 10-%-Fläche) | Zustands-Badges (unterwegs, empfangen, ausgeliehen …) |
+| Werk-Name mit farbigem Punkt | Fließtext oder Zahlen |
+| **Ganze Tabellenzeile** in `rgba(Werkfarbe, .14)`, Hover `.20` – ersetzt das Zebra in diesen Tabellen | Eine einzelne markierte **Zelle** (zerreißt das Raster) |
+
+**Verworfen (Projektinhaber, 2026-10):** die Markierung nur auf der Werkzeug-ID-Zelle
+(sieht wie ein Fremdkörper zwischen neutralen Zellen aus) und eine Deckkraft von 8,5 %
+(zeigt die Herkunft nicht). Verbindlich ist die **ganze Zeile bei 14 %**, Hover 20 %.
+
+**Abgrenzung (wichtig):** Eine Farbe hat genau eine Bedeutung. Zustände behalten ihre eigenen
+Töne – `unterwegs` Sky `#0284c7`, `empfangen/verfügbar` Emerald `#047857`,
+`teilweise/defekt` Amber `#b45309`, `storniert/ausgeliehen` Slate `#475569`,
+Fehler Rose `#be123c`. Die Werkfarbe ist eine Kennung, keine Bewertung.
+
+**Die zwei Bausteine, die die Werkfarbe tragen (TASK-025b):**
+
+| Klasse | Wirkung | Einsatz |
+|---|---|---|
+| `.ui-btn-werk` | Fläche `var(--werk)`, heller beim Überfahren, Druck-Feedback wie `.ui-btn-primary` | „+ Neuer Auftrag", „Als unterwegs melden", „Alles angekommen", „Rück-Auftrag anlegen" |
+| `.werk-zeile` | `background-color: var(--row)` (14 %), `:hover` `var(--row-hover)` (20 %) – die Werte kommen als CSS-Variablen **von der Zeile** (`werkZeile()` in `components/logistics/logistikTeile.tsx`) | jede Zeile einer Logistik-Tabelle und die Auswahl im Fenster „Neuer Auftrag" |
+
+Der aktive Reiter liest `var(--werk)` direkt (`.ui-tabs button.is-active`); bei Werk 1 ist
+das genau der bisherige Textwert `#115e59`, die Vorgabe bleibt also unverändert.
+
 > **Textskala:** Im Haupt-Frontend gibt es genau **drei** Textstufen (Ebene 1/2/3, siehe §1.8).
 > Kein anderer Grauton ist für Text zulässig; die Werte erreichen auf den Glasflächen
 > mindestens 6:1.
@@ -156,6 +196,25 @@ Glasflächen über einem farbigen Verlaufshintergrund. Umgesetzt in
 | `.ui-avatar` | 32×32px, BG `#0f766e`, weiß, Font-Weight `800` |
 | `.modal-overlay` | `rgba(15,23,42,0.45)`, **kein** `backdrop-filter` |
 | `.modal-panel` | `rgba(255,255,255,.8)`, Radius `.85rem`, Blur `10px`, Shadow `0 20px 50px` |
+
+**Seitenraster der Hauptseite** (`App.tsx`, DEC-083): `main` hat **keinen
+`max-w`-Deckel** mehr und ist nicht zentriert; der Deckel erzeugte auf breiten
+Bildschirmen toten Raum, der entweder ganz rechts lag oder (zentriert) links und
+rechts verteilt wurde – in beiden Fällen waren die Außenabstände größer als der
+Abstand zwischen den Blöcken. Es gilt **ein** Kantenmaß:
+
+| Kante | Wert |
+|---|---|
+| Rand links (Navigation → Inhalt) | `p-4 md:p-6` = **24 px** |
+| Rasterlücke (Inhalt → Statistik-Sidebar) | `gap-6` = **24 px** |
+| Rand rechts (Statistik-Sidebar → Fenster) | **24 px** |
+| Abstand zwischen Blöcken (vertikal) | `space-y-4` = **16 px**, auch in der Statistik-Sidebar |
+
+Spalten: **Inhalt `xl:col-span-10`**, **Statistik-Sidebar `xl:col-span-2`** (vier
+Karten mit je einer Textzeile und einer Zahl – dafür sind drei Spalten zu viel). Das
+zusätzliche Zwölftel gehört den Listen und dem Werkzeug-Formular. Gemessene
+Inhaltsbreite: 1020 px (1280) · 1152 px (1440) · 1353 px (1600) · 1620 px (1920) ·
+2153 px (2560) – Abstände an jeder Breite 24/24/24 px.
 
 ### 1.7 Icons
 
@@ -401,6 +460,14 @@ ohne eigene Fläche, ohne Farbe, ohne Trennlinie.
     Einsatz (im Ersatzteil- und Datenblatt-Formular entfernt); die `title=`-Attribute
     an den Icon-Knöpfen der Dateizeilen sind Beschriftungen dieser Knöpfe und keine
     Feld-Hilfen.
+
+    **Wo `title=` ausdrücklich erlaubt ist (TASK-025b):** an **Knöpfen** und an
+    **Werten** einer Tabelle – nie an einem Eingabefeld. Beispiele aus der Logistik:
+    ✕-Knopf „Schließen (Esc)", „An Werk 1 zurück schicken (3)" (nennt die Folge),
+    Heimatplatz-Code („bleibt reserviert, bis das Werkzeug zurück ist"), Spalte
+    „Hier seit" (Auftrag, mit dem das Werkzeug kam). Der Grund: Ein Knopf sagt mit
+    seinem Wort nur *was* er tut, nicht *was danach passiert*; ein Feld trägt seine
+    Beschriftung und braucht keinen zweiten Text.
 
 13. **Gruppen gehören in `FormSection`.** Zusammengehörige Felder stehen in einer
     Glasfläche mit Kopfzeile (`frontend/src/components/Field.tsx`):

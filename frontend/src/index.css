@@ -441,9 +441,47 @@
   }
   .ui-tabs button.is-active {
     background: #fff;
-    /* Primary als TEXTFARBE dunkler als die Fläche (6,0:1 statt 4,3:1). */
-    color: #115e59;
+    /* Primary als TEXTFARBE dunkler als die Fläche (6,0:1 statt 4,3:1).
+       Ab DEC-076 trägt der aktive Reiter die Farbe des Arbeitswerks; bei Werk 1
+       ist das genau dieser Teal-Wert, die Vorgabe bleibt also unverändert. */
+    color: var(--werk, #115e59);
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  }
+
+  /* ======================================== */
+  /* WERKFARBE (DEC-076)                      */
+  /* ======================================== */
+  /* Knopf in der Farbe des Arbeitswerks – für „+ Neuer Auftrag" und die
+     Bestätigen-Knöpfe der Logistik. Keine farbigen Kanten: die Farbe steht auf
+     der Fläche (Vorgabe des Projektinhabers). */
+  .ui-btn-werk {
+    background: var(--werk, #0f766e);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  }
+  .ui-btn-werk:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+  }
+  .ui-btn-werk:active {
+    transform: scale(0.96);
+  }
+  /* Ganze Tabellenzeile in der Farbe ihres Werks: 14 % Ruhe, 20 % beim
+     Überfahren. Kein Zebra – die Farbe ist die Ordnung, zwei Muster übereinander
+     heben sich nur gegenseitig auf (DEC-076). Die Werte kommen als CSS-Variablen
+     von der Zeile (`werkZeile()` in `components/logistics/logistikTeile.tsx`). */
+  .werk-zeile {
+    background-color: var(--row, transparent);
+  }
+  .werk-zeile:hover {
+    background-color: var(--row-hover, var(--row, transparent));
+  }
+  /* Ankreuzfelder in Logistik-Tabellen nehmen die Farbe des Arbeitswerks an –
+     das native Blau der Browser würde sonst als Fremdfarbe dazwischenfunken
+     (DEC-082). Die Auswahlfenster der Logistik sitzen in denselben Zeilen
+     (`.werk-zeile`), die Regel gilt damit auch dort. */
+  .werk-zeile input[type="checkbox"] {
+    accent-color: var(--werk, #0f766e);
   }
 
   /* Senkrechte Reiterleiste im Anlege-Formular (lg:flex-col).

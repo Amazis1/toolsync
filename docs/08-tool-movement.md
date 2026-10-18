@@ -35,7 +35,7 @@ Komfort-Properties für die Anzeige (nur lesend): `tool_code` (`tool.tool_id`),
 
 | `MovementType` | Fachliche Bedeutung | Wirkung auf `Tool.status` |
 |---|---|---|
-| `lend` | Ausleihe | `available` → `lent` (nur wenn vorher `available`) |
+| `lend` | Ausleihe | `available` → `lent` (auch aus **ohne Status**, DEC-080) |
 | `return` | Rückgabe | `lent` → `available` (nur wenn vorher `lent`) |
 | `transfer` | Standortwechsel / Weitergabe | keine Änderung |
 | `relocate` | Umplatzierung / Lagerplatzwechsel | keine Änderung |

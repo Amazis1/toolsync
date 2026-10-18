@@ -59,6 +59,7 @@ import {
   Star,
   Trash,
   TrendingUp,
+  Undo2,
   Upload,
   User,
   X,
@@ -178,9 +179,30 @@ export function AdminIcon(props: IconProps) {
   return fromLucideBody(ShieldCheck, props)
 }
 
-/** Lucide `Star` – Favoriten-Spalte (gefüllt = gesetzt). */
-export function StarIcon(props: IconProps) {
-  return fromLucideBody(Star, props)
+/**
+ * Lucide `Undo2` – „zurück" (Rückweg zwischen Werken, Werkzeug zurück).
+ *
+ * Eigener Wrapper, weil `ResetIcon` bereits „Filter zurücksetzen" bedeutet und
+ * `LoginIcon` das Abmelden: ein Zeichen hat genau eine Bedeutung (DEC-082).
+ */
+export function ReturnIcon(props: IconProps) {
+  return fromLucideBody(Undo2, props)
+}
+
+/**
+ * Lucide `Star` – Favoriten-Spalte (gefüllt = gesetzt).
+ *
+ * `filled` ist eine **eigene** Eigenschaft und darf nicht am `<svg>` landen:
+ * React verwirft unbekannte boolesche Attribute nicht, sondern meldet
+ * „Received `false` for a non-boolean attribute `filled`". Sie wird deshalb hier
+ * in `fill` übersetzt – der Stern ist damit auch sichtbar gefüllt, nicht nur
+ * anders eingefärbt.
+ */
+export function StarIcon({
+  filled = false,
+  ...props
+}: IconProps & { filled?: boolean }) {
+  return fromLucideBody(Star, { ...props, fill: filled ? 'currentColor' : 'none' })
 }
 
 /** Lucide `ArrowUpDown` – Spalte ist sortierbar, aber nicht aktiv. */

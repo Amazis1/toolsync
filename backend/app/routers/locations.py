@@ -52,7 +52,7 @@ async def create_plant(
     existing = await db.execute(select(Plant).where(Plant.name == data.name))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Werk existiert bereits")
-    plant = Plant(name=data.name)
+    plant = Plant(name=data.name, color=data.color)
     db.add(plant)
     await db.commit()
     await db.refresh(plant)
@@ -66,7 +66,7 @@ async def update_plant(
     db: AsyncSession = Depends(get_db),
     admin_user: User = Depends(require_admin),
 ):
-    """Werk umbenennen (nur Admin)."""
+    """Werk umbenennen und Farbe setzen (nur Admin, DEC-076)."""
     plant = await db.get(Plant, id)
     if not plant:
         raise HTTPException(status_code=404, detail="Werk nicht gefunden")
@@ -75,6 +75,10 @@ async def update_plant(
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Werk existiert bereits")
     plant.name = data.name
+    # Farbe ausdrücklich übernehmen – auch das Leeren (dann gilt wieder die
+    # Primärfarbe `#0f766e`). Ein nicht gesendetes Feld bleibt unverändert.
+    if "color" in data.model_fields_set:
+        plant.color = data.color
     await db.commit()
     await db.refresh(plant)
     return plant

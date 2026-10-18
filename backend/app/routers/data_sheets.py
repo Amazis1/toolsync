@@ -240,7 +240,8 @@ async def get_data_sheet(
 
 @router.post("/", response_model=DataSheetRead, status_code=201)
 async def create_data_sheet(
-    plant_id: str = Form(...),
+    # Werk ist **freiwillig** (DEC-085): leer = gilt für alle Werke.
+    plant_id: Optional[str] = Form(None),
     tool_id: Optional[str] = Form(None),
     machine_id: Optional[str] = Form(None),
     name: Optional[str] = Form(None),
@@ -254,16 +255,12 @@ async def create_data_sheet(
 
     Der Ordner `<Datensatz-ID>` entsteht in der Ablage; Datenblätter liegen darin
     als `plan.pdf`, `plan-2.pdf` …, Bilder als `bild-1.jpg`, `bild-2.png` …
-    (DEC-065).
+    (DEC-065). **Ohne Werk** gilt der Datensatz für alle Werke (DEC-085).
     """
-    parsed_plant = _parse_optional_int(plant_id, "Das Werk")
-    if parsed_plant is None:
-        raise HTTPException(status_code=400, detail="Bitte ein Werk auswählen.")
-
     try:
         data = DataSheetCreate(
             tool_id=tool_id,
-            plant_id=parsed_plant,
+            plant_id=_parse_optional_int(plant_id, "Das Werk"),
             machine_id=_parse_optional_int(machine_id, "Die Maschine"),
             name=name,
             description=description,
@@ -295,8 +292,8 @@ async def update_data_sheet(
     """Datenblatt ändern (nur Admin) und Dateien ergänzen.
 
     Ein **fehlendes** Feld bedeutet „unverändert", ein **leerer** Wert bedeutet
-    „Feld leeren" (Werkzeug-ID, Maschine, Name, Beschreibung). Das Werk ist
-    Pflicht und wird nie geleert.
+    „Feld leeren" (Werkzeug-ID, Maschine, Name, Beschreibung). Auch das **Werk**
+    lässt sich leeren – dann gilt der Datensatz für alle Werke (DEC-085).
     """
     service = DataSheetService(db)
 
@@ -311,10 +308,8 @@ async def update_data_sheet(
         values["machine_id"] = _parse_optional_int(machine_id, "Die Maschine")
 
     if plant_id is not None:
-        parsed_plant = _parse_optional_int(plant_id, "Das Werk")
-        if parsed_plant is None:
-            raise HTTPException(status_code=400, detail="Bitte ein Werk auswählen.")
-        values["plant_id"] = parsed_plant
+        # Leer = kein Werk = gilt für alle Werke (DEC-085).
+        values["plant_id"] = _parse_optional_int(plant_id, "Das Werk")
 
     try:
         sheet = await service.update(id, values, pdf_files=plans, image_files=images)

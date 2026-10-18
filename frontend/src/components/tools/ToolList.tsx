@@ -27,6 +27,8 @@ interface ToolListProps {
   onEdit: (tool: Tool) => void
   onDelete: (tool: Tool) => void
   onLend: (tool: Tool) => void
+  /** Rückgabe eines einzelnen Werkzeugs (DEC-078). */
+  onReturn: (tool: Tool) => void
   /** Datenblätter dieses Werkzeugs öffnen (DEC-065 Punkt 10). */
   onOpenDataSheets: (tool: Tool) => void
   onCreate: () => void
@@ -57,6 +59,7 @@ export default function ToolList({
   onEdit,
   onDelete,
   onLend,
+  onReturn,
   onOpenDataSheets,
   onCreate,
 }: ToolListProps) {
@@ -149,6 +152,7 @@ export default function ToolList({
             onEdit={onEdit}
             onDelete={onDelete}
             onLend={onLend}
+            onReturn={onReturn}
             onOpenDataSheets={onOpenDataSheets}
           />
         </div>

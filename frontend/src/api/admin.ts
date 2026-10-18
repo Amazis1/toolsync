@@ -4,7 +4,8 @@ import type { Plant, ToolType } from './types'
 
 // Kunden und Maschinen sind nach masterData.ts ausgelagert (dort auch für
 // normale Benutzer lesbar) und werden hier re-exportiert, damit bestehende
-// Admin-Importe unverändert weiterlaufen.
+// Admin-Importe unverändert weiterlaufen. Dasselbe gilt für die
+// Stempel-Beschichtungen (Dachmarke MultiDur), die das Werkzeug-Formular liest.
 export {
   getCustomers,
   createCustomer,
@@ -14,21 +15,29 @@ export {
   createMachine,
   updateMachine,
   deleteMachine,
+  getCoatings,
+  createCoating,
+  updateCoating,
+  deleteCoating,
 } from './masterData'
 
 // ------------------------------------------------------------
-// Plants (Werke)
+// Plants (Werke) – mit Werkfarbe (DEC-076)
 // ------------------------------------------------------------
 export async function getPlants(): Promise<Plant[]> {
   return http.get<Plant[]>('/locations/plants')
 }
 
-export async function createPlant(name: string): Promise<Plant> {
-  return http.post<Plant>('/locations/plants', { name })
+export async function createPlant(name: string, color?: string | null): Promise<Plant> {
+  return http.post<Plant>('/locations/plants', { name, color: color ?? null })
 }
 
-export async function updatePlant(id: number, name: string): Promise<Plant> {
-  return http.put<Plant>(`/locations/plants/${id}`, { name })
+export async function updatePlant(
+  id: number,
+  name: string,
+  color?: string | null,
+): Promise<Plant> {
+  return http.put<Plant>(`/locations/plants/${id}`, { name, color: color ?? null })
 }
 
 export async function deletePlant(id: number): Promise<void> {

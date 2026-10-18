@@ -7,16 +7,19 @@ from .master_data import MachineRead, PlantRead
 
 
 class DataSheetBase(BaseModel):
-    """Angaben, über die ein Datenblatt gefunden wird (DEC-065).
+    """Angaben, über die ein Datenblatt gefunden wird (DEC-065, DEC-085).
 
-    Pflicht ist nur das **Werk**; Werkzeug-ID, Maschine, Name und Beschreibung
-    sind freiwillig. Es gibt **keine** Artikelnummer und **keinen** Kunden –
-    Einstellwerte gelten für Werkzeug und Maschine, nicht für einen Auftraggeber.
+    **Pflicht ist nichts** – alles ist freiwillig. Ein Datenblatt **ohne Werk**
+    gilt für **alle** Werke (allgemeine Info: Bedienungsanleitung,
+    Prozesshinweis); mit Werk gehört es zu diesem Werk. Es gibt **keine**
+    Artikelnummer und **keinen** Kunden – Einstellwerte gelten für Werkzeug und
+    Maschine, nicht für einen Auftraggeber.
     """
 
     # Die Werkzeug-ID als Text, nicht als Fremdschlüssel (DEC-052/055).
     tool_id: Optional[str] = None
-    plant_id: int
+    # Ohne Werk = für alle Werke (DEC-085).
+    plant_id: Optional[int] = None
     machine_id: Optional[int] = None
     name: Optional[str] = None
     description: Optional[str] = None
@@ -79,7 +82,8 @@ class DataSheetRead(DataSheetBase):
     plans: List[DataSheetFileRead] = Field(default_factory=list)
     # Bilder zum Datenblatt (`bild-1.jpg` …), nach der Zahl im Namen sortiert.
     images: List[DataSheetFileRead] = Field(default_factory=list)
-    # Für die Listenansicht mitgelieferte Stammdaten (Werk ist Pflicht).
+    # Für die Listenansicht mitgelieferte Stammdaten. `plant` ist **null**, wenn
+    # das Datenblatt für alle Werke gilt (DEC-085).
     plant: Optional[PlantRead] = None
     machine: Optional[MachineRead] = None
 

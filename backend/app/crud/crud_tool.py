@@ -48,15 +48,19 @@ _MEASURE_A_NUMERIC = cast(
 # Fachliche Reihenfolge der Status statt Alphabet: nach dem Speicherwert
 # sortiert stünde "ausgeliehen" vor "defekt" vor "in Transit" vor "verfügbar" —
 # eine Reihenfolge, die niemand erwartet. „Verfügbar" kommt zuerst, weil das
-# die Werkzeuge sind, die man entnehmen darf; Datensätze ohne Status stehen am
-# Ende (Rang 5).
+# die Werkzeuge sind, die man entnehmen darf.
+#
+# **Ohne Status = verfügbar** (DEC-080): Ein Datensatz ohne gepflegten Status ist
+# der Normalfall (Bestand aus dem Altsystem) und wird wie „verfügbar" behandelt –
+# auch in der Sortierung (`else_=0`). Nur so steht „noch nie gepflegt" nicht
+# hinter „defekt".
 _STATUS_RANK = case(
     (Tool.status == ToolStatus.AVAILABLE, 0),
     (Tool.status == ToolStatus.LENT, 1),
     (Tool.status == ToolStatus.IN_TRANSIT, 2),
     (Tool.status == ToolStatus.MAINTENANCE, 3),
     (Tool.status == ToolStatus.DEFECTIVE, 4),
-    else_=5,
+    else_=0,
 )
 
 
@@ -145,7 +149,16 @@ class CRUDTool(CRUDBase):
         if categories:
             conditions.append(Tool.category.in_(list(categories)))
         if statuses:
-            conditions.append(Tool.status.in_(list(statuses)))
+            # „Ohne Status = verfügbar" (DEC-080): Wer nach verfügbaren Werkzeugen
+            # filtert, meint die, die man entnehmen darf – und das sind die ohne
+            # Status genauso. `IN (…)` allein fände NULL nie.
+            gewaehlt = list(statuses)
+            if ToolStatus.AVAILABLE in gewaehlt:
+                conditions.append(
+                    or_(Tool.status.in_(gewaehlt), Tool.status.is_(None))
+                )
+            else:
+                conditions.append(Tool.status.in_(gewaehlt))
         if plant_id is not None:
             conditions.append(Tool.plant_id == plant_id)
         if tool_type_id is not None:

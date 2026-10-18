@@ -9,6 +9,7 @@
 
 import { ApiError, getErrorMessage } from './apiErrors'
 import { applyRenewedToken, ensureFreshToken, isLoginRequest, reportExpiredSession } from './session'
+import { plantIdForHeader } from './plantContext'
 
 const API_BASE = '/api'
 
@@ -62,6 +63,12 @@ export async function send(url: string, options: RequestInit = {}): Promise<Resp
   }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+  }
+  // Arbeitswerk (DEC-070): die Wahl des Benutzers geht bei jeder Anfrage mit.
+  // Der Server prüft sie und antwortet bei unbekanntem Werk mit 400.
+  const plantId = plantIdForHeader()
+  if (plantId !== null) {
+    headers['X-Plant-Id'] = String(plantId)
   }
 
   let res: Response

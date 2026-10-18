@@ -350,22 +350,35 @@ test.describe('Datenblätter', () => {
 
   test('Favoriten-Zeile ist getönt und reagiert auf Hover', async ({ page }) => {
     await openAsAdmin(page)
-    // Ohne Filter: nur so steht die Favoriten-Zeile an einer **geraden**
-    // Position – genau dort hat das Zebra die Tönung vorher überschrieben.
-    const favorit = page.locator('tbody tr').filter({ hasText: 'Abstreifer ohne ID' }).first()
-    const zebra = page.locator('tbody tr').filter({ hasText: `${PREFIX}3000` }).first()
-    await expect(favorit).toBeVisible()
-    await expect(zebra).toBeVisible()
-
-    const hintergrund = (zeile: typeof favorit) =>
+    // Seit die Datenbank Testdaten enthält, stehen die Zeilen dieses Specs nicht
+    // mehr auf der ersten Seite. Gemessen wird deshalb **je Suche eine Zeile**:
+    // erst eine gewöhnliche (Zebra), dann die Favoriten-Zeile. Beide stehen in
+    // ihrer Liste an derselben (ersten) Position – ohne eigene Favoriten-Tönung
+    // wären ihre Hintergründe gleich, und genau das war der Fehler (`:nth-child`
+    // des Zebras war stärker als die Favoritenfarbe).
+    const hintergrund = (zeile: ReturnType<typeof page.locator>) =>
       zeile.evaluate((el) => getComputedStyle(el).backgroundColor)
-    const favoritRuhe = await hintergrund(favorit)
+
+    await suche(page, `${PREFIX}3000`)
+    const zebra = page.locator('tbody tr').first()
+    await expect(zebra).toBeVisible()
     const zebraRuhe = await hintergrund(zebra)
-    // Beide Zeilen sind „gerade" – ohne eigene Favoriten-Tönung wären sie gleich.
+
+    await suche(page, 'Abstreifer ohne ID')
+    const favorit = page.locator('tbody tr').first()
+    await expect(favorit).toBeVisible()
+    await expect(favorit).toContainText('Abstreifer ohne ID')
+    const favoritRuhe = await hintergrund(favorit)
+
     expect(favoritRuhe).not.toBe(zebraRuhe)
 
     // Bewusst über Koordinaten **innerhalb** der Zeile: `locator.hover()` zielt
     // auf die Mitte, die bei einer schmalen Zeile auf der Zellgrenze liegen kann.
+    // Vorher in die Fenstermitte holen: Die Zeile darf am unteren Rand stehen,
+    // ihre Lage hängt an der Höhe der Kopfbereiche (Tab-Leiste, Arbeitswerk-Leiste).
+    // Ohne diesen Schritt zeigt `page.mouse.move` auf einen Punkt außerhalb des
+    // Fensters – dann greift kein `:hover` (TASK-030, DEC-070).
+    await favorit.evaluate((el) => el.scrollIntoView({ block: 'center' }))
     const kasten = await favorit.boundingBox()
     expect(kasten).not.toBeNull()
     await page.mouse.move(kasten!.x + 30, kasten!.y + kasten!.height / 2)
@@ -420,13 +433,32 @@ test.describe('Datenblätter', () => {
     await expect(zeile).toContainText('1 Bild')
   })
 
-  test('Werk ist Pflicht', async ({ page }) => {
+  test('Datenblatt ohne Werk gilt für alle Werke (DEC-085)', async ({ page, request }) => {
     await openAsAdmin(page)
     const karte = await oeffneAnlegeKarte(page)
 
-    await karte.getByLabel('Name').fill('Ohne Werk')
+    // Werk ist freiwillig – die Auswahl beginnt mit „Alle Werke (allgemein)".
+    // `exact`: „Werk" ist auch Teil von „Werkzeug-ID".
+    await expect(karte.getByLabel('Werk', { exact: true })).toHaveValue('')
+    const name = `${PREFIX}Allgemeine Info`
+    await karte.getByLabel('Name').fill(name)
     await karte.getByRole('button', { name: 'Datenblatt anlegen' }).click()
-    await expect(karte.getByText('Bitte ein Werk auswählen.')).toBeVisible()
+    await expect(page.locator('.ui-toast-stack')).toContainText('angelegt', { timeout: 10_000 })
+
+    // Zurück in die Liste (das Formular bleibt nach dem Speichern offen).
+    await page.getByRole('button', { name: 'Zurück' }).click()
+    await suche(page, name)
+    const zeile = page.locator('tbody tr', { hasText: name }).first()
+    await expect(zeile).toBeVisible()
+    await expect(zeile).toContainText('Alle Werke')
+
+    // Und in der Datenbank steht wirklich kein Werk.
+    const antwort = await request.get(`/api/data-sheets/?search=${encodeURIComponent(name)}`, {
+      headers: authHeaders(),
+    })
+    const seite = (await antwort.json()) as { items: { name: string; plant_id: number | null }[] }
+    const eintrag = seite.items.find((blatt) => blatt.name === name)
+    expect(eintrag?.plant_id).toBeNull()
   })
 
   test('Zeilenklick öffnet das Datei-Fenster mit dem Datenblatt', async ({ page }) => {

@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import Tools from './pages/Tools';
+import Logistics from './pages/Logistics';
+import PlantSwitch from './components/PlantSwitch';
+import { usePlantTheme } from './lib/plantTheme';
 import SerialArticleList from './components/serial-articles/SerialArticleList';
 import PDFViewer from './components/serial-articles/PDFViewer';
 import SparePartList from './components/spare-parts/SparePartList';
@@ -26,18 +29,21 @@ type TabKey =
   | 'serienartikel'
   | 'datenblaetter'
   | 'ersatzteile'
+  | 'logistik'
   | 'historie'
   | 'create';
 type ViewMode = 'main' | 'admin';
 
 // Tab-Leiste der Hauptansicht (DEC-066): Werkzeuge · Serienartikel ·
-// Datenblätter · Ersatzteile · Historie. „Lager/Ersatz" ist entfallen:
+// Datenblätter · Ersatzteile · Logistik · Historie. „Lager/Ersatz" ist entfallen:
 // Ersatzwerkzeuge stehen in der Werkzeugliste, Ersatzteile im eigenen Tab.
+// „Logistik" ist der Werkzeugtransport zwischen den Werken (DEC-072/075).
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'werkzeuge', label: 'Werkzeuge' },
   { key: 'serienartikel', label: 'Serienartikel' },
   { key: 'datenblaetter', label: 'Datenblätter' },
   { key: 'ersatzteile', label: 'Ersatzteile' },
+  { key: 'logistik', label: 'Logistik' },
   { key: 'historie', label: 'Historie' },
 ];
 
@@ -62,7 +68,9 @@ function Placeholder({ title, note }: { title: string; note?: string }) {
 // Rechte Spalte: Statistik-Sidebar (.app-stat-card) nach test.html
 function StatisticsSidebar() {
   return (
-    <div className="space-y-3">
+    // `space-y-4` wie die Blöcke im Inhaltsbereich (vorher 12 px gegen 16 px –
+    // die Karten standen enger als die Blöcke daneben, DEC-083).
+    <div className="space-y-4">
       <div className="app-stat-card rounded-2xl p-4">
         <p className="text-xs font-medium text-slate-600">Aktive Ausleihen</p>
         <p className="mt-1 text-xl font-bold text-slate-900">—</p>
@@ -84,8 +92,11 @@ function StatisticsSidebar() {
 }
 
 const MainApp: React.FC = () => {
-  const { user, logout, expireSession, extendSession, isLoading, expiresAt } = useAuth();
+  const { user, logout, expireSession, extendSession, isLoading, expiresAt, refreshPlant } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('werkzeuge');
+  // Werkfarbe des Arbeitswerks als CSS-Variablen (`--werk`, `--werk-soft`,
+  // `--werk-line`) – jede Stelle nutzt sie über `var(--werk)` (DEC-076).
+  usePlantTheme(user?.id, user?.plant_id ?? null);
   // Auftrag „Werkzeug anlegen“ an die Liste: eindeutiges Token statt Zähler,
   // damit ein bereits verbrauchter Auftrag nicht erneut greift.
   const createToken = useRef(0);
@@ -132,6 +143,9 @@ const MainApp: React.FC = () => {
   // Bereichen (Serienartikel DEC-062, Datenblatt DEC-065).
   const canManageViewerFiles = !!user?.is_admin;
   const [dataSheetRefreshKey, setDataSheetRefreshKey] = useState(0);
+  // Werkzeug-Logistik (DEC-072): Auftragsliste, Eingang und „Wo ist was" hängen
+  // am Arbeitswerk – ein Wechsel lädt sie neu.
+  const [logisticsRefreshKey, setLogisticsRefreshKey] = useState(0);
   const dataSheetToken = useRef(0);
   /**
    * Laufender Auftrag der Zeilenaktion „Datenblatt": eine späte Antwort einer
@@ -159,6 +173,20 @@ const MainApp: React.FC = () => {
   function handleSerialFormClosed() {
     setActiveTab('serienartikel');
     setSerialArticleRefreshKey((k) => k + 1);
+  }
+
+  /**
+   * Werkswechsel (DEC-070/076): Arbeitswerk neu auflösen lassen (damit die
+   * Werkfarbe auch in der Oberfläche ankommt) und alle werkabhängigen Listen neu
+   * laden. Die Wahl selbst liegt bereits im Browser-Merkzettel; ab der nächsten
+   * Anfrage geht sie als `X-Plant-Id` mit.
+   */
+  function handlePlantChanged() {
+    void refreshPlant();
+    setSerialArticleRefreshKey((k) => k + 1);
+    setSparePartRefreshKey((k) => k + 1);
+    setDataSheetRefreshKey((k) => k + 1);
+    setLogisticsRefreshKey((k) => k + 1);
   }
 
   /**
@@ -418,6 +446,17 @@ const MainApp: React.FC = () => {
             <div className="px-2">
               <SessionTimer expiresAt={expiresAt} onExpire={expireSession} />
             </div>
+            {/* Arbeitswerk (DEC-070): sitzt in der Sidebar unter dem Benutzer –
+                in jedem Bereich sichtbar, kein eigener Tab, keine Leiste über
+                dem Inhalt. Der Wechsel färbt die Oberfläche (DEC-076) und lädt
+                die werkabhängigen Listen neu. */}
+            <div className="pt-1">
+              <PlantSwitch
+                userId={user.id}
+                serverPlantId={user.plant_id ?? null}
+                onChanged={handlePlantChanged}
+              />
+            </div>
             {user.is_admin && (
               <button
                 onClick={openAdmin}
@@ -439,10 +478,20 @@ const MainApp: React.FC = () => {
       </aside>
 
       {/* MAIN WRAPPER */}
-      <main className="flex-1 p-4 md:p-6 space-y-4 max-w-[1600px]">
-        <div className="grid grid-cols-12 gap-5">
-          {/* CONTENT SPALTE */}
-          <div className="col-span-12 xl:col-span-9 space-y-4">
+      {/* **Kein `max-w` mehr** (DEC-083): der Deckel erzeugte auf breiten
+          Bildschirmen toten Raum – und der wurde entweder ganz rechts abgelegt
+          oder (zentriert) links und rechts verteilt. In beiden Fällen waren die
+          Außenabstände größer als der Abstand zwischen den Blöcken; genau das
+          war als ungleicher Abstand sichtbar. Gemessen ist der Abstand jetzt an
+          jeder Fensterbreite gleich: 24 px (Rand) = 24 px (Rasterlücke). */}
+      <main className="flex-1 p-4 md:p-6 space-y-4">
+        {/* `gap-6` = 24 px, dieselbe Kante wie das Seitenpolster `p-6`. */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* CONTENT SPALTE – 10 von 12: die Statistik-Spalte rechts braucht nur
+              Platz für vier kurze Karten. Das eine zusätzliche Zwölftel geht an
+              die Listen und an das Formular; dort paßt die Beschichtung neben
+              „Lager/Ersatz" damit in eine Zeile (DEC-083). */}
+          <div className="col-span-12 xl:col-span-10 space-y-4">
             {/* TABBAR (.app-tabbar): NUR über dem Content, + Anlegen rechts */}
             <nav aria-label="Bereiche wechseln" className="app-tabbar flex items-center justify-between gap-2 px-3 py-1.5 rounded-2xl shadow-xs">
               <div className="ui-tabs min-w-0 overflow-x-auto">
@@ -458,8 +507,12 @@ const MainApp: React.FC = () => {
               </div>
 
               {/* + Anlegen öffnet das passende Formular je nach aktivem Tab.
-                  Im Serienartikel-Bereich nur für Admins (DEC-056 Punkt 4). */}
-              {!(activeTab === 'serienartikel' && !canManageSerialArticles) && (
+                  Im Serienartikel-Bereich nur für Admins (DEC-056 Punkt 4).
+                  In der Logistik entfällt der Knopf: dort führt „+ Neuer
+                  Auftrag" im Bereich selbst (DEC-075) – zwei Knöpfe für zwei
+                  verschiedene Dinge wären eine Falle. */}
+              {!(activeTab === 'serienartikel' && !canManageSerialArticles) &&
+                activeTab !== 'logistik' && (
                 <button
                   onClick={handleCreateClick}
                   className={`ui-btn ui-btn-primary shrink-0 ${
@@ -539,6 +592,10 @@ const MainApp: React.FC = () => {
                   </div>
                 )}
 
+                {activeTab === 'logistik' && (
+                  <Logistics refreshKey={logisticsRefreshKey} notify={showToast} />
+                )}
+
                 {activeTab === 'historie' && (
                   <Placeholder
                     title="Historie"
@@ -574,8 +631,11 @@ const MainApp: React.FC = () => {
             )}
           </div>
 
-          {/* RECHTE SPALTE: Statistik-Sidebar (.app-stat-card) */}
-          <aside className="col-span-12 xl:col-span-3 space-y-3">
+          {/* RECHTE SPALTE: Statistik-Sidebar (.app-stat-card).
+              Nur 2 von 12 Spalten: die Karten tragen eine Zeile Text und eine
+              Zahl – dafür sind drei Spalten zu viel (DEC-083). `space-y-4` wie
+              im Inhaltsbereich: gleicher Abstand zwischen allen Blöcken. */}
+          <aside className="col-span-12 xl:col-span-2 space-y-4">
             <StatisticsSidebar />
           </aside>
         </div>

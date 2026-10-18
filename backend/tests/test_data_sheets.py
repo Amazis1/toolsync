@@ -228,3 +228,61 @@ async def test_antwort_has_pdf_ist_falsch_wenn_die_datei_verschwindet(workspace)
     data = _to_read(sheet, service)
     assert data.plans == []
     assert data.has_pdf is False
+
+
+# --------------------------------------------------------------------------
+# Datenblatt ohne Werk = gilt für alle Werke (DEC-085)
+# --------------------------------------------------------------------------
+
+
+async def test_anlegen_ohne_werk_ist_erlaubt(workspace):
+    """Allgemeine Info: kein Werk, kein Werkzeug – nur Name und Datei.
+
+    Das war der gemeldete Fall: „Ich muss Werk auswählen, die Info soll aber für
+    beide Werke gehen." Ohne Werk gilt der Datensatz für **alle** Werke.
+    """
+    service = workspace["service"]
+    sheet = await service.create(
+        DataSheetCreate(name="Allgemeine Bedienungsanleitung"),
+        pdf_files=_pdf("anleitung.pdf"),
+    )
+
+    assert sheet.plant_id is None
+    data = _to_read(sheet, service)
+    assert data.plant is None, "ohne Werk kein Plant-Objekt - die Liste zeigt 'Alle Werke'"
+    assert data.has_pdf is True
+
+
+async def test_werk_filter_findet_auch_allgemeine_datensaetze(workspace):
+    """Ein Filter auf ein Werk schließt die „für alle Werke" nicht aus.
+
+    Sonst wäre die allgemeine Info in jedem Werk unsichtbar – genau das Gegenteil
+    von „gilt für alle".
+    """
+    service = workspace["service"]
+    await _anlegen(workspace, "188", "Nur Werk 1")
+    await service.create(DataSheetCreate(name="Für alle"))
+
+    items, total = await service.get_all(plant_id=workspace["plant"].id)
+    assert total == 2
+    assert {eintrag.name for eintrag in items} == {"Nur Werk 1", "Für alle"}
+
+
+async def test_werk_laesst_sich_wieder_leeren(workspace):
+    """Aus „Werk 1" wird „alle Werke" – das Feld ist leerbar (anders als früher)."""
+    sheet = await _anlegen(workspace, "189", "Erst Werk 1")
+    service = workspace["service"]
+
+    geaendert = await service.update(sheet.id, {"plant_id": None})
+    assert geaendert.plant_id is None
+
+    items, total = await service.get_all(plant_id=workspace["plant"].id)
+    assert total == 1, "gilt weiterhin für Werk 1 – jetzt, weil es für alle gilt"
+
+
+async def test_unbekanntes_werk_wird_weiter_abgewiesen(workspace):
+    """Ein *angegebenes*, aber unbekanntes Werk bleibt ein Fehler."""
+    service = workspace["service"]
+    with pytest.raises(ValueError) as fehler:
+        await service.create(DataSheetCreate(plant_id=9999, name="Geisterwerk"))
+    assert "gibt es nicht mehr" in str(fehler.value)

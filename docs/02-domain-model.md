@@ -18,6 +18,7 @@
 |---|---|---|---|
 | `Plant` / `Customer` / `Machine` | `plants` / `customers` / `machines` | `models/master_data.py` | Stammdaten (Werk, Kunde, Maschine) |
 | `ToolType` | `tool_types` | `models/master_data.py` | Werkzeugtyp |
+| `Coating` | `coatings` | `models/master_data.py` | Stempel-Beschichtung (Dachmarke MultiDur, DEC-083) |
 | `ToolCategory` | – (Enum) | `models/enums.py` | Werkzeugkategorie auf `Tool` |
 | `Tool` | `tools` | `models/tool.py` | Werkzeug bzw. Lager-/Ersatzobjekt |
 | `Cabinet` / `Drawer` / `Position` | `cabinets` / `drawers` / `positions` | `models/storage.py` | Lagerstruktur; `Position` = Lagerort |
@@ -49,12 +50,13 @@ Alle Tabellen erben von `Base` (`models/base.py`) und – außer `ToolMovement` 
 | `description` | `String(500)` | ja | Beschreibung |
 | `plant_id` | FK → `plants.id` | nein | `ondelete="RESTRICT"` |
 | `tool_type_id` | FK → `tool_types.id` | nein | `ondelete="RESTRICT"` |
+| `coating_id` | FK → `coatings.id` | ja | `ondelete="SET NULL"`; Stempel-Beschichtung (DEC-083), fachlich nur bei Kategorie `Stempel` |
 | `position_id` | FK → `positions.id` | ja | `ondelete="SET NULL"`; `NULL` = Werkzeug-Ablage |
 | `machine_id` | FK → `machines.id` | ja | `ondelete="SET NULL"` |
 | `customer_id` | FK → `customers.id` | ja | `ondelete="SET NULL"` |
 
-Beziehungen: `plant`, `tool_type` und `customer` sind `lazy="joined"` (Listenansicht),
-`machine` lazy, `movements` mit `cascade="all, delete-orphan"`.
+Beziehungen: `plant`, `tool_type`, `coating` und `customer` sind `lazy="joined"`
+(Listenansicht), `machine` lazy, `movements` mit `cascade="all, delete-orphan"`.
 
 > **Wichtig:** Es gibt **keinen** `UNIQUE`-Constraint auf `tools.tool_id`. Die
 > Eindeutigkeit wird ausschließlich im Backend geprüft (Abschnitt 5).
@@ -131,14 +133,17 @@ Fachlicher Schlüssel: `tool_id + category + plant_id + is_storage`.
 
 | Entität | Felder | Constraints | Beziehungen |
 |---|---|---|---|
-| `Plant` | `id`, `name` (`String(100)`) | `name` `unique=True` | `machines`, `cabinets`, `tools` |
+| `Plant` | `id`, `name` (`String(100)`), **`color`** (`String(7)`, geplant – DEC-076) | `name` `unique=True`; `color` nullable, `#RRGGBB`, `None` = bisherige Primärfarbe `#0f766e` | `machines`, `cabinets`, `tools` |
 | `Customer` | `id`, `name` (`String(100)`), `color` (`String(7)`) | `name` `unique=True`; `color` nullable, `#RRGGBB`, `None` = keine Farbe | – (werkunabhängig) |
 | `Machine` | `id`, `name` (`String(100)`), `plant_id`, `color` (`String(7)`) | `plant_id` FK → `plants.id`, nullable, `SET NULL`; `name` **nicht** unique; `color` nullable, `#RRGGBB`, `None` = keine Farbe (DEC-067) | `plant`, `tools` |
 
 `customers.color` wurde mit Migration `d1a4f6b2c9e3` (`add_color_to_customers`,
 `down_revision = 'c7d9e2f3a1b8'`) ergänzt; `machines.color` mit `e7d1b9c34a52`
 (DEC-067) – dieselbe Idee: ein Farbpunkt aus den Stammdaten macht Kunden bzw.
-Maschinen in den Listen auf einen Blick unterscheidbar.
+Maschinen in den Listen auf einen Blick unterscheidbar. `plants.color` folgt
+demselben Muster (DEC-076): die Farbe des **Arbeitswerks** färbt die Oberfläche,
+und jeder Werk-Name trägt seine eigene Farbe – damit ist beim Werkswechsel sofort
+sichtbar, in welchem Werk man arbeitet.
 
 > **Offen:** `Machine.name` ist nicht eindeutig – gleichnamige Maschinen sind möglich.
 > Ob das fachlich gewollt ist, ist nicht dokumentiert.
@@ -167,10 +172,31 @@ Plant ──1:n── Cabinet      UNIQUE (plant_id, name)
 > `Plant → Cabinet → Drawer → Position → StorageLocation` und nennt den Endpunkt
 > `GET/POST /api/locations/storage-locations`. Beides entspricht nicht mehr dem Code.
 
-> **Offen:** Werkzeug ↔ Platz ist **beidseitig** modelliert (`Tool.position_id` und
-> `Position.tool_id`). Eine DB-seitige Garantie für Einzelbelegung oder Konsistenz
-> beider Seiten existiert nicht – das leisten `ToolService` und `LocationService`
-> manuell.
+> **Stand (geprüft 2026-10):** Werkzeug ↔ Platz ist **beidseitig** modelliert
+> (`Tool.position_id` und `Position.tool_id`). Eine DB-seitige Garantie für
+> Einzelbelegung oder Konsistenz beider Seiten gibt es **weiterhin nicht** – das
+> leisten `ToolService` und `LocationService` manuell. Beide Dienste schreiben
+> **immer beide Seiten**, und zwar in **einer** Transaktion:
+>
+> - `LocationService`: `move_position`, `swap_positions`, `insert_at_position`,
+>   `place_tool_at_position`, `release_tool_from_position`,
+>   `_release_tools_from_positions` (Löschen von Schrank/Schublade) – je ein
+>   `commit` am Ende.
+> - `ToolService`: `create_tool`, `update_tool`, `delete_tool`. `update_tool`
+>   hält den Platzwechsel seit 2026-10 in **einer** Transaktion (vorher drei
+>   Commits: Werkzeug, alter Platz, neuer Platz) und liest zusätzlich die
+>   **Platz-Seite** (`Position.tool_id`), damit ein auseinandergelaufener
+>   Bestand beim Bearbeiten wieder zusammengeführt wird statt einen Geist auf
+>   dem alten Platz zu hinterlassen.
+> - Abgesichert durch `backend/tests/test_platz_konsistenz.py` (17 Tests): nach
+>   jeder Operation wird in **beide** Richtungen geprüft, dass Platz und
+>   Werkzeug dieselbe Aussage treffen; ein Test lässt absichtlich eine Seite
+>   stehen und belegt, dass die Prüfung anschlägt. Der Bestand der
+>   Dev-Datenbank wurde einmalig gegengeprüft (13 belegte Plätze, 0
+>   Abweichungen).
+>
+> **Offen bleibt:** der DB-Constraint (partieller Unique-Index) als letzte
+> Absicherung – siehe `docs/04-warehouse.md`, „Offene Fragen" 1.
 
 ## 8. Werkzeugbewegung (`ToolMovement`, Tabelle `tool_movements`)
 
@@ -196,8 +222,9 @@ Lesefelder (Properties, nicht in der Tabelle): `tool_code` (= `tool.tool_id`),
 
 > **Wichtig:** `MovementService.create_movement()` setzt `status` **immer** auf
 > `COMPLETED` und ignoriert den Wert aus dem Request-Body. `lend` ist nur bei
-> `Tool.status == AVAILABLE` erlaubt (danach `LENT`), `return` nur bei `LENT`
-> (danach `AVAILABLE`); `transfer`/`relocate` lassen den Status unverändert.
+> `Tool.status == AVAILABLE` **oder ohne Status** erlaubt (danach `LENT`, DEC-080),
+> `return` nur bei `LENT` (danach `AVAILABLE`); `transfer`/`relocate` lassen den
+> Status unverändert.
 
 > **Wichtig:** `status_change` liest den neuen Status **aus `note`**; nur bei exakter
 > Übereinstimmung mit einem `ToolStatus`-Wert wird er übernommen, sonst bleibt der
@@ -393,9 +420,14 @@ StorageItem (abgelöst – wird entfernt, DEC-064)
 > **Wichtig:** Alle Enums sind mit `native_enum=False` als `VARCHAR` abgelegt (keine
 > PostgreSQL-Enums). `ToolCategory` ist deutsch, alle übrigen Werte englisch.
 
-> **Offen:** `Tool.status` ist nullable. Ein Werkzeug ohne Status kann weder
-> ausgeliehen noch zurückgegeben werden (`MovementService` vergleicht mit
-> `ToolStatus.AVAILABLE` bzw. `LENT`) – ein Default beim Anlegen ist nicht festgelegt.
+> **Geklärt (DEC-080):** `Tool.status` ist nullable, und **`NULL` gilt als
+> `available`** – „nichts Abweichendes bekannt". Damit lässt sich ein Werkzeug ohne
+> gepflegten Status ausleihen (`MovementService` prüft auf „nicht gesetzt oder
+> `AVAILABLE`"), der Filter „Verfügbar" findet es, und die Sortierung stellt es zu
+> „verfügbar". Nur ein **gesetzter** abweichender Zustand (`lent`, `in_transit`,
+> `defective`, `maintenance`) sperrt. Vorher wies die Ausleihe diese Werkzeuge mit
+> „ist nicht verfügbar (aktueller Status: unbekannt)" ab – bei 14 von 16 Werkzeugen
+> im Bestand war das eine stille Sperre.
 
 > **Offen:** Der von `docs/01-requirements.md` Abschnitt 12 genannte Status „nicht
 > verfügbar" existiert **nicht** im Enum; abgedeckt wird er derzeit nur durch

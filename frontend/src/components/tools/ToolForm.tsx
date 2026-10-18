@@ -7,7 +7,7 @@ import {
   type ToolIdPrefill,
 } from '../../api/tools'
 import { getCabinets, getDrawers, getPositions, getPositionContext } from '../../api/locations'
-import { getCustomers, getMachines } from '../../api/masterData'
+import { getCoatings, getCustomers, getMachines } from '../../api/masterData'
 import SerialArticleForm from '../serial-articles/SerialArticleForm'
 import SparePartForm from '../spare-parts/SparePartForm'
 import DataSheetForm from '../data-sheets/DataSheetForm'
@@ -27,6 +27,7 @@ import {
 import { FieldLabel, FieldMessage, FormSection } from '../Field'
 import { TOOL_CATEGORY_LABELS, TOOL_STATUS_LABELS } from '../../api/types'
 import type {
+  Coating,
   Customer,
   Machine,
   Plant,
@@ -157,6 +158,8 @@ export default function ToolForm({
   const [plants, setPlants] = useState<Plant[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [machines, setMachines] = useState<Machine[]>([])
+  // Stempel-Beschichtungen (Stammdaten, Dachmarke MultiDur)
+  const [coatings, setCoatings] = useState<Coating[]>([])
   const [metaError, setMetaError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -165,7 +168,11 @@ export default function ToolForm({
 
   const [toolId, setToolId] = useState(initial?.tool_id ?? '')
   const [category, setCategory] = useState<ToolCategory>(initial?.category ?? 'Stempel')
-  const [status, setStatus] = useState<ToolStatus | ''>(initial?.status ?? '')
+  // **Vorausgewählt „verfügbar"** (DEC-080): „ohne Status" ist als Auswahl
+  // entfallen – ein neues Werkzeug ist verfügbar, und ein alter Datensatz ohne
+  // Status wird beim Öffnen als „verfügbar" gezeigt. Nur Abweichungen
+  // (ausgeliehen, unterwegs, defekt, in Wartung) wählt man bewusst.
+  const [status, setStatus] = useState<ToolStatus>(initial?.status ?? 'available')
   const [isStorage, setIsStorage] = useState(initial?.is_storage ?? false)
   const [measureA, setMeasureA] = useState(initial?.measure_a ?? '')
   const [measureB, setMeasureB] = useState(initial?.measure_b ?? '')
@@ -176,6 +183,11 @@ export default function ToolForm({
   const [description, setDescription] = useState(initial?.description ?? '')
   const [plantId, setPlantId] = useState<string>(initial ? String(initial.plant_id) : '')
   const [toolTypeId, setToolTypeId] = useState<string>(initial ? String(initial.tool_type_id) : '')
+  // Beschichtung des Stempels (nur bei Kategorie Stempel, siehe unten). Leerer
+  // Wert = „ohne Beschichtung"; beim Anlegen ist „Standard" vorausgewählt.
+  const [coatingId, setCoatingId] = useState<string>(
+    initial?.coating_id != null ? String(initial.coating_id) : '',
+  )
 
   // Stammdaten-Zuordnung (optional)
   const [customerId, setCustomerId] = useState<string>(initial?.customer_id ? String(initial.customer_id) : '')
@@ -215,17 +227,58 @@ export default function ToolForm({
   // alle Kategorien Pflicht, Maß B bleibt freiwillig.
   const idRequired = category === 'Stempel'
 
+  /**
+   * Die Vorgabe-Beschichtung („Standard").
+   *
+   * Sie steht im Feld, solange nichts anderes gewählt ist – beim Anlegen und bei
+   * einem alten Stempel ohne Beschichtung (`NULL`). Ein leeres Feld gibt es
+   * nicht: „Ohne Beschichtung" war eine zweite Bedeutung für denselben Zustand.
+   */
+  function standardCoatingId(list: Coating[]): string {
+    const standard = list.find((c) => c.name.trim().toLowerCase() === 'standard')
+    return standard ? String(standard.id) : ''
+  }
+
+  /** Voller Name der gewählten Beschichtung für den Tooltip des Feldes. */
+  const coatingFullName =
+    coatings.find((coat) => String(coat.id) === coatingId)?.name ??
+    'Beschichtung des Stempels (Dachmarke MultiDur)'
+
+  /**
+   * Kategorie wechseln – die Beschichtung gehört zum **Stempel**.
+   *
+   * Bei Abstreifer und Matrize verschwindet das Feld deshalb und der Wert wird
+   * verworfen: ein gespeicherter Wert an einem Abstreifer wäre eine Angabe, die
+   * nirgends mehr sichtbar ist. Zurück beim Stempel steht wieder „Standard".
+   */
+  function handleCategoryChange(next: ToolCategory) {
+    setCategory(next)
+    // Ein Pflichtfeld-Hinweis der vorigen Kategorie gilt jetzt nicht mehr
+    // (z. B. „ID erforderlich" → Abstreifer).
+    setError(null)
+    if (next === 'Stempel') {
+      setCoatingId((aktuell) => aktuell || standardCoatingId(coatings))
+      return
+    }
+    setCoatingId('')
+  }
+
   // Stammdaten laden. Beim Anlegen wird das erste Werk vorausgewählt,
   // damit Schrank/Schublade/Platz sofort geladen werden können.
   useEffect(() => {
-    Promise.all([getToolTypes(), getPlants(), getCustomers()])
-      .then(([types, pl, cus]) => {
+    Promise.all([getToolTypes(), getPlants(), getCustomers(), getCoatings()])
+      .then(([types, pl, cus, coat]) => {
         setToolTypes(types)
         setPlants(pl)
         setCustomers(cus)
+        setCoatings(coat)
         if (!initial && pl.length > 0) {
           setPlantId(String(pl[0].id))
         }
+        // Ein leeres Auswahlfeld gibt es nicht: „Standard" ist die Vorgabe. Das
+        // gilt auch für einen alten Stempel ohne Beschichtung (`NULL`) – sonst
+        // zeigte das Feld die erste Zeile an, während im Datensatz nichts steht.
+        setCoatingId((aktuell) => aktuell || standardCoatingId(coat))
       })
       .catch((e) => setMetaError(e instanceof Error ? e.message : 'Stammdaten konnten nicht geladen werden. Lade die Seite neu.'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -471,7 +524,7 @@ export default function ToolForm({
       // für Stempel greift die Prüfung oben (DEC-055).
       tool_id: toolId.trim() === '' ? null : toolId.trim(),
       category,
-      status: status === '' ? null : (status as ToolStatus),
+      status,
       is_storage: isStorage,
       // Checkbox „Lager/Ersatz“ => Mehrfach-ID ausdrücklich erlaubt
       allow_duplicate_id: isStorage,
@@ -480,6 +533,9 @@ export default function ToolForm({
       description: emptyToNull(description),
       plant_id: Number(plantId),
       tool_type_id: Number(toolTypeId),
+      // Beschichtung nur beim Stempel – bei Abstreifer und Matrize wird sie
+      // nicht angeboten und deshalb auch nicht gesendet (null).
+      coating_id: category === 'Stempel' && coatingId ? Number(coatingId) : null,
       // Kein Platz gewählt (z. B. Lager/Ersatz ohne Platz) → Ablage (null).
       position_id: !inTray && positionId ? Number(positionId) : null,
       machine_id: machineId ? Number(machineId) : null,
@@ -578,12 +634,7 @@ export default function ToolForm({
                       name="category"
                       value={c}
                       checked={category === c}
-                      onChange={() => {
-                        setCategory(c)
-                        // Ein Pflichtfeld-Hinweis der vorigen Kategorie gilt
-                        // jetzt nicht mehr (z. B. „ID erforderlich" → Abstreifer).
-                        setError(null)
-                      }}
+                      onChange={() => handleCategoryChange(c)}
                       className="accent-teal-700 h-4 w-4"
                     />
                     {TOOL_CATEGORY_LABELS[c]}
@@ -591,7 +642,7 @@ export default function ToolForm({
                 ))}
               </div>
 
-              <div className="flex items-center gap-3 border-l border-slate-300 pl-6">
+              <div className="flex items-center gap-3 flex-wrap border-l border-slate-300 pl-6">
                 <div className="flex items-center gap-2">
                   <input
                     id="tool-is-storage"
@@ -615,6 +666,43 @@ export default function ToolForm({
                   title="Anzahl der Exemplare, die in einem Zug angelegt werden"
                   className="input-bordered w-20 text-base sm:text-sm py-1"
                 />
+
+                {/* Beschichtung – nur beim Stempel, aus den Stammdaten
+                    („Stempel-Beschichtung", Dachmarke MultiDur). Eigene senkrechte
+                    Trennlinie, direkt neben „Lager/Ersatz" – zwei voneinander
+                    unabhängige Angaben in einer Zeile.
+                    Gemessen (DEC-083): die Zeile trägt mit dem **vollen** Namen
+                    („MultiDur Performance") 857 px. Sie paßt damit ab ca. 1840 px
+                    Fensterbreite in eine Zeile (Inhaltsspalte 10/12, Deckel
+                    1600 px); darunter bricht sie als **eine** Einheit um, statt
+                    das Feld allein nach unten zu schieben. */}
+                {category === 'Stempel' && (
+                  <div className="flex items-center border-l border-slate-300 pl-3">
+                    {coatings.length > 0 ? (
+                      <div className="ui-field shrink-0">
+                        <FieldLabel htmlFor="tool-coating">Beschichtung</FieldLabel>
+                        <select
+                          id="tool-coating"
+                          value={coatingId}
+                          onChange={(e) => setCoatingId(e.target.value)}
+                          title={coatingFullName}
+                        >
+                          {coatings.map((coat) => (
+                            <option key={coat.id} value={coat.id}>
+                              {coat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      /* Ohne gepflegte Beschichtung bleibt die Angabe leer, statt
+                         ein leeres Auswahlfeld zu zeigen (Admin → Stammdaten). */
+                      <span className="text-xs text-slate-600">
+                        Beschichtung: keine gepflegt (Admin → Stammdaten)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -932,9 +1020,11 @@ export default function ToolForm({
                     <select
                       id="tool-status"
                       value={status}
-                      onChange={(e) => setStatus(e.target.value as ToolStatus | '')}
+                      onChange={(e) => setStatus(e.target.value as ToolStatus)}
                     >
-                      <option value="">— ohne Status —</option>
+                      {/* „ohne Status" gibt es nicht mehr (DEC-080): Jedes Werkzeug
+                          ist verfügbar, solange niemand eine Abweichung einträgt.
+                          Die Liste beginnt deshalb mit „Verfügbar". */}
                       {(Object.keys(TOOL_STATUS_LABELS) as ToolStatus[]).map((s) => (
                         <option key={s} value={s}>{TOOL_STATUS_LABELS[s]}</option>
                       ))}

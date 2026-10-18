@@ -42,21 +42,47 @@ Das Admin-Panel ist in drei Bereiche unterteilt:
 | Bereich | Inhalt |
 |---|---|
 | Übersicht | Kennzahlen und Status des Systems |
-| Stammdaten | Werke, Kunden, Maschinen und Werkzeugtypen in Tabellen |
+| Stammdaten | Werke, Kunden, Maschinen, Werkzeugtypen und Stempel-Beschichtungen in Tabellen |
 | Lagerplätze | Schrank-/Schubladen-/Platzverwaltung mit Werkzeug-Ablage |
 
 ## Stammdaten
 
 Die Stammdaten-Verwaltung verwendet **kompakte Tabellenkarten in einem Grid**:
 
-- Werke, Kunden, Maschinen und Werkzeugtypen werden jeweils in einer eigenen
-  Tabelle dargestellt.
+- Werkzeugtypen, Stempel-Beschichtung, Werke, Kunden und Maschinen werden jeweils in
+  einer eigenen Tabelle dargestellt.
 - Die Blöcke stehen **nebeneinander** (`grid`: 1 Spalte mobil, 2 ab `sm`,
   3 ab `xl`, 4 ab `2xl`) und sind oben ausgerichtet.
 - Jede Tabelle hat eine **feste Höhe mit eigenem Scrollbereich**
   (`.admin-scroll-y`), damit auch viele Einträge übersichtlich bleiben und
   weitere Blöcke später einfach ergänzt werden können.
 - Neue Einträge werden über ein Eingabefeld oberhalb der Tabelle hinzugefügt.
+- Ein optionaler Satz unter der Überschrift (`hint` an `TableEditor`, `.admin-hint`)
+  ordnet den Block ein – z. B. die Dachmarke der Beschichtungen.
+
+### Stempel-Beschichtung (Dachmarke MultiDur)
+
+Der Block **„Stempel-Beschichtung"** pflegt die Beschichtungen der Stempel
+(`coatings`, DEC-083). Angelegt, umbenannt und gelöscht wird wie in den übrigen
+Blöcken über die Tabelle; der Name enthält die Dachmarke
+(„MultiDur TiCN", „MultiDur Performance", „MultiDur Alu", „Standard").
+
+- Ein Werkzeug hängt mit `coating_id` an der Zeile (`SET NULL`): Löschen nimmt
+  keinen Stempel mit, die Werkzeuge verlieren nur die Zuordnung.
+- Die Liste füllt das Dropdown **„Beschichtung"** im Werkzeug-Formular – dort
+  **nur bei Kategorie Stempel**, mit eigener Trennlinie neben „Lager/Ersatz" in
+  derselben Zeile. Angezeigt wird der **volle Name** („MultiDur TiCN"). Platz dafür
+  kommt aus dem Seitenraster (Inhalt 10/12, Statistik-Sidebar 2/12, kein Deckel,
+  DEC-083): ab ca. 1700 px Fensterbreite steht die Zeile einzeilig, darunter bricht
+  sie als Ganzes um. „Standard" ist vorausgewählt; eine Option „Ohne Beschichtung"
+  gibt es nicht.
+- In der Werkzeugliste steht der volle Name in der Kategorie-Zeile
+  („Stempel · MultiDur TiCN").
+- Startdaten kommen aus der Migration `b5e2d8c41f97` (nur gesetzt, solange die
+  Tabelle leer ist).
+- Endpunkte: `GET /api/coatings` (alle aktiven Benutzer) sowie
+  `POST` / `PUT` / `DELETE /api/coatings…` (nur Admin) – wie bei Kunden und
+  Maschinen.
 
 ### Aktionen pro Zeile (Kebab-Menü)
 

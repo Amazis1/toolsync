@@ -39,7 +39,7 @@ Maschine eingerichtet wird. Es ist ein **eigener Fachbereich** mit eigenem Tab
 > „Werkzeug-ID" bleibt der Bezug zum Werkzeug ausdrücklich sichtbar.
 
 Ein Datenblatt wird gefunden über **Werkzeug-ID, Name, Beschreibung, Werk und
-Maschine**. Werk ist Pflicht, Werkzeug-ID und Maschine sind freiwillig; Werk und
+Maschine**. Werk ist **freiwillig** (DEC-085), Werkzeug-ID und Maschine ebenfalls; Werk und
 Maschine sind **Stammdaten** aus dem Admin-Bereich (Auswahl, kein Freitext).
 
 ## 2. Funktionen
@@ -72,7 +72,7 @@ Tabelle `data_sheets` (`class DataSheet(Base, AuditMixin)`); `id`, `created_at`,
 | Feld | Typ | Nullable | Bedeutung |
 |---|---|---|---|
 | `tool_id` | `String(50)`, `index=True` | **ja** | **Werkzeug-ID**; empfohlen, aber nicht Pflicht (DEC-055: Abstreifer/Matrize dürfen ohne ID existieren) |
-| `plant_id` | FK → `plants.id`, `ondelete="RESTRICT"` | **nein** | Werk (Pflicht) |
+| `plant_id` | FK → `plants.id`, `ondelete="RESTRICT"` | **ja** | Werk – **freiwillig** (DEC-085): `NULL` = gilt für alle Werke |
 | `machine_id` | FK → `machines.id`, `ondelete="SET NULL"` | ja | die Maschine, für die die Werte gelten |
 | `name` | `String(200)` | ja | Bezeichnung des Datenblatts |
 | `description` | `String(500)` | ja | Zusatztext |
@@ -144,7 +144,7 @@ Tiebreaker.
 
 **Formularwerte bei `PUT`:** ein **fehlendes** Feld bedeutet „unverändert", ein
 **leerer** Wert bedeutet „Feld leeren" (Werkzeug-ID, Name, Beschreibung, Maschine).
-Das **Werk** ist Pflicht und wird nie geleert. Mitgeschickte Dateien **kommen
+Auch das **Werk** ist freiwillig und lässt sich leeren – dann gilt der Datensatz für alle Werke (DEC-085). Mitgeschickte Dateien **kommen
 hinzu**; entfernt wird einzeln über `DELETE /{id}/files/{name}`.
 
 **Fehlerfälle** (Meldungen deutsch, wie im Serienartikel):

@@ -48,12 +48,18 @@ export interface ToolMovement {
   tool_code: string | null
   tool_description: string | null
   user_display_name: string | null
+  /** Arbeitswerk, in dem gehandelt wurde (DEC-070); null bei Altdaten. */
+  plant_id?: number | null
+  plant?: { id: number; name: string; color?: string | null } | null
 }
 
 /**
  * Eingabedaten zum Anlegen einer neuen Bewegung.
  * Achtung: id und timestamp werden vom Backend erzeugt
  * und dürfen hier nicht mitgeschickt werden.
+ *
+ * `user_id` setzt der Server aus dem Token (DEC-078) – ein mitgeschickter Wert
+ * wird überschrieben. Das Arbeitswerk kommt aus dem Header `X-Plant-Id`.
  */
 export interface ToolMovementInput {
   movement_type: MovementType
@@ -62,5 +68,25 @@ export interface ToolMovementInput {
   note?: string | null
   tool_id: number
   user_id?: number | null
+}
+
+/**
+ * Eine laufende Ausleihe (`GET /movements/active`, DEC-078).
+ *
+ * Grundlage der Rückgabe: Welche Werkzeuge des Arbeitswerks sind gerade bei einer
+ * Person? Zurückgegeben wird **einzelnes** Werkzeug – nicht die ganze Liste.
+ */
+export interface ActiveLoan {
+  movement_id: number
+  tool_id: number
+  tool_code: string | null
+  description: string | null
+  category: string | null
+  measure_a: string | null
+  position_code: string | null
+  lent_at: string | null
+  user_id: number | null
+  user_display_name: string | null
+  note: string | null
 }
 

@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ToolSync – Werkzeug-Logistik (Prototyp)</title>
+
+<!--
+  PROTOTYP – docs/demo-werkzeug-logistik.html
+  ===========================================
+  Einzelne Offline-Datei, kein Backend, keine Bibliothek, kein Build.
+
+  Zeigt den VORGANG und den RAHMEN der Main Site:
+    Sidebar (Logo, Profil, Arbeitswerk) · Tab-Leiste · Auftrags-Dropdowns
+    · Fenster für alles Ausfüllbare. KEINE rechte Statistikspalte mehr –
+    die Zahlen standen doppelt.
+
+  Werkfarbe (DEC-076): Das Arbeitswerk färbt die Oberfläche.
+    Werk 1 = Teal #0f766e (bisheriges Primary) · Werk 2 = Indigo #4338ca ·
+    Werk 3 = Ocker #a16207. Farbregel: die Werkfarbe steht nur auf Flächen,
+    Rahmen und Werk-Namen; Zustände behalten ihre eigenen Töne.
+
+  Plan:           docs/21-werkzeug-logistik.md
+  Entscheidungen: DEC-070 (Arbeitswerk), DEC-071 (Heimatwerk/Ort), DEC-072 (Auftrag),
+                  DEC-073 (Reihenfolge), DEC-074 (Empfang), DEC-075 (Einordnung),
+                  DEC-076 (Werkfarbe), DEC-077 („Wo ist was" nur Unterwegs/Ausgeliehen)
+-->
+
+<style>
+  /* ---------- Design-Tokens (Glas-System, docs/15-ui-styleguide.md) ---------- */
+  :root{
+    --bg:#eef2f6; --ink:#0f172a; --ink-2:#334155; --ink-3:#64748b;
+    --line:rgba(15,23,42,.10); --line-2:rgba(15,23,42,.16);
+    --teal:#0f766e; --sky:#0284c7; --amber:#b45309; --emerald:#047857;
+    --rose:#be123c; --slate:#475569;
+    --radius:1rem; --radius-sm:.55rem;
+    --shadow:0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.08);
+    --shadow-lg:0 20px 50px rgba(15,23,42,.22);
+
+    /* Werkfarbe des aktiven Werks – wird per JavaScript gesetzt (DEC-076) */
+    --werk:#0f766e; --werk-soft:rgba(15,118,110,.10); --werk-line:rgba(15,118,110,.30);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font:14px/1.45 Inter,"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink);
+    background:
+      radial-gradient(1100px 520px at 6% -8%, var(--werk-soft) 0%, transparent 55%),
+      radial-gradient(900px 460px at 100% 0%, #e8f5f3 0%, transparent 55%),
+      var(--bg);
+    min-height:100vh; transition:background .25s;
+  }
+  .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace; font-variant-numeric:tabular-nums}
+  .muted{color:var(--ink-3)} .small{font-size:12px} .tiny{font-size:11px}
+  .row{display:flex; align-items:center; gap:.5rem}
+  .row-wrap{display:flex; align-items:center; gap:.5rem; flex-wrap:wrap}
+  .spread{display:flex; align-items:center; justify-content:space-between; gap:.75rem}
+  .nowrap{white-space:nowrap}
+  h1,h2,h3{margin:0; font-weight:700; letter-spacing:-.01em}
+  h1{font-size:16px} h2{font-size:14px}
+  h3{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3)}
+
+  /* ---------- Rahmen: Sidebar + Hauptbereich (wie App.tsx) ---------- */
+  .app{display:flex; min-height:100vh; align-items:stretch}
+  .app-sidebar{
+    width:15rem; flex:0 0 15rem; padding:0 16px 18px; display:flex; flex-direction:column;
+    background:linear-gradient(165deg, rgba(255,255,255,.94), rgba(255,255,255,.66));
+    border-right:1px solid var(--line); backdrop-filter:blur(12px);
+  }
+  /* Die Werkfarbe steht NUR auf: Werk-Namen, Knopf, aktivem Reiter und der
+     leisen Markierung der Werkzeug-ID. KEINE farbigen Kanten an Karten,
+     Tab-Leiste, Aufträgen oder Fenstern – das zerschneidet das Glas-Design
+     (Entscheidung des Projektinhabers). */
+  .werk-band{display:none}
+  .werk-card{margin-top:auto; border:1px solid var(--line); border-radius:var(--radius-sm); background:rgba(255,255,255,.8); padding:9px 10px}
+  .werk-card .werk-name{font-weight:800; font-size:14px; color:var(--werk)}
+  .werk-card select{margin-top:5px}
+  .brandbox{display:flex; flex-direction:column; align-items:center; gap:6px; padding-bottom:12px; border-bottom:1px solid var(--line)}
+  .brandbox .hp{height:44px; width:44px; border-radius:12px; background:var(--werk); color:#fff; display:grid; place-items:center; font-size:19px; font-weight:800; transition:background .25s}
+  .brandbox .title{font-size:19px; font-weight:800; letter-spacing:-.02em}
+  .brandbox .sub{font-size:11px; color:var(--ink-3)}
+  .me{display:flex; align-items:center; gap:.5rem; padding:10px 2px; font-size:12px; font-weight:600; color:var(--ink-2)}
+  .avatar{width:26px;height:26px;border-radius:999px;background:var(--werk-soft);color:var(--werk);display:grid;place-items:center;font-size:11px;font-weight:800}
+  .side-btn{
+    display:flex; align-items:center; gap:.5rem; width:100%; padding:6px 8px; font:inherit; font-size:12px; font-weight:600;
+    color:var(--ink-2); background:none; border:0; border-radius:8px; cursor:pointer; text-align:left;
+  }
+  .side-btn:hover{background:rgba(15,23,42,.05)}
+
+  .main{flex:1 1 auto; min-width:0; padding:14px 18px 32px; max-width:1400px}
+  @media(max-width:1080px){ .app-sidebar{display:none} }
+
+  /* ---------- Tab-Leiste ---------- */
+  .tabbar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:4px 8px; border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:linear-gradient(135deg, rgba(255,255,255,.88), rgba(255,255,255,.62));
+    box-shadow:var(--shadow); backdrop-filter:blur(10px);
+  }
+  .tabs{display:flex; gap:2px; overflow-x:auto}
+  .tab{
+    border:0; background:none; font:inherit; font-size:13px; font-weight:600; color:var(--ink-3);
+    padding:7px 11px; border-radius:9px; cursor:pointer; white-space:nowrap;
+  }
+  .tab:hover{color:var(--ink); background:rgba(15,23,42,.04)}
+  .tab[aria-selected="true"]{color:var(--werk); background:var(--werk-soft)}
+  .badge-mini{display:inline-block; margin-left:5px; padding:0 5px; border-radius:999px; background:var(--amber); color:#fff; font-size:10px; font-weight:800; vertical-align:1px}
+
+  /* ---------- Karten ---------- */
+  .card{
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    background:linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.66));
+    backdrop-filter:blur(10px); padding:12px 14px;
+  }
+  .card + .card{margin-top:10px}
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:8px}
+
+  /* ---------- Knöpfe, Felder ---------- */
+  .btn{
+    display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .75rem; font:inherit; font-size:13px; font-weight:600;
+    background:#fff; color:var(--ink); border:1px solid var(--line-2); border-radius:var(--radius-sm); cursor:pointer;
+  }
+  .btn:hover{background:#f8fafc}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .btn-primary{background:var(--werk); border-color:var(--werk); color:#fff}
+  .btn-primary:hover{filter:brightness(.94)}
+  .btn-sky{background:var(--sky); border-color:var(--sky); color:#fff}
+  .btn-sky:hover{background:#026ea3}
+  .btn-danger{color:var(--rose); border-color:rgba(190,18,60,.35)}
+  .btn-danger:hover{background:rgba(190,18,60,.06)}
+  .btn-sm{padding:.22rem .5rem; font-size:12px}
+  .btn-ghost{background:none; border-color:transparent}
+  .btn-ghost:hover{background:rgba(15,23,42,.05)}
+  input[type=text], input[type=search], select, textarea{
+    width:100%; padding:6px 9px; font:inherit; font-size:13px; color:inherit;
+    background:rgba(255,255,255,.92); border:1px solid var(--line-2); border-radius:var(--radius-sm);
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--werk-line); outline-offset:1px}
+  label.field{display:block}
+  label.field > span{display:block; font-size:11px; font-weight:700; color:var(--ink-2); margin-bottom:3px}
+  .fields-3{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
+  @media(max-width:720px){ .fields-3{grid-template-columns:1fr} }
+
+  /* ---------- Zustands-Chips (haben ihre eigenen Töne) ---------- */
+  .chip{display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid transparent; white-space:nowrap}
+  .chip-ok{background:rgba(4,120,87,.12); color:var(--emerald); border-color:rgba(4,120,87,.24)}
+  .chip-transit{background:rgba(2,132,199,.12); color:var(--sky); border-color:rgba(2,132,199,.28)}
+  .chip-block{background:rgba(100,116,139,.14); color:var(--slate); border-color:rgba(100,116,139,.26)}
+  .chip-warn{background:rgba(180,83,9,.13); color:var(--amber); border-color:rgba(180,83,9,.28)}
+
+  /* ---------- Werk-Namen tragen die Werkfarbe (Fläche/Text, nie Zustände) ---------- */
+  .werk-tag{
+    display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px;
+    font-size:11px; font-weight:800; border:1px solid currentColor; background:rgba(255,255,255,.62);
+  }
+  .werk-tag::before{content:""; width:7px; height:7px; border-radius:50%; background:currentColor}
+
+  /* ---------- Auftrags-Dropdown ---------- */
+  .drop{border:1px solid var(--line); border-radius:var(--radius-sm); background:rgba(255,255,255,.74); overflow:hidden}
+  .drop + .drop{margin-top:6px}
+  .drop-head{width:100%; display:flex; align-items:center; gap:.6rem; padding:8px 10px; background:none; border:0; font:inherit; cursor:pointer; text-align:left; color:inherit}
+  .drop-head:hover{background:rgba(15,23,42,.035)}
+  .drop-head .nr{font-family:ui-monospace,Consolas,monospace; font-weight:800; letter-spacing:-.02em}
+  .drop-head .chev{margin-left:auto; color:var(--ink-3); transition:transform .15s}
+  .drop.is-open .drop-head .chev{transform:rotate(180deg)}
+  .drop-body{border-top:1px solid var(--line); padding:9px 10px; background:rgba(255,255,255,.55)}
+  .drop-body .actions{display:flex; justify-content:flex-end; gap:6px; margin-top:8px; flex-wrap:wrap}
+
+  /* ---------- Tabellen (kompakt) ---------- */
+  .table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.55)}
+  table{border-collapse:separate; border-spacing:0; width:100%; font-size:12px}
+  th,td{padding:6px 8px; text-align:left; border-bottom:1px solid var(--line); vertical-align:middle}
+  th{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-2); background:rgba(226,232,240,.5)}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.blocked{background:rgba(100,116,139,.08)}
+  tbody tr.picked{background:var(--werk-soft)}
+  /* Herkunft am ganzen Datensatz: die GANZE Zeile trägt die Farbe des
+     Heimatwerks (14 %, --row/-row-hover setzt das Skript je Zeile).
+     Eine einzelne markierte Spalte zerriss das Tabellenraster – die Zeile
+     liest sich ruhig und ist trotzdem auf einen Blick zuzuordnen.
+     Deshalb auch kein Zebra in diesen Tabellen: Zeilenfarbe statt Streifen. */
+  tr.plantrow{background:var(--row, transparent)}
+  tr.plantrow:hover{background:var(--row-hover, var(--row, transparent))}
+  tr[data-plant]{background:var(--row, transparent)}
+  tr[data-plant]:hover{background:var(--row-hover, var(--row, transparent))}
+  .cell-id{font-family:ui-monospace,Consolas,monospace; font-weight:700}
+  .empty{padding:14px; text-align:center; color:var(--ink-3); border:1px dashed var(--line-2); border-radius:9px; font-size:12px}
+  .note{font-size:12px; border:1px solid var(--line-2); border-radius:9px; background:rgba(255,255,255,.6); padding:7px 9px; color:var(--ink-2)}
+  .note-amber{background:rgba(180,83,9,.08); border-color:rgba(180,83,9,.26); color:#7c2d12}
+  .note-werk{background:var(--werk-soft); border-color:var(--werk-line)}
+  .stack > * + *{margin-top:6px}
+  .segments{display:inline-flex; border:1px solid var(--line-2); border-radius:999px; overflow:hidden; background:#fff}
+  .segments button{border:0; background:none; font:inherit; font-size:12px; padding:.25rem .7rem; cursor:pointer; color:var(--ink-2)}
+  .segments button[aria-pressed="true"]{background:var(--werk-soft); color:var(--werk); font-weight:700}
+
+  /* ---------- Fenster ---------- */
+  dialog{border:1px solid var(--line-2); border-radius:var(--radius); padding:0; width:min(900px,94vw); box-shadow:var(--shadow-lg); background:#fff}
+  dialog::backdrop{background:rgba(15,23,42,.38)}
+  .dlg-head{display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:12px 14px; border-bottom:1px solid var(--line)}
+  .dlg-body{padding:12px 14px; max-height:70vh; overflow:auto}
+  .dlg-foot{display:flex; justify-content:flex-end; gap:8px; padding:10px 14px; border-top:1px solid var(--line); background:#f8fafc; flex-wrap:wrap}
+  .toast{position:fixed; right:16px; bottom:16px; z-index:80; display:flex; flex-direction:column; gap:6px}
+  .toast div{background:#0f172a; color:#fff; padding:8px 12px; border-radius:9px; box-shadow:var(--shadow); font-size:12px; max-width:380px}
+</style>
+</head>
+<body>
+
+<!-- ======================= MAIN-SITE-RAHMEN (Entwurf) ======================= -->
+<div class="app"><!-- Sidebar: Logo, Profil, Arbeitswerk (DEC-070) -->
+  <aside class="app-sidebar">
+    <div class="brandbox">
+      <div class="hp">hp</div>
+      <span class="title">ToolSync</span>
+      <span class="sub">Werkzeug- &amp; Lagerverwaltung</span>
+    </div>
+
+    <div class="me"><span class="avatar" id="meInitials">MB</span><span id="meName">–</span></div>
+
+    <div class="stack" style="margin-bottom:10px">
+      <button class="side-btn" data-view="ausgang">â–¤ Werkzeug-Logistik</button>
+      <button class="side-btn" data-open="help">? Regeln &amp; Datentypen</button>
+      <button class="side-btn" data-open="reset">âŸ² Prototyp zurücksetzen</button>
+    </div>
+
+    <div class="werk-card">
+      <span class="tiny muted" style="font-weight:700">Arbeitswerk</span>
+      <div class="werk-name" id="werkName">–</div>
+      <select id="plantSelect" aria-label="Arbeitswerk wählen"></select>
+      <span class="tiny muted" id="plantSource"></span>
+    </div>
+  </aside>
+
+  <!-- Hauptbereich: volle Breite – KEINE Statistikspalte (Zahlen standen doppelt) -->
+  <main class="main">
+    <nav class="tabbar" aria-label="Bereiche wechseln">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-view="ausgang" aria-selected="true">Aufträge</button>
+        <button class="tab" role="tab" data-view="eingang">Eingang <span class="badge-mini" id="tabEingangCount" hidden>0</span></button>
+        <button class="tab" role="tab" data-view="wowas">Wo ist was</button>
+        <button class="tab" role="tab" data-view="historie">Historie</button>
+      </div>
+      <button class="btn btn-primary btn-sm nowrap" data-open="new">+ Neuer Auftrag</button>
+    </nav>
+
+    <div id="view" style="margin-top:12px"></div>
+
+    <p class="tiny muted" style="margin-top:14px">
+      Entwurf: Sidebar links, Tab-Leiste, Fenster für alles Ausfüllbare. Die Werkfarbe färbt die
+      Oberfläche – <span id="werkLegende"></span>. Daten liegen nur in diesem Browser
+      (<span class="mono">localStorage</span>). Plan: <span class="mono">docs/21-werkzeug-logistik.md</span>.
+    </p>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<dialog id="dlg">
+  <div class="dlg-head"><h2 id="dlgTitle">–</h2><button class="btn btn-ghost btn-sm" data-close="1">Schließen</button></div>
+  <div class="dlg-body" id="dlgBody"></div>
+  <div class="dlg-foot" id="dlgFoot"></div>
+</dialog>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   A. DATENTYPEN (1:1 ins Backend übertragbar, docs/21 § 3)
+
+   Plant          → plants          NEU: `color` (DEC-076), wie Kunde/Maschine
+   { id, name, color }
+
+   TransportOrder → transport_orders
+   { id, order_number (Freitext), reference, from_plant_id, to_plant_id,
+     status: draft|sent|partly_received|received|cancelled, info,
+     parent_order_id, created_by_id, created_plant_id, sent_at, sent_by_id, closed_at }
+
+   TransportItem  → transport_items
+   { id, order_id, tool_id, home_position_id, received_at, received_by_id,
+     received_plant_id, note }
+
+   Tool (Ausschnitt)
+   { id, tool_id, category, measure_a, tool_type,
+     plant_id (HEIMATWERK), home_slot, current_plant_id (null = am Heimatwerk),
+     status: available|lent|in_transit|defective|maintenance, lent_to }
+
+   Movement → tool_movements
+   { id, ts, plant_id (Arbeitswerk), from_plant, to_plant, tool_id, action, user, note }
+   ===================================================================== */
+
+/* =====================================================================
+   B. ZUSTANDSMASCHINE (pur – wird 1:1 zu Service-Funktionen)
+   ===================================================================== */
+
+const OPEN_STATUS = ["draft", "sent", "partly_received"];
+const SHIPPED_STATUS = ["sent", "partly_received"];
+
+function blockedReason(S, tool, activePlant){
+  if (!activePlant) return "kein Arbeitswerk gewählt";
+  if (tool.status === "lent")        return "an " + (tool.lent_to || "Person") + " ausgeliehen";
+  if (tool.status === "defective")   return "defekt";
+  if (tool.status === "maintenance") return "in Wartung";
+  if (tool.status === "in_transit")  return "unterwegs";
+  const open = openOrderOf(S, tool.id);
+  if (open) return "bereits im Auftrag " + open.order_number;
+  if (placeOf(tool) !== activePlant) return "liegt in " + plantName(S, placeOf(tool));
+  return null;
+}
+function placeOf(tool){ return tool.current_plant_id ?? tool.plant_id; }
+function plantName(S, id){ return (S.plants.find(p => p.id === id) || {name:"?"}).name; }
+function plantColor(S, id){
+  const p = S.plants.find(x => x.id === id);
+  return (p && p.color) || "#475569";
+}
+function openOrderOf(S, toolId){
+  return S.orders.find(o => OPEN_STATUS.includes(o.status)
+    && S.items.some(i => i.order_id === o.id && i.tool_id === toolId)) || null;
+}
+function orderItems(S, orderId){ return S.items.filter(i => i.order_id === orderId); }
+function toolOf(S, id){ return S.tools.find(t => t.id === id); }
+
+/* „Wo ist was" zeigt nur, was NICHT am Platz liegt (DEC-077) */
+function isAway(tool){ return tool.status === "lent" || tool.status === "in_transit"; }
+
+function derivedStatus(S, order){
+  if (order.status === "draft" || order.status === "cancelled") return order.status;
+  const items = orderItems(S, order.id);
+  const received = items.filter(i => i.received_at).length;
+  if (received === 0) return "sent";
+  if (received < items.length) return "partly_received";
+  return "received";
+}
+function canSend(S, order, activePlant){
+  if (!activePlant) return "Kein Arbeitswerk gewählt.";
+  if (order.status !== "draft") return "Nur ein Entwurf kann verschickt werden.";
+  if (order.from_plant_id !== activePlant) return "Nur das Absenderwerk darf verschicken.";
+  if (order.from_plant_id === order.to_plant_id) return "Absender und Empfänger sind dasselbe Werk.";
+  const items = orderItems(S, order.id);
+  if (!items.length) return "Der Auftrag hat keine Werkzeuge.";
+  for (const it of items){
+    const tool = toolOf(S, it.tool_id);
+    if (!tool) return "Ein Werkzeug fehlt im Bestand.";
+    const why = blockedReason(S, tool, activePlant);
+    if (why && !why.startsWith("bereits im Auftrag")) return tool.tool_id + ": " + why;
+  }
+  return null;
+}
+function canReceive(S, order, activePlant){
+  if (!activePlant) return "Kein Arbeitswerk gewählt.";
+  if (!SHIPPED_STATUS.includes(order.status)) return "Dieser Auftrag ist nicht unterwegs.";
+  if (order.to_plant_id !== activePlant) return "Nur das Empfängerwerk darf bestätigen.";
+  if (orderItems(S, order.id).every(i => i.received_at)) return "Es ist schon alles bestätigt.";
+  return null;
+}
+function canCancel(S, order, activePlant){
+  if (order.status !== "draft") return "Nur ein Entwurf ist stornierbar – ein verschickter Auftrag wird über den Rückweg aufgelöst.";
+  if (order.from_plant_id !== activePlant) return "Nur das Absenderwerk darf stornieren.";
+  return null;
+}
+function canReturn(S, order, activePlant){
+  if (order.status !== "received" && order.status !== "partly_received") return "Erst wenn Werkzeuge angekommen sind.";
+  if (order.to_plant_id !== activePlant) return "Nur das Werk, das die Werkzeuge hat, schickt sie zurück.";
+  if (order.parent_order_id) return "Das ist bereits ein Rück-Auftrag.";
+  return null;
+}
+
+/* =====================================================================
+   C. BEISPIELDATEN
+   ===================================================================== */
+
+const STORE_KEY = "toolsync.logistik.demo.v3";
+const ACTIVE_KEY = "toolsync.plant";
+
+function seed(){
+  const S = {
+    me: { id:7, name:"M. Berger", personal_number:"1042", default_plant_id:1 },
+    plants:[
+      { id:1, name:"Werk 1", color:"#0f766e" },   /* Teal – bisheriges Primary */
+      { id:2, name:"Werk 2", color:"#4338ca" },   /* Indigo */
+      { id:3, name:"Werk 3", color:"#a16207" }    /* Ocker  */
+    ],
+    tools:[], items:[], orders:[], movements:[], seq:{tool:0,item:0,order:0,mv:0}
+  };
+  const T = (tool_id, category, measure_a, tool_type, plant_id, home_slot, extra={}) => {
+    S.seq.tool += 1;
+    S.tools.push(Object.assign({
+      id:"t"+S.seq.tool, tool_id, category, measure_a, tool_type, plant_id, home_slot,
+      current_plant_id:null, status:"available", lent_to:null
+    }, extra));
+  };
+  /* Werk 1 – Schrank 01, Schubladen A/B */
+  T("01020000","Stempel","7,00","01 Rund",1,"01-A-01");
+  T("01020001","Stempel","7,00","01 Rund",1,"01-A-02");
+  T("01020002","Stempel","8,20","02 Eckig",1,"01-A-03");
+  T("01020003","Stempel","8,20","02 Eckig",1,"01-A-04",{status:"lent",lent_to:"Personalnr. 2277"});
+  T("01020004","Stempel","12,00","03 Oval",1,"01-A-05");
+  T("AB-1200","Abstreifer","12,00","05 Abstreifer",1,"01-A-06");
+  T("AB-1500","Abstreifer","15,00","05 Abstreifer",1,"01-A-07");
+  T(null,"Matrize","25,40","10 Matrize",1,"01-A-08");
+  T("01020010","Stempel","6,00","01 Rund",1,"01-B-01");
+  T("01020011","Stempel","6,00","01 Rund",1,"01-B-02",{status:"defective"});
+  T("01020012","Stempel","9,50","04 Sechskant",1,"01-B-03");
+  T("AB-2000","Abstreifer","20,00","05 Abstreifer",1,"01-B-04");
+  T(null,"Matrize","30,00","10 Matrize",1,"01-B-05");
+  T("01020013","Stempel","9,50","04 Sechskant",1,null);
+  /* Werk 2 – gleiche Werkzeug-ID wie Werk 1 (kein Konflikt, DEC-071) */
+  T("01020000","Stempel","7,00","01 Rund",2,"02-A-01");
+  T("01020020","Stempel","10,00","01 Rund",2,"02-A-02");
+  T("01020021","Stempel","10,00","03 Oval",2,"02-A-03");
+  T("AB-1200","Abstreifer","12,00","05 Abstreifer",2,"02-A-04");
+  T("AB-3000","Abstreifer","18,00","05 Abstreifer",2,"02-A-05");
+  T(null,"Matrize","22,00","10 Matrize",2,"02-B-01",{status:"maintenance"});
+  T("01020022","Stempel","11,10","02 Eckig",2,"02-B-02");
+  T("01020023","Stempel","11,10","02 Eckig",2,"02-B-03",{status:"lent",lent_to:"Personalnr. 3311"});
+  T("01020024","Stempel","5,50","01 Rund",2,"02-B-04");
+  T(null,"Matrize","28,00","10 Matrize",2,null);
+  /* Werk 3 – kleiner Bestand */
+  T("01020030","Stempel","7,50","01 Rund",3,"03-A-01");
+  T("01020031","Stempel","7,50","01 Rund",3,"03-A-02");
+  T("AB-4000","Abstreifer","14,00","05 Abstreifer",3,"03-A-03");
+  T(null,"Matrize","26,00","10 Matrize",3,"03-A-04");
+  T("01020032","Stempel","13,00","03 Oval",3,"03-A-05");
+
+  /* Beispiel-Aufträge: einer unterwegs, einer teilweise empfangen */
+  const t1 = S.tools.find(t => t.tool_id === "01020002");
+  const t2 = S.tools.find(t => t.tool_id === "01020010");
+  if (t1 && t2){
+    const o = addOrder(S, {order_number:"AUF-2026-0042", reference:"LS 8891", from_plant_id:1, to_plant_id:2,
+      info:"Für Auftrag 4711 – bitte bis Donnerstag zurück."});
+    addItem(S, o, t1); addItem(S, o, t2);
+    doSend(S, o);
+  }
+  const t3 = S.tools.find(t => t.tool_id === "01020000" && t.plant_id === 2);
+  const t4 = S.tools.find(t => t.tool_id === "01020020");
+  if (t3 && t4){
+    const o = addOrder(S, {order_number:"AUF-2026-0043", from_plant_id:2, to_plant_id:1,
+      info:"Ersatz für den defekten Stempel 01020011."});
+    addItem(S, o, t3); addItem(S, o, t4);
+    doSend(S, o);
+    const first = S.items.find(i => i.order_id === o.id && i.tool_id === t3.id);
+    doReceive(S, o, [first.id], 1);
+  }
+  return S;
+}
+
+/* =====================================================================
+   D. ZUSTAND + AKTIONEN (jede Aktion = eine „Transaktion")
+   ===================================================================== */
+
+let S = load();
+let view = "ausgang";
+let openDrops = {};
+let awayFilter = "alle";
+
+function load(){
+  try{ const raw = localStorage.getItem(STORE_KEY); if (raw) return JSON.parse(raw); }catch(e){}
+  const x = seed(); save(x); return x;
+}
+function save(x){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(x)); }catch(e){} }
+
+/* Aktives Werk: 1 = Wahl dieses Benutzers, 2 = Vorgabe im Konto,
+   3 = Wahl dieses Rechners, 4 = erstes Werk (DEC-070). Der Benutzer wird
+   hereingereicht, damit die Beispieldaten ohne globalen Zustand entstehen. */
+function activePlantFor(me){
+  const perUser = localStorage.getItem(ACTIVE_KEY + "." + me.personal_number);
+  if (perUser === "all") return "all";
+  if (perUser) return Number(perUser);
+  if (me.default_plant_id) return me.default_plant_id;
+  const device = localStorage.getItem(ACTIVE_KEY + ".device");
+  if (device) return Number(device);
+  return 1;
+}
+function activePlant(){ return activePlantFor(S.me); }
+function setActivePlant(id){
+  localStorage.setItem(ACTIVE_KEY + "." + S.me.personal_number, String(id));
+  localStorage.setItem(ACTIVE_KEY + ".device", String(id));
+}
+function plantOrNull(){ const a = activePlant(); return (a === "all" || a === null) ? null : Number(a); }
+
+function movement(x, toolId, from, to, action, note){
+  x.seq.mv += 1;
+  const werk = activePlantFor(x.me);
+  x.movements.unshift({ id:"m"+x.seq.mv, ts:new Date().toISOString(),
+    plant_id: werk === "all" ? x.me.default_plant_id : werk,
+    from_plant_id: x.plants.find(p => p.name === from)?.id ?? null,
+    to_plant_id: x.plants.find(p => p.name === to)?.id ?? null,
+    from_plant:from, to_plant:to, tool_id:toolId, action, user:x.me.name, note:note||"" });
+}
+function addOrder(x, head){
+  x.seq.order += 1;
+  const werk = activePlantFor(x.me);
+  const o = Object.assign({ id:"o"+x.seq.order, status:"draft", parent_order_id:null,
+    created_by_id:x.me.id, created_plant_id: werk === "all" ? x.me.default_plant_id : werk,
+    created_at:new Date().toISOString(), sent_at:null, sent_by_id:null, closed_at:null,
+    reference:"", info:"" }, head);
+  x.orders.unshift(o);
+  return o;
+}
+function addItem(x, order, tool){
+  if (openOrderOf(x, tool.id)) return null;                    /* höchstens ein offener Auftrag */
+  x.seq.item += 1;
+  const it = { id:"i"+x.seq.item, order_id:order.id, tool_id:tool.id, home_position_id:tool.home_slot,
+    received_at:null, received_by_id:null, received_plant_id:null, note:"" };
+  x.items.push(it);
+  return it;
+}
+function doSend(x, order){
+  order.status = "sent"; order.sent_at = new Date().toISOString(); order.sent_by_id = x.me.id;
+  orderItems(x, order.id).forEach(it => {
+    const tool = toolOf(x, it.tool_id); if (!tool) return;
+    tool.status = "in_transit";                                /* position_id bleibt unangetastet */
+    movement(x, tool.id, plantName(x, order.from_plant_id), plantName(x, order.to_plant_id),
+      "Transport raus", order.order_number);
+  });
+  order.status = derivedStatus(x, order);
+}
+function doReceive(x, order, itemIds, plantId){
+  const werk = plantId ?? (activePlantFor(x.me) === "all" ? x.me.default_plant_id : activePlantFor(x.me));
+  orderItems(x, order.id).filter(i => itemIds.includes(i.id)).forEach(it => {
+    if (it.received_at) return;
+    it.received_at = new Date().toISOString();
+    it.received_by_id = x.me.id;
+    it.received_plant_id = werk;
+    const tool = toolOf(x, it.tool_id); if (!tool) return;
+    tool.status = "available"; tool.lent_to = null;
+    tool.current_plant_id = (order.to_plant_id === tool.plant_id) ? null : order.to_plant_id;
+    movement(x, tool.id, plantName(x, order.from_plant_id), plantName(x, order.to_plant_id),
+      "Transport an", order.order_number);
+  });
+  order.status = derivedStatus(x, order);
+  if (order.status === "received") order.closed_at = new Date().toISOString();
+}
+function doReturn(x, order, toolIds){
+  const back = addOrder(x, {
+    order_number: order.order_number + "-R",
+    reference: order.reference ? "Rück: " + order.reference : "Rückweg",
+    from_plant_id: order.to_plant_id, to_plant_id: order.from_plant_id,
+    info: "Rückweg zu " + order.order_number, parent_order_id: order.id
+  });
+  orderItems(x, order.id).filter(i => i.received_at && toolIds.includes(i.tool_id)).forEach(i => {
+    x.seq.item += 1;
+    x.items.push({ id:"i"+x.seq.item, order_id:back.id, tool_id:i.tool_id,
+      home_position_id:i.home_position_id, received_at:null, received_by_id:null,
+      received_plant_id:null, note:"Rückweg" });
+  });
+  return back;
+}
+function commit(){ save(S); render(); }
+
+/* =====================================================================
+   E. OBERFLÄCHE
+   ===================================================================== */
+
+const $  = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = iso => iso ? new Date(iso).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
+
+/* Werk-Name mit seiner eigenen Farbe – eine der wenigen Stellen, an der die
+   Werkfarbe sichtbar wird (keine farbigen Kanten an Karten oder Fenstern). */
+function werkTag(id){
+  const c = plantColor(S, id);
+  return `<span class="werk-tag" style="color:${c}">${esc(plantName(S, id))}</span>`;
+}
+/* Die ganze Zeile trägt die Farbe ihres Werks: 14 % Fläche, beim Überfahren 20 %.
+   Vorgabe des Projektinhabers: lieber die ganze Zeile als eine einzelne markierte
+   Spalte – eine markierte Spalte mitten in neutralen Zellen zerreißt das
+   Tabellenraster. Ohne Werkzuordnung (Verlauf ohne Werk) bleibt die Zeile neutral. */
+function rowTint(plantId){
+  if (!plantId) return `data-plant="" style="--row:transparent;--row-hover:rgba(2,132,199,.08)"`;
+  const c = plantColor(S, plantId);
+  return `data-plant="${plantId}" style="--row:${hexAlpha(c, .14)};--row-hover:${hexAlpha(c, .20)}"`;
+}
+/* Werkzeug-ID-Zelle – Text unverändert (die Zeile trägt die Farbe) */
+function idMark(tool, extra=""){
+  return `<td class="cell-id">${esc((tool && tool.tool_id) || "ohne ID")}${extra}</td>`;
+}
+function idSpan(tool){
+  return `<span class="cell-id">${esc((tool && tool.tool_id) || "ohne ID")}</span>`;
+}
+function statusChip(t){
+  const map = { available:["chip-ok","verfügbar"], lent:["chip-block","ausgeliehen"],
+    in_transit:["chip-transit","unterwegs"], defective:["chip-warn","defekt"], maintenance:["chip-warn","Wartung"] };
+  const [cls,label] = map[t.status] || ["chip-block", t.status];
+  return `<span class="chip ${cls}">${label}</span>`;
+}
+function orderChip(o){
+  const map = { draft:["chip-block","Entwurf"], sent:["chip-transit","unterwegs"],
+    partly_received:["chip-warn","teilweise da"], received:["chip-ok","empfangen"], cancelled:["chip-block","storniert"] };
+  const [cls,label] = map[o.status] || ["chip-block",o.status];
+  return `<span class="chip ${cls}">${label}</span>`;
+}
+function toast(msg){
+  const box = $("#toast"), el = document.createElement("div");
+  el.textContent = msg; box.appendChild(el); setTimeout(() => el.remove(), 3800);
+}
+
+/* Werkfarbe des Arbeitswerks als CSS-Variablen setzen (DEC-076) */
+function hexAlpha(hex, a){
+  const h = String(hex).replace("#","");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+function applyPlantColor(){
+  const p = plantOrNull();
+  const c = p ? plantColor(S, p) : "#475569";
+  /* Auch ohne DOM verfügbar (Prüflauf) – wird für die Rückmeldung mitgeführt. */
+  window.__werkFarbe = c;
+  const root = document.documentElement && document.documentElement.style;
+  if (!root) return;
+  root.setProperty("--werk", c);
+  root.setProperty("--werk-soft", hexAlpha(c, .10));
+  root.setProperty("--werk-line", hexAlpha(c, .30));
+}
+
+function renderShell(){
+  applyPlantColor();
+  $("#meName").textContent = S.me.name + " (Personalnr. " + S.me.personal_number + ")";
+  const sel = $("#plantSelect");
+  sel.innerHTML = S.plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("") +
+    `<option value="all">Alle Werke (nur ansehen)</option>`;
+  sel.value = String(activePlant());
+  const werk = plantOrNull();
+  if (werk){
+    $("#werkName").textContent = plantName(S, werk);
+    $("#werkName").style.color = plantColor(S, werk);
+  } else {
+    $("#werkName").textContent = "Alle Werke";
+    $("#werkName").style.color = "#475569";
+  }
+  const perUser = localStorage.getItem(ACTIVE_KEY + "." + S.me.personal_number);
+  $("#plantSource").textContent = perUser ? "gewählt · jederzeit änderbar"
+    : (S.me.default_plant_id ? "Vorgabe aus dem Benutzerkonto" : "zuletzt an diesem Rechner");
+  $("#werkLegende").innerHTML = S.plants.map(p =>
+    `<strong style="color:${p.color}">${esc(p.name)}</strong>`).join(" · ");
+
+  const nIn = werk ? S.orders.filter(o => o.to_plant_id === werk && SHIPPED_STATUS.includes(o.status)
+    && orderItems(S,o.id).some(i => !i.received_at)).length : 0;
+  const badge = $("#tabEingangCount");
+  badge.hidden = nIn === 0; badge.textContent = String(nIn);
+
+  $$(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === view)));
+}
+
+/* ---------- Auftrag als Dropdown ---------- */
+function orderDrop(o){
+  const items = orderItems(S, o.id);
+  const done = items.filter(i => i.received_at).length;
+  const isOpen = !!openDrops[o.id];
+  const plant = plantOrNull();
+  const isSender = o.from_plant_id === plant;
+  const sendErr = canSend(S, o, plant);
+
+  const rows = items.map(it => {
+    const t = toolOf(S, it.tool_id) || {};
+    return `<tr ${rowTint(t.plant_id)}>
+      ${idMark(t)}
+      <td class="tiny">${esc(t.category || "")}</td>
+      <td class="tiny">${esc(t.tool_type || "")}</td>
+      <td class="tiny">${werkTag(t.plant_id)}</td>
+      <td class="mono tiny">${esc(it.home_position_id || "Ablage")}</td>
+      <td>${statusChip(t)}</td>
+      <td class="tiny">${it.received_at
+        ? `<span class="chip chip-ok">da</span> ${fmt(it.received_at)}`
+        : `<span class="chip chip-transit">unterwegs</span>`}</td>
+    </tr>`;
+  }).join("");
+
+  const senderActions = (isSender && o.status === "draft")
+    ? `<button class="btn btn-danger btn-sm" data-cancel="${o.id}" ${canCancel(S,o,plant) ? `disabled title="${esc(canCancel(S,o,plant))}"` : ""}>Stornieren</button>
+       <button class="btn btn-primary btn-sm" data-send="${o.id}" ${sendErr ? `disabled title="${esc(sendErr)}"` : ""}>Als unterwegs melden</button>` : "";
+  const receiveAction = canReceive(S, o, plant) === null
+    ? `<button class="btn btn-sky btn-sm" data-receive="${o.id}">Empfang bestätigen</button>` : "";
+  const returnAction = canReturn(S, o, plant) === null
+    ? `<button class="btn btn-sm" data-return="${o.id}">Zurück schicken</button>` : "";
+
+  return `<div class="drop ${isOpen ? "is-open" : ""}">
+    <button class="drop-head" data-drop="${o.id}" aria-expanded="${isOpen}">
+      <span class="nr">${esc(o.order_number)}</span>
+      ${orderChip(o)}
+      ${o.parent_order_id ? `<span class="chip chip-block">Rückweg</span>` : ""}
+      <span class="tiny">${werkTag(o.from_plant_id)} <span class="muted">→</span> ${werkTag(o.to_plant_id)}</span>
+      <span class="tiny muted">${items.length} Werkzeug(e)${done ? ` · ${done} da` : ""}${o.sent_at ? ` · ${fmt(o.sent_at)}` : ""}</span>
+      <span class="chev">▾</span>
+    </button>
+    ${isOpen ? `<div class="drop-body">
+      ${o.info ? `<div class="note" style="margin-bottom:8px">${esc(o.info)}</div>` : ""}
+      <div class="table-wrap"><table><thead><tr>
+        <th>Werkzeug-ID</th><th>Kategorie</th><th>Typ</th><th>Heimatwerk</th><th>Heimatplatz</th><th>Zustand</th><th>Empfang</th>
+      </tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">Keine Werkzeuge im Auftrag.</td></tr>`}</tbody></table></div>
+      <div class="actions">${returnAction}${receiveAction}${senderActions}
+        <button class="btn btn-sm" data-detail="${o.id}">Auftrag öffnen</button></div>
+      <div class="tiny muted" style="margin-top:6px">
+        Angelegt von ${o.created_by_id === S.me.id ? esc(S.me.name) : "Benutzer " + o.created_by_id}
+        ${o.sent_at ? " · verschickt " + fmt(o.sent_at) : ""}${o.closed_at ? " · abgeschlossen " + fmt(o.closed_at) : ""}
+      </div>
+    </div>` : ""}
+  </div>`;
+}
+
+/* ---------- Reiter „Aufträge" ---------- */
+function renderAusgang(){
+  const plant = plantOrNull();
+  if (!plant) return `<div class="card"><div class="note note-amber">Bitte links ein Arbeitswerk wählen – „Alle Werke" ist nur zum Ansehen.</div></div>`;
+  const mine = S.orders.filter(o => o.from_plant_id === plant);
+  const offen = mine.filter(o => SHIPPED_STATUS.includes(o.status)).length;
+  const entworfen = mine.filter(o => o.status === "draft").length;
+  return `<div class="card">
+    <div class="card-head">
+      <h1>Aufträge aus <span style="color:${plantColor(S, plant)}">${esc(plantName(S, plant))}</span></h1>
+      <span class="tiny muted">${mine.length} gesamt · ${offen} unterwegs · ${entworfen} Entwurf/Entwürfe</span>
+    </div>
+    ${mine.length ? mine.map(o => orderDrop(o)).join("") : `<div class="empty">Kein Auftrag aus diesem Werk.</div>`}
+  </div>`;
+}
+
+/* ---------- Reiter „Eingang" (deutlich: von wem, was fehlt, seit wann) ---------- */
+function renderEingang(){
+  const plant = plantOrNull();
+  if (!plant) return `<div class="card"><div class="note note-amber">Bitte links ein Arbeitswerk wählen.</div></div>`;
+  const incoming = S.orders.filter(o => o.to_plant_id === plant && SHIPPED_STATUS.includes(o.status)
+    && orderItems(S, o.id).some(i => !i.received_at));
+  const wartend = incoming.reduce((n, o) => n + orderItems(S, o.id).filter(i => !i.received_at).length, 0);
+  const angenommen = S.orders.filter(o => o.to_plant_id === plant && o.status === "received");
+
+  const karten = incoming.map(o => {
+    const offen = orderItems(S, o.id).filter(i => !i.received_at);
+    const da = orderItems(S, o.id).filter(i => i.received_at);
+    const err = canReceive(S, o, plant);
+    const zeilen = offen.map(it => {
+      const t = toolOf(S, it.tool_id) || {};
+      return `<tr ${rowTint(t.plant_id)}>
+        <td><input type="checkbox" data-recv="${it.id}" checked aria-label="empfangen"></td>
+        ${idMark(t)}
+        <td class="tiny">${esc(t.category)} · ${esc(t.tool_type)} · ${esc(t.measure_a)}</td>
+        <td class="tiny">${werkTag(t.plant_id)}</td>
+        <td class="mono tiny">${esc(it.home_position_id || "Ablage")}</td>
+        <td>${statusChip(t)}</td>
+      </tr>`;
+    }).join("");
+    const daZeilen = da.map(it => {
+      const t = toolOf(S, it.tool_id) || {};
+      return `<tr ${rowTint(t.plant_id)}><td class="tiny muted">✓</td>
+        ${idMark(t)}
+        <td class="tiny">${esc(t.category)} · ${esc(t.tool_type)}</td>
+        <td class="tiny">${werkTag(t.plant_id)}</td>
+        <td class="mono tiny">${esc(it.home_position_id || "Ablage")}</td>
+        <td class="tiny"><span class="chip chip-ok">angekommen</span> ${fmt(it.received_at)}</td></tr>`;
+    }).join("");
+
+    return `<div class="drop is-open" style="margin-bottom:10px">
+      <div class="drop-head" style="cursor:default">
+        <span class="nr">${esc(o.order_number)}</span>
+        ${orderChip(o)}
+        <span class="tiny">von ${werkTag(o.from_plant_id)} <span class="muted">an</span> ${werkTag(o.to_plant_id)}</span>
+      </div>
+      <div class="drop-body">
+        <div class="note note-werk" style="margin-bottom:8px">
+          <strong>${offen.length} von ${orderItems(S, o.id).length} Werkzeug(en) noch nicht bestätigt</strong>
+          ${da.length ? ` · ${da.length} schon angekommen` : ""}
+          · verschickt ${fmt(o.sent_at)}${o.info ? ` · Info: ${esc(o.info)}` : ""}
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th style="width:30px"></th><th>Werkzeug-ID</th><th>Art · Typ · Maß</th><th>Heimatwerk</th><th>Heimatplatz</th><th>Zustand</th>
+        </tr></thead><tbody>${zeilen}${daZeilen}</tbody></table></div>
+        <div class="actions">
+          <button class="btn btn-sm" data-detail="${o.id}">Auftrag öffnen</button>
+          <button class="btn btn-sm" data-receive="${o.id}" ${err ? `disabled title="${esc(err)}"` : ""}>Nur angehakte bestätigen</button>
+          <button class="btn btn-primary btn-sm" data-receive-all="${o.id}" ${err ? `disabled title="${esc(err)}"` : ""}>Alles angekommen</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="card-head">
+      <h1>Eingang in <span style="color:${plantColor(S, plant)}">${esc(plantName(S, plant))}</span></h1>
+      <span class="tiny muted">${incoming.length} Auftrag/Aufträge offen · ${wartend} Werkzeug(e) zu bestätigen</span>
+    </div>
+    <p class="tiny muted" style="margin:0 0 10px">
+      Bestätigen darf, wer sein Arbeitswerk auf <strong>${esc(plantName(S, plant))}</strong> gestellt hat;
+      Person, Arbeitswerk und Zeitpunkt werden festgehalten (DEC-074).
+    </p>
+    ${incoming.length ? karten : `<div class="empty">Nichts zu bestätigen.</div>`}
+  </div>
+  ${angenommen.length ? `<div class="card">
+    <div class="card-head"><h2>Angenommen</h2><span class="tiny muted">${angenommen.length}</span></div>
+    ${angenommen.map(o => orderDrop(o)).join("")}
+  </div>` : ""}`;
+}
+
+/* ---------- Reiter „Wo ist was": nur unterwegs oder ausgeliehen (DEC-077) ---------- */
+function renderWoWas(){
+  let zeilen = S.tools.filter(isAway);
+  if (awayFilter === "unterwegs") zeilen = zeilen.filter(t => t.status === "in_transit");
+  if (awayFilter === "ausgeliehen") zeilen = zeilen.filter(t => t.status === "lent");
+  const unterwegs = S.tools.filter(t => t.status === "in_transit").length;
+  const ausgeliehen = S.tools.filter(t => t.status === "lent").length;
+
+  const rows = zeilen.map(t => {
+    const open = openOrderOf(S, t.id);
+    return `<tr ${rowTint(t.plant_id)}>
+      ${idMark(t)}
+      <td class="tiny">${esc(t.category)} · ${esc(t.tool_type)} · ${esc(t.measure_a)}</td>
+      <td class="tiny">${werkTag(t.plant_id)}</td>
+      <td class="mono tiny">${esc(t.home_slot || "Ablage")}</td>
+      <td class="tiny">${t.status === "in_transit"
+        ? (open ? `<strong style="color:${plantColor(S, open.to_plant_id)}">${esc(plantName(S, open.to_plant_id))}</strong>` : "<strong>unterwegs</strong>")
+        : `<span class="muted">beim Ausleiher</span>`}</td>
+      <td>${statusChip(t)}</td>
+      <td class="tiny">${t.status === "lent"
+        ? esc(t.lent_to || "—")
+        : (open ? `<button class="btn btn-ghost btn-sm" data-detail="${open.id}">${esc(open.order_number)}</button>` : "—")}</td>
+    </tr>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="card-head">
+      <h1>Wo ist was</h1>
+      <div class="segments" role="group" aria-label="Umfang">
+        <button data-away="alle" aria-pressed="${awayFilter === "alle"}">Alles (${unterwegs + ausgeliehen})</button>
+        <button data-away="unterwegs" aria-pressed="${awayFilter === "unterwegs"}">Unterwegs (${unterwegs})</button>
+        <button data-away="ausgeliehen" aria-pressed="${awayFilter === "ausgeliehen"}">Ausgeliehen (${ausgeliehen})</button>
+      </div>
+    </div>
+    <p class="tiny muted" style="margin:0 0 10px">
+      Nur Werkzeuge, die <strong>nicht an ihrem Platz</strong> liegen: unterwegs zwischen Werken oder an
+      eine Person ausgeliehen – die Antwort auf „wo sind meine Sachen gerade". Der Heimatplatz bleibt
+      dabei reserviert (DEC-071); eingelagerte Werkzeuge stehen in der Werkzeugliste.
+    </p>
+    <div class="table-wrap" style="max-height:460px; overflow-y:auto"><table><thead><tr>
+      <th>Werkzeug-ID</th><th>Art · Typ · Maß</th><th>Heimatwerk</th><th>Heimatplatz</th><th>Ist jetzt</th><th>Zustand</th><th>Auftrag / Ausleiher</th>
+    </tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">Nichts unterwegs, nichts ausgeliehen.</td></tr>`}</tbody></table></div>
+  </div>`;
+}
+
+/* ---------- Reiter „Historie" ---------- */
+function renderHistorie(){
+  return `<div class="card">
+    <div class="card-head"><h1>Historie</h1><span class="tiny muted">${S.movements.length} Transporte</span></div>
+    <p class="tiny muted" style="margin:0 0 8px">
+      In der echten Anwendung stehen hier <strong>Personen-Ausleihen und Werks-Transporte</strong> in einer
+      Ansicht (TASK-029). Der Reiter existiert heute schon als Platzhalter (DEC-066).
+    </p>
+    ${S.movements.length ? S.movements.map(m => `<div class="row spread" style="padding:5px 0; border-bottom:1px dashed var(--line)" ${rowTint(m.from_plant_id)}>
+      <span><span class="chip ${m.action === "Transport an" ? "chip-ok" : "chip-transit"}">${esc(m.action)}</span>
+        <span style="margin-left:6px">${idSpan(toolOf(S, m.tool_id)||{})}</span>
+        <span class="tiny" style="margin-left:6px">${m.from_plant_id ? werkTag(m.from_plant_id) : ""}
+          <span class="muted">→</span> ${m.to_plant_id ? werkTag(m.to_plant_id) : ""}</span>
+        <span class="tiny muted" style="margin-left:6px">${esc(m.note)}</span></span>
+      <span class="tiny muted">${esc(m.user)} · ${fmt(m.ts)}</span>
+    </div>`).join("") : `<div class="empty">Noch keine Transporte.</div>`}
+  </div>`;
+}
+
+function render(){
+  try{
+    renderShell();
+    const host = $("#view");
+    if (view === "ausgang") host.innerHTML = renderAusgang();
+    else if (view === "eingang") host.innerHTML = renderEingang();
+    else if (view === "wowas") host.innerHTML = renderWoWas();
+    else host.innerHTML = renderHistorie();
+  }catch(e){
+    console.error("Render-Fehler", e);
+    const host = $("#view");
+    if (host) host.innerHTML = `<div class="card"><div class="note note-amber">Anzeigefehler: ${esc(e && e.message)}</div></div>`;
+  }
+}
+
+/* =====================================================================
+   F. FENSTER
+   ===================================================================== */
+function dlg(title, body, buttons){
+  const d = $("#dlg");
+  $("#dlgTitle").textContent = title;
+  $("#dlgBody").innerHTML = body;
+  const foot = $("#dlgFoot"); foot.innerHTML = "";
+  (buttons || []).forEach(([label, fn, cls]) => {
+    const b = document.createElement("button");
+    b.className = cls || "btn"; b.textContent = label; b.type = "button";
+    b.addEventListener("click", () => { const keep = fn ? fn() : true; if (keep !== false) d.close(); });
+    foot.appendChild(b);
+  });
+  if (!d.open) d.showModal();
+}
+function closeDlg(){ const d = $("#dlg"); if (d.open) d.close(); }
+
+/* ---- Neuer Auftrag ---- */
+let form = null;
+
+function candidates(){
+  const plant = plantOrNull();
+  const q = (form.q || "").trim().toLowerCase();
+  return S.tools
+    .map(tool => ({tool, why: blockedReason(S, tool, plant)}))
+    .filter(({tool}) => !q || [tool.tool_id, tool.category, tool.tool_type, tool.measure_a]
+      .some(v => String(v || "").toLowerCase().includes(q)))
+    .sort((a,b) => String(a.tool.tool_id || "").localeCompare(String(b.tool.tool_id || ""), "de"));
+}
+function openNewOrder(){
+  if (!plantOrNull()){ toast("Bitte zuerst links ein Arbeitswerk wählen."); return; }
+  form = { order_number:"", reference:"", to_plant_id: S.plants.find(p => p.id !== plantOrNull()).id,
+    info:"", picked:[], q:"" };
+  drawForm();
+}
+function drawForm(){
+  const plant = plantOrNull();
+  const cands = candidates();
+  const rows = cands.map(({tool, why}) => {
+    const picked = form.picked.includes(tool.id);
+    return `<tr ${rowTint(tool.plant_id)} class="${why && !picked ? "blocked" : ""} ${picked ? "picked" : ""}">
+      <td><input type="checkbox" data-pick="${tool.id}" ${picked ? "checked" : ""} ${why && !picked ? "disabled" : ""} aria-label="auswählen"></td>
+      ${idMark(tool)}
+      <td class="tiny">${esc(tool.category)} · ${esc(tool.tool_type)} · ${esc(tool.measure_a)}</td>
+      <td class="tiny">${werkTag(tool.plant_id)}</td>
+      <td class="mono tiny">${esc(tool.home_slot || "Ablage")}</td>
+      <td>${statusChip(tool)}</td>
+      <td class="tiny">${why ? `<span class="chip chip-block">${esc(why)}</span>` : `<span class="chip chip-ok">wählbar</span>`}</td>
+    </tr>`;
+  }).join("");
+
+  const picked = form.picked.map(id => toolOf(S, id)).filter(Boolean);
+  dlg("Neuer Auftrag – Werkzeuge auswählen", `
+    <div class="fields-3">
+      <label class="field"><span>Auftrags-Nr. (Freitext)</span>
+        <input type="text" id="fNr" value="${esc(form.order_number)}" placeholder="z. B. AUF-2026-0044"></label>
+      <label class="field"><span>An Werk</span>
+        <select id="fTo">${S.plants.filter(p => p.id !== plant).map(p =>
+          `<option value="${p.id}" ${Number(form.to_plant_id) === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <label class="field"><span>Referenz (frei)</span>
+        <input type="text" id="fRef" value="${esc(form.reference)}" placeholder="Lieferschein …"></label>
+    </div>
+    <label class="field" style="margin-top:8px"><span>Info für das Empfängerwerk</span>
+      <textarea id="fInfo" rows="2" placeholder="z. B. für Auftrag 4711, bitte bis Donnerstag zurück">${esc(form.info)}</textarea></label>
+
+    <div class="row-wrap" style="margin:10px 0 6px">
+      <input type="search" id="fQ" value="${esc(form.q)}" placeholder="Suche: ID, Kategorie, Typ, Maß …" style="max-width:260px">
+      <span class="tiny muted">${cands.length} Treffer · ${picked.length} ausgewählt · wählbar nur aus
+        <strong style="color:${plantColor(S, plant)}">${esc(plantName(S, plant))}</strong></span>
+    </div>
+    <div class="table-wrap" style="max-height:320px; overflow-y:auto"><table><thead><tr>
+      <th style="width:30px"></th><th>Werkzeug-ID</th><th>Art · Typ · Maß</th><th>Heimatwerk</th><th>Heimatplatz</th><th>Zustand</th><th>Hinweis</th>
+    </tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">Kein Treffer.</td></tr>`}</tbody></table></div>
+
+    ${picked.length ? `<div class="note note-werk" style="margin-top:8px">
+      <strong>${picked.length} ausgewählt:</strong> ${picked.map(t => esc(t.tool_id || "ohne ID")).join(", ")}
+    </div>` : ""}
+  `, [
+    ["Abbrechen", null, "btn"],
+    ["Entwurf speichern", () => saveOrder(false), "btn"],
+    ["Als unterwegs melden", () => saveOrder(true), "btn-primary"]
+  ]);
+}
+function saveOrder(andSend){
+  const plant = plantOrNull();
+  if (!form.order_number.trim()){ toast("Bitte eine Auftrags-Nr. eintragen (Freitext)."); return false; }
+  if (!form.picked.length){ toast("Bitte mindestens ein Werkzeug auswählen."); return false; }
+  if (Number(form.to_plant_id) === plant){ toast("Absender und Empfänger sind dasselbe Werk."); return false; }
+  const tools = form.picked.map(id => toolOf(S, id)).filter(Boolean);
+  const bad = tools.map(x => ({x, why: blockedReason(S, x, plant)}))
+    .filter(o => o.why && !o.why.startsWith("bereits im Auftrag"));
+  if (bad.length){ toast(bad[0].x.tool_id + ": " + bad[0].why); return false; }
+
+  const o = addOrder(S, { order_number:form.order_number.trim(), reference:form.reference.trim(),
+    from_plant_id:plant, to_plant_id:Number(form.to_plant_id), info:form.info.trim() });
+  tools.forEach(x => addItem(S, o, x));
+  if (andSend){
+    const err = canSend(S, o, plant);
+    if (err){ toast(err); return false; }
+    doSend(S, o);
+    toast(`${tools.length} Werkzeug(e) unterwegs: ${o.order_number} · ${plantName(S, plant)} → ${plantName(S, o.to_plant_id)}`);
+  } else toast("Entwurf gespeichert: " + o.order_number);
+  openDrops[o.id] = true; form = null; view = "ausgang";
+  save(S); render();
+  return true;
+}
+
+/* ---- Auftrag im Detail ---- */
+function openDetail(id){
+  const o = S.orders.find(x => x.id === id); if (!o) return;
+  const plant = plantOrNull();
+  const rows = orderItems(S, o.id).map(it => {
+    const t = toolOf(S, it.tool_id) || {};
+    return `<tr ${rowTint(t.plant_id)}>
+      ${idMark(t)}
+      <td class="tiny">${esc(t.category)} · ${esc(t.tool_type)}</td>
+      <td class="tiny">${werkTag(t.plant_id)}</td>
+      <td class="mono tiny">${esc(it.home_position_id || "Ablage")}</td>
+      <td>${statusChip(t)}</td>
+      <td class="tiny">${it.received_at
+        ? `<span class="chip chip-ok">empfangen</span> ${fmt(it.received_at)}`
+        : `<span class="chip chip-transit">unterwegs</span>`}</td>
+    </tr>`;
+  }).join("");
+  const parent = o.parent_order_id ? S.orders.find(x => x.id === o.parent_order_id) : null;
+  const btns = [["Schließen", null, "btn"]];
+  if (canReceive(S, o, plant) === null) btns.push(["Empfang bestätigen", () => { closeDlg(); openReceive(o.id); return false; }, "btn-sky"]);
+  if (canReturn(S, o, plant) === null) btns.push(["Zurück schicken", () => { closeDlg(); openReturn(o.id); return false; }, "btn"]);
+  if (o.status === "draft" && o.from_plant_id === plant) btns.push(["Als unterwegs melden", () => {
+    const err = canSend(S, o, plant); if (err){ toast(err); return false; }
+    doSend(S, o); toast("Unterwegs gemeldet: " + o.order_number); save(S); render(); return true;
+  }, "btn-primary"]);
+
+  dlg("Auftrag " + o.order_number, `
+    <div class="stack">
+      <div class="note note-werk">
+        <div class="row-wrap">${orderChip(o)} ${o.parent_order_id ? `<span class="chip chip-block">Rückweg</span>` : ""}
+          ${werkTag(o.from_plant_id)} <span class="muted">→</span> ${werkTag(o.to_plant_id)}</div>
+        <div class="tiny muted" style="margin-top:4px">Angelegt ${fmt(o.created_at || o.sent_at)} von
+          ${o.created_by_id === S.me.id ? esc(S.me.name) : "Benutzer " + o.created_by_id}
+          · Arbeitswerk ${esc(plantName(S, o.created_plant_id))}
+          ${o.sent_at ? " · unterwegs seit " + fmt(o.sent_at) : ""}${o.closed_at ? " · abgeschlossen " + fmt(o.closed_at) : ""}</div>
+        ${o.reference ? `<div class="tiny">Referenz: <span class="mono">${esc(o.reference)}</span></div>` : ""}
+        ${parent ? `<div class="tiny">gehört zu <span class="mono">${esc(parent.order_number)}</span></div>` : ""}
+        ${o.info ? `<div class="tiny">Info: ${esc(o.info)}</div>` : ""}
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Werkzeug-ID</th><th>Art · Typ</th><th>Heimatwerk</th><th>Heimatplatz</th><th>Zustand</th><th>Empfang</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note">Der Heimatplatz bleibt während des ganzen Vorgangs reserviert und unverändert (DEC-071).</div>
+    </div>
+  `, btns);
+}
+
+/* ---- Empfang bestätigen ---- */
+function openReceive(id){
+  const o = S.orders.find(x => x.id === id); if (!o) return;
+  const items = orderItems(S, o.id).filter(i => !i.received_at);
+  dlg("Empfang bestätigen · " + o.order_number, `
+    <div class="note note-werk" style="margin-bottom:8px">
+      ${werkTag(o.from_plant_id)} <span class="muted">→</span> ${werkTag(o.to_plant_id)} ·
+      bestätigt wird mit dem Arbeitswerk <strong>${esc(plantName(S, plantOrNull()))}</strong>
+      (Person, Arbeitswerk und Zeitpunkt werden festgehalten).
+    </div>
+    <div class="table-wrap"><table><thead><tr>
+      <th style="width:30px"></th><th>Werkzeug-ID</th><th>Art · Typ</th><th>Heimatwerk</th><th>Heimatplatz</th>
+    </tr></thead><tbody>${items.map(i => { const t = toolOf(S, i.tool_id) || {}; return `<tr ${rowTint(t.plant_id)}>
+      <td><input type="checkbox" data-recv="${i.id}" checked aria-label="empfangen"></td>
+      ${idMark(t)}
+      <td class="tiny">${esc(t.category)} · ${esc(t.tool_type)}</td>
+      <td class="tiny">${werkTag(t.plant_id)}</td>
+      <td class="mono tiny">${esc(i.home_position_id || "Ablage")}</td>
+    </tr>`; }).join("")}</tbody></table></div>
+  `, [
+    ["Abbrechen", null, "btn"],
+    ["Nur Auswahl", () => {
+      const ids = $$("input[data-recv]:checked").map(i => i.dataset.recv);
+      if (!ids.length){ toast("Bitte die angekommenen Werkzeuge anhaken."); return false; }
+      doReceive(S, o, ids, plantOrNull()); toast(ids.length + " Werkzeug(e) bestätigt · " + o.order_number); save(S); render(); return true;
+    }, "btn"],
+    ["Alles angekommen", () => {
+      doReceive(S, o, items.map(i => i.id), plantOrNull()); toast("Alles angekommen · " + o.order_number); save(S); render(); return true;
+    }, "btn-primary"]
+  ]);
+}
+
+/* ---- Zurück schicken ---- */
+function openReturn(id){
+  const o = S.orders.find(x => x.id === id); if (!o) return;
+  const ready = orderItems(S, o.id).filter(i => i.received_at);
+  dlg("Zurück schicken · " + o.order_number, `
+    <p class="small" style="margin:0 0 8px">Welche Werkzeuge gehen zurück an ${werkTag(o.from_plant_id)}?</p>
+    ${ready.map(i => { const t = toolOf(S, i.tool_id) || {}; return `
+      <label class="row small" style="margin:5px 0"><input type="checkbox" data-ret="${i.tool_id}" checked>
+        ${idSpan(t)}
+        <span class="muted tiny">${esc(t.tool_type || "")} · Heimatplatz ${esc(i.home_position_id || "Ablage")}</span></label>`; }).join("")}
+    <div class="note" style="margin-top:8px">Der Rückweg wird ein eigener Auftrag mit Bezug auf
+      <span class="mono">${esc(o.order_number)}</span>; bestätigt wird er vom Heimatwerk.</div>
+  `, [
+    ["Abbrechen", null, "btn"],
+    ["Rück-Auftrag anlegen", () => {
+      const ids = $$("input[data-ret]:checked").map(i => i.dataset.ret);
+      if (!ids.length){ toast("Bitte mindestens ein Werkzeug wählen."); return false; }
+      const back = doReturn(S, o, ids);
+      openDrops[back.id] = true; view = "ausgang";
+      toast("Rück-Auftrag angelegt: " + back.order_number); save(S); render(); return true;
+    }, "btn-primary"]
+  ]);
+}
+
+/* ---- Regeln & Datentypen ---- */
+function openHelp(){
+  const plant = { id:1, name:"Werk 1", color:"#0f766e" };
+  const order = { id:"o1", order_number:"AUF-2026-0044", reference:"LS 8891",
+    from_plant_id:1, to_plant_id:2, status:"sent", info:"…", parent_order_id:null,
+    created_by_id:7, created_plant_id:1, sent_at:"2026-10-10T09:12:00Z", sent_by_id:7, closed_at:null };
+  const item = { id:"i1", order_id:"o1", tool_id:"t3", home_position_id:"01-A-03",
+    received_at:null, received_by_id:null, received_plant_id:null, note:"" };
+  dlg("Regeln & Datentypen", `
+    <div class="stack">
+      <div class="note">Verschickt werden darf nur, was <strong>verfügbar</strong> ist und <strong>im Arbeitswerk liegt</strong> – gesperrte Zeilen sagen warum.</div>
+      <div class="note">Ein Werkzeug steht in <strong>höchstens einem offenen Auftrag</strong> (Entwurf oder unterwegs).</div>
+      <div class="note">Der <strong>Heimatplatz ändert sich nie</strong> – er ist reserviert, solange das Werkzeug unterwegs oder ausgeliehen ist.</div>
+      <div class="note">Stornieren nur im <strong>Entwurf</strong>; ein verschickter Auftrag wird über den <strong>Rückweg</strong> aufgelöst.</div>
+      <div class="note">Empfangen darf das <strong>Zielwerk</strong> – einzeln oder alles (DEC-074).</div>
+      <div class="note"><strong>Werkfarbe (DEC-076):</strong> Jedes Werk hat eine Farbe
+        (${S.plants.map(p => `<strong style="color:${p.color}">${esc(p.name)}</strong>`).join(", ")}).
+        Die Farbe des <em>Arbeitswerks</em> färbt Knöpfe, aktiven Reiter, Rahmen und Fensterkopf;
+        Werk-Namen tragen immer ihre eigene Farbe. Zustände (unterwegs, empfangen, ausgeliehen …)
+        behalten ihre eigenen Töne – <strong>eine Farbe hat genau eine Bedeutung</strong>.</div>
+      <div class="note"><strong>„Wo ist was" (DEC-077):</strong> zeigt nur Werkzeuge, die nicht an
+        ihrem Platz liegen – unterwegs oder ausgeliehen. Eingelagerte stehen in der Werkzeugliste.</div>
+      <h3 style="margin-top:10px">plants (neu: color)</h3>
+      <pre class="note mono tiny" style="overflow:auto">${esc(JSON.stringify(plant, null, 2))}</pre>
+      <h3 style="margin-top:8px">transport_orders</h3>
+      <pre class="note mono tiny" style="overflow:auto">${esc(JSON.stringify(order, null, 2))}</pre>
+      <h3 style="margin-top:8px">transport_items</h3>
+      <pre class="note mono tiny" style="overflow:auto">${esc(JSON.stringify(item, null, 2))}</pre>
+      <h3 style="margin-top:8px">Zustandsübergänge</h3>
+      <pre class="note mono tiny" style="overflow:auto">${esc([
+        "draft            → sent              verschicken (Absenderwerk)",
+        "draft            → cancelled         stornieren (Absenderwerk)",
+        "sent             → partly_received   Empfang einzelner Zeilen (Zielwerk)",
+        "sent             → received          alles angekommen (Zielwerk)",
+        "partly_received  → received          letzte Zeile bestätigt",
+        "received         → closed            automatisch (closed_at)",
+        "received         → draft (neu)       Rück-Auftrag mit parent_order_id"
+      ].join("\n"))}</pre>
+    </div>
+  `, [["Schließen", null, "btn"]]);
+}
+
+/* =====================================================================
+   G. EREIGNISSE
+   ===================================================================== */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-view],[data-open],[data-drop],[data-detail],[data-send],[data-cancel],[data-receive],[data-receive-all],[data-return],[data-away],[data-close]");
+  if (!el) return;
+
+  if (el.dataset.close){ closeDlg(); return; }
+  if (el.dataset.view){ view = el.dataset.view; render(); return; }
+  if (el.dataset.away){ awayFilter = el.dataset.away; render(); return; }
+  if (el.dataset.drop){ openDrops[el.dataset.drop] = !openDrops[el.dataset.drop]; render(); return; }
+  if (el.dataset.detail){ openDetail(el.dataset.detail); return; }
+
+  if (el.dataset.open){
+    const k = el.dataset.open;
+    if (k === "new") openNewOrder();
+    else if (k === "help") openHelp();
+    else if (k === "reset"){
+      localStorage.removeItem(STORE_KEY); S = load(); openDrops = {}; awayFilter = "alle"; view = "ausgang";
+      toast("Prototyp zurückgesetzt."); render();
+    }
+    return;
+  }
+  if (el.dataset.send){
+    const o = S.orders.find(x => x.id === el.dataset.send);
+    const err = canSend(S, o, plantOrNull());
+    if (err){ toast(err); return; }
+    doSend(S, o); toast("Unterwegs gemeldet: " + o.order_number); commit(); return;
+  }
+  if (el.dataset.receiveAll){
+    const o = S.orders.find(x => x.id === el.dataset.receiveAll);
+    const err = canReceive(S, o, plantOrNull());
+    if (err){ toast(err); return; }
+    doReceive(S, o, orderItems(S, o.id).filter(i => !i.received_at).map(i => i.id), plantOrNull());
+    toast("Alles angekommen · " + o.order_number); commit(); return;
+  }
+  if (el.dataset.cancel){
+    const o = S.orders.find(x => x.id === el.dataset.cancel);
+    const err = canCancel(S, o, plantOrNull());
+    if (err){ toast(err); return; }
+    o.status = "cancelled"; toast("Storniert: " + o.order_number); commit(); return;
+  }
+  if (el.dataset.receive){ openReceive(el.dataset.receive); return; }
+  if (el.dataset.return){ openReturn(el.dataset.return); return; }
+});
+
+document.addEventListener("input", e => {
+  if (!form) return;
+  const id = e.target.id;
+  if (id === "fNr") form.order_number = e.target.value;
+  else if (id === "fRef") form.reference = e.target.value;
+  else if (id === "fInfo") form.info = e.target.value;
+  else if (id === "fQ"){
+    form.q = e.target.value; drawForm();
+    const q = $("#fQ"); if (q){ q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  }
+});
+document.addEventListener("change", e => {
+  if (!form) return;
+  if (e.target.id === "fTo"){ form.to_plant_id = Number(e.target.value); return; }
+  if (e.target.dataset.pick){
+    const id = e.target.dataset.pick;
+    form.picked = e.target.checked ? [...new Set([...form.picked, id])] : form.picked.filter(x => x !== id);
+    drawForm(); return;
+  }
+});
+$("#plantSelect").addEventListener("change", e => {
+  setActivePlant(e.target.value);
+  openDrops = {}; awayFilter = "alle"; render();
+});
+
+/* =====================================================================
+   H. START
+   ===================================================================== */
+render();
+
+/* Für die Konsole und die automatische Prüfung */
+window.__demo = {
+  state: () => S,
+  render,
+  view: v => { view = v; render(); },
+  away: f => { awayFilter = f; render(); },
+  plant: id => { setActivePlant(id); openDrops = {}; render(); },
+  open: id => { openDrops[id] = true; render(); },
+  reset: () => { localStorage.removeItem(STORE_KEY); S = load(); openDrops = {}; view = "ausgang"; render(); },
+  seed,
+  markup: {
+    order: id => orderDrop(S.orders.find(o => o.id === id)),
+    newOrder: () => { openNewOrder(); return { title: $("#dlgTitle").textContent, body: $("#dlgBody").innerHTML, foot: $("#dlgFoot").innerHTML }; },
+    receive: id => { openReceive(id); return { body: $("#dlgBody").innerHTML, foot: $("#dlgFoot").innerHTML }; },
+    help: () => { openHelp(); return $("#dlgBody").innerHTML; },
+    detail: id => { openDetail(id); return { body: $("#dlgBody").innerHTML, foot: $("#dlgFoot").innerHTML }; },
+    view: () => $("#view").innerHTML,
+    werkName: () => $("#werkName").textContent,
+    werkColor: () => window.__werkFarbe || ""
+  }
+};
+</script>
+</body>
+</html>

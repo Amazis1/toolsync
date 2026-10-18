@@ -34,7 +34,9 @@ class MovementService:
             limit=limit,
         )
 
-    async def create_movement(self, data: ToolMovementCreate) -> ToolMovement:
+    async def create_movement(
+        self, data: ToolMovementCreate, plant_id: Optional[int] = None
+    ) -> ToolMovement:
         """Neue Bewegung erfassen.
 
         Fachliche Regeln:
@@ -50,16 +52,19 @@ class MovementService:
           (einmaliges db.commit() am Ende, dadurch ist beides eine Transaktion).
         - CRUDBase.create() wird hier bewusst NICHT verwendet, weil es bereits
           selbst committet (das würde zu doppelten Commits führen).
+        - `plant_id` ist das Arbeitswerk aus dem Header (DEC-070) und wandert in
+          die Bewegung – damit ist „wer hat für welches Werk gehandelt" belegt.
         """
         # Werkzeug laden – muss existieren
         tool = await self.tool_crud.get(data.tool_id)
         if not tool:
             raise ValueError(f"Werkzeug mit ID {data.tool_id} existiert nicht!")
 
-        # TODO: user_id aus dem JWT-Token holen, sobald die Authentifizierung
-        # vollständig implementiert ist. Aktuell wird user_id aus dem Body übernommen.
+        # Der Benutzer kommt aus dem Token (Router setzt ihn), das Arbeitswerk aus
+        # dem Header. Beides gehört in die Bewegung, nicht als Klartext in die Notiz.
         movement_dict = data.model_dump()
         movement_dict["status"] = MovementStatus.COMPLETED
+        movement_dict["plant_id"] = plant_id
 
         # TODO: from_location automatisch aus dem Werkzeug befüllen (z. B.
         # storage_location.name), sobald die Beziehung sicher geladen wird.
@@ -67,7 +72,12 @@ class MovementService:
 
         # Werkzeug-Status je nach Bewegungstyp anpassen
         if data.movement_type == MovementType.LEND:
-            if tool.status != ToolStatus.AVAILABLE:
+            # **Ohne Status = verfügbar** (DEC-080): Der Bestand aus dem Altsystem
+            # hat keinen gepflegten Status (14 von 16 Werkzeugen). Ein leeres Feld
+            # heißt „nichts Abweichendes bekannt" – also darf das Werkzeug raus.
+            # Nur ein *gesetzter* abweichender Zustand sperrt die Ausleihe:
+            # ausgeliehen, unterwegs, defekt, in Wartung.
+            if tool.status not in (None, ToolStatus.AVAILABLE):
                 current = tool.status.value if tool.status else "unbekannt"
                 raise ValueError(
                     f"Werkzeug {tool.tool_id or 'ohne ID'} ist nicht verfügbar "
@@ -105,8 +115,15 @@ class MovementService:
 
         # Einmalig committen: Tool-Status und Bewegung werden atomar gespeichert
         await self.db.commit()
-        await self.db.refresh(tool)
-        await self.db.refresh(movement)
+
+        # **Frisch geladen** zurückgeben: `tool_code`/`tool_description` kommen aus
+        # `movement.tool`, und nach dem Commit ist die Beziehung abgelaufen. Ein
+        # Nachladen im Antwort-Aufbau würde außerhalb des async-Kontexts laufen
+        # (MissingGreenlet). Die Liste lädt `tool`/`user` ausdrücklich mit.
+        geladen = await self.crud.get_multi(tool_id=data.tool_id, skip=0, limit=1)
+        if geladen:
+            return geladen[0]
+        return movement
 
     async def get_movement(self, movement_id: int) -> Optional[ToolMovement]:
         return await self.crud.get(movement_id)

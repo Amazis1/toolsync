@@ -510,7 +510,11 @@ test.describe('Werkzeugliste', () => {
     await page.getByLabel('Werkzeuge durchsuchen').fill(zielId)
     await expect(page.getByText(/^1–1 von 1 Werkzeug$/)).toBeVisible({ timeout: 5000 })
 
+    // Die Zeile in die Fenstermitte holen: ihre Lage hängt an der Höhe der
+    // Kopfbereiche (Tab-Leiste, Arbeitswerk-Leiste, TASK-030). Steht sie am
+    // unteren Rand, trifft ein Scroll oder ein Klick daneben.
     const zeile = page.locator('tbody tr').first()
+    await zeile.evaluate((el) => el.scrollIntoView({ block: 'center' }))
     const vorherZeile = await zeile.evaluate((element) => getComputedStyle(element).backgroundColor)
 
     await zeile.getByRole('button', { name: /zu den Favoriten hinzufügen/ }).click()
@@ -518,6 +522,16 @@ test.describe('Werkzeugliste', () => {
       timeout: 5000,
     })
 
+    // Zeilenfarbe **warten**, nicht einmal messen: Der Favorit wird optimistisch
+    // umgeschaltet (React-Zustand), die neue Farbe steht erst im nächsten Bild.
+    // Eine Momentaufnahme direkt nach dem Klick war deshalb wackelig.
+    await expect
+      .poll(
+        async () =>
+          zeile.evaluate((element) => getComputedStyle(element).backgroundColor),
+        { timeout: 5_000 },
+      )
+      .not.toBe(vorherZeile)
     const nachher = await zeile.evaluate((element) => {
       const stern = element.querySelector('svg') as SVGElement
       return {
@@ -530,7 +544,6 @@ test.describe('Werkzeugliste', () => {
     expect(nachher.zeile).not.toBe(vorherZeile)
     // ... und der Stern ein sattes Gold statt des gedämpften Grau-Tons
     expect(nachher.stern).not.toBe('rgb(71, 85, 105)')
-
     // Aufräumen
     await zeile.getByRole('button', { name: /Favorit .* entfernen/ }).click()
     await expect(zeile.getByRole('button', { name: /zu den Favoriten hinzufügen/ })).toBeVisible({
@@ -806,7 +819,10 @@ test.describe('Werkzeugliste', () => {
     await expect(zeile).toContainText('ohne ID')
   })
 
-  test('setzt den Status im Formular und entfernt ihn wieder', async ({ page, request }) => {
+  test('setzt den Status im Formular um – „verfügbar" ist vorausgewählt', async ({
+    page,
+    request,
+  }) => {
     await login(page)
 
     const zielId = `${SEED_PREFIX}001`
@@ -831,32 +847,45 @@ test.describe('Werkzeugliste', () => {
       const antwort = await request
         .get(`/api/tools/?q=${zielId}&limit=5`, { headers: authHeaders() })
         .then((response) => response.json())
-      return antwort.items[0].status
+      // Über die **Kennung** suchen, nicht über `items[0]`: In der Suche stehen
+      // auch Werkzeuge, deren Kennung den Suchbegriff nur enthält – der erste
+      // Treffer ist nicht zwingend der gesuchte (mögliche Ursache eines
+      // einmaligen Ausfalls im Gesamtlauf, TASK-025b).
+      const eintrag = (antwort.items as { tool_id: string | null; status: string | null }[]).find(
+        (werkzeug) => werkzeug.tool_id === zielId,
+      )
+      return eintrag?.status ?? null
     }
 
-    // 1) Status setzen
+    // „ohne Status" gibt es nicht mehr (DEC-080): Die Auswahl bietet nur noch die
+    // fünf Zustände. Ein Datensatz ohne Status erscheint als „verfügbar".
+    const vorher = (await statusInDerDatenbank()) ?? 'available'
     await oeffneBearbeiten()
+    await expect(formular.getByLabel('Status')).toHaveValue(vorher)
+    const auswahl = await formular
+      .getByLabel('Status')
+      .locator('option')
+      .allTextContents()
+    expect(auswahl).not.toContain('— ohne Status —')
+
+    // 1) Status setzen
     await formular.getByLabel('Status').selectOption('maintenance')
     await speichern.click()
     await expect(page.locator('.ui-toast-stack')).toContainText('gespeichert', { timeout: 10000 })
     await expect.poll(statusInDerDatenbank, { timeout: 10_000 }).toBe('maintenance')
 
-    // 2) Status wieder auf „— ohne Status —" stellen: das war der gemeldete
-    //    Fehler (der alte Wert blieb stehen, weil None als „nicht ändern" galt).
+    // 2) Zurück auf „verfügbar": der geänderte Wert muss ankommen (der alte
+    //    Fehler war, dass ein „leerer" Wert als „nicht ändern" galt).
     await oeffneBearbeiten()
-    await formular.getByLabel('Status').selectOption('')
-    // Erst pruefen, ob das Formular die Leerung ueberhaupt angenommen hat: sonst
-    // schickt der Speichern-Knopf den alten Wert und der Fehler unten waere
-    // nicht zu deuten.
-    await expect(formular.getByLabel('Status')).toHaveValue('')
+    await expect(formular.getByLabel('Status')).toHaveValue('maintenance')
+    await formular.getByLabel('Status').selectOption('available')
+    await expect(formular.getByLabel('Status')).toHaveValue('available')
     await speichern.click()
     await expect(page.locator('.ui-toast-stack')).toContainText('gespeichert', { timeout: 10000 })
     // `poll` statt einer Momentaufnahme: im Verbund laeuft parallel ein anderer
     // Spec gegen dieselbe Datenbank, und unmittelbar nach dem Speichern kann die
-    // Abfrage den Stand von vor dem Schreiben treffen. Gemessen war das der
-    // einzige verbleibende Ausfall (Zeile 850), obwohl das Backend `status=None`
-    // nachweislich korrekt speichert (`backend/check_status_clear.py`).
-    await expect.poll(statusInDerDatenbank, { timeout: 10_000 }).toBeNull()
+    // Abfrage den Stand von vor dem Schreiben treffen.
+    await expect.poll(statusInDerDatenbank, { timeout: 10_000 }).toBe('available')
   })
 
   test('sieht bei 1440×900 und auf dem Telefon ordentlich aus', async ({ page }) => {

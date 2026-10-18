@@ -1520,4 +1520,1033 @@ Knöpfe und `svg`-Prüfung) und „zeigt kein Symbol, wenn es kein Datenblatt gi
 
 ---
 
+# DEC-070 – Arbeitswerk des Benutzers (Kontext, keine Stammdaten-Eigenschaft)
+
+**Status:** Verbindlich
+**Bezug:** Anforderung 3 (Werke und Standorte), Anforderung 9/10 (Ausleihe/Rückgabe
+nachvollziehbar), DEC-071 (Werkzeug-Logistik), DEC-066 (Tab-Struktur)
+**Auftrag des Projektinhabers:** „Ich hätte es gern, dass der Benutzer das Werk selbst
+wählt, in dem er arbeitet – z. B. auf der Main Site in der Sidebar – und das System
+merkt es sich, aber jederzeit änderbar. Das Personal rotiert teilweise zwischen den
+Werken, mal hier, mal da."
+
+## Ausgangslage
+
+`users` hat **kein** `plant_id`; Benutzer sind heute an kein Werk gebunden. Das Werk ist
+bisher eine reine Datenzuordnung (Werkzeug, Serienartikel, Datenblatt, Ersatzteil,
+Maschine). Damit fehlt dem System genau eine Information: **in welchem Werk steht dieser
+Mensch gerade**. Ohne sie müsste er es in jedem Formular neu wählen, und niemand könnte
+einordnen, wer wann für welches Werk gehandelt hat.
+
+## Regel
+
+1. **Das Werk ist ein Kontext, keine Eigenschaft.** Es ist eine augenblickliche
+   Einstellung des Benutzers, kein Stammdatenfeld. Bei rotierendem Personal wäre ein
+   Pflichtfeld am Benutzer fachlich falsch.
+2. **Drei getrennte Begriffe** (nicht vermischen):
+   - **Arbeitswerk** – wo der Benutzer *gerade* arbeitet (dieser Beschluss),
+   - **Heimatwerk** – wem ein Werkzeug gehört (`tools.plant_id`, DEC-071),
+   - **aktueller Ort** – wo ein Werkzeug *gerade* liegt (`tools.current_plant_id`,
+     DEC-071).
+3. **Gemerkte Wahl im Browser** (`localStorage`), in drei Stufen:
+   1. Wahl dieses Benutzers auf diesem Rechner (`toolsync.plant.<personalnummer>`),
+   2. sonst `users.default_plant_id` (optional, Pflege im Admin-Panel),
+   3. sonst zuletzt gewähltes Werk dieses Rechners (`toolsync.plant.device`),
+   4. sonst das erste Werk.
+   Der Rechner-Schlüssel wird **nur** bei einer bewussten Umschaltung gesetzt, nicht
+   beim bloßen Anmelden.
+4. **Übertragung und Prüfung:** Jeder Request trägt `X-Plant-Id`. Das Backend prüft den
+   Wert gegen `plants`. Ein unbekanntes Werk ist **HTTP 400** mit klarer Meldung – kein
+   stiller Rückfall auf ein anderes Werk. Fehlt der Header, löst der Server über
+   `default_plant_id` → erstes Werk auf.
+5. **Das Arbeitswerk steuert** die Vorbelegung „Werk" in den Anlegeformularen, die
+   Logistik-Ansicht (mein Ausgang / mein Eingang) und den **Nachweis** (Aufträge und
+   Bewegungen speichern, welches Arbeitswerk gehandelt hat).
+6. **Das Arbeitswerk filtert nichts.** Die bestehenden Werk-Filter in Werkzeugliste,
+   Serienartikeln, Datenblättern und Ersatzteilen bleiben unverändert für alle Werke
+   bedienbar. Es ist Bequemlichkeit und Nachweis, **keine** Zugangskontrolle.
+7. **Sichtbarkeit ist Pflicht:** Das Arbeitswerk steht dauerhaft sichtbar in der Sidebar
+   und in jedem Bestätigungstext („wird für **Werk 2** verschickt"). Die Speicherung ist
+   nicht die Absicherung – die Sichtbarkeit ist es.
+8. **Benutzer ohne Werk funktionieren unverändert** (`default_plant_id` ist nullable).
+   Keine Migration von Bestandsdaten nötig.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** Pflichtfeld: ein Benutzer muss kein Werk haben.
+- **Keine** Speicherung des Arbeitswerks in der Datenbank (jeder Werkwechsel wäre ein
+  Schreibvorgang, und zusätzlich bräuchte es „seit wann").
+- **Keine** Kopien von Daten im Browser: gespeichert wird **nur** die Werk-Nummer, dazu
+  die Benutzerkennung im Schlüssel. Keine Werkzeuglisten, kein Cache von Tabellen – damit
+  entsteht keine zweite Datenhaltung.
+- **Keine** Rechteverwaltung je Werk in dieser Ausbaustufe (siehe DEC-074).
+- **Keine** Änderung an Login oder Sitzung: Personalnummer-Login und das rollierende
+  Sitzungs-Token (TASK-013) bleiben unberührt.
+
+## Offene Fragen
+
+1. Soll das Arbeitswerk später auch die **Rechte** einschränken (nur eigene Werkzeuge
+   ändern)? Heute ausdrücklich nicht (Punkt 6).
+2. Soll bei einem Werkwechsel eine kurze Rückfrage erscheinen, wenn gerade ein Formular
+   offen ist? Heute: nein, der Wechsel lädt die aktive Ansicht neu.
+
+---
+
+# DEC-071 – Heimatwerk und aktueller Ort eines Werkzeugs
+
+**Status:** Verbindlich
+**Bezug:** DEC-052 (Einzelzeilen je Exemplar), DEC-055 (Werkzeug-ID je Kategorie),
+DEC-070 (Arbeitswerk), DEC-072 (Transport), Anforderung 3
+**Auftrag des Projektinhabers:** „Wenn ich 01020000 nach Werk 2 schicke und Werk 2 hat
+dieselbe ID schon eingelagert, sollen keine Konflikte entstehen – es ist 01020000 aus
+Werk 1 und 01020000 aus Werk 2."
+
+## Ausgangslage
+
+`tools.plant_id` bedeutet heute faktisch „wem gehört es und wo liegt es" – beides in
+einem Feld, und im Formular frei änderbar. Die Werkzeug-ID ist innerhalb
+`tool_id + category + plant_id + is_storage` eindeutig (DEC-052/055). Sobald Werkzeuge
+zwischen Werken wandern, muss klar sein, **welches** Werk in dieser Prüfung steht.
+
+## Regel
+
+1. **`tools.plant_id` heißt fachlich „Heimatwerk" und bleibt unverändert.** Die
+   Eindeutigkeitsprüfung der Werkzeug-ID läuft weiterhin über dieses Feld → identische
+   IDs in zwei Werken sind **kein** Konflikt (genau der Fall des Projektinhabers).
+2. **Neu: `tools.current_plant_id`** (FK → `plants`, nullable). `NULL` heißt: das
+   Werkzeug liegt in seinem **Heimatwerk**. Einen anderen Wert schreibt **ausschließlich**
+   die Logistik (bestätigter Empfang, DEC-072).
+3. **`position_id` bleibt der Heimatplatz** und wird durch Transporte **nie** verändert.
+   Der Platz ist reserviert, solange das Werkzeug unterwegs ist („ausgeliehen nach W2",
+   nicht belegbar für andere Werkzeuge).
+4. **Anzeige:** Die Werkzeugliste zeigt das Werk nur bei Abweichung doppelt
+   (`Heimat W1 · aktuell W2`); ohne Abweichung wie bisher ein Werk.
+5. **Filter unverändert:** Die Werkzeugliste filtert weiterhin über `plant_id`
+   (Heimatwerk) – ein Werkzeug erscheint also **nicht** plötzlich in zwei Listen.
+   Für die Logistik gibt es eine eigene Abfrage über den **aktuellen Ort**.
+6. **Nachweis:** `transport_items.home_position_id` hält den Heimatplatz zum
+   Versandzeitpunkt fest, damit ein späterer Umbau der Matrix die Spur nicht zerstört.
+
+## Begründung
+
+- Die ID-Eindeutigkeit bleibt **genau dort**, wo sie heute ist → kein Risiko für
+  Bestandsdaten, keine Änderung an `get_by_tool_id`, `get_all_by_tool_id`,
+  `count_by_tool_id`.
+- „Gehört zu" und „liegt gerade bei" sind zwei verschiedene Fragen. Sie in einem Feld zu
+  führen wäre die nächste „zwei Wahrheiten"-Falle: die ID-Prüfung würde mit dem Werkzeug
+  umziehen und Werk 2 würde ein fremdes Werkzeug als eigenes führen.
+- Der Heimatplatz bleibt nach der Rückkehr gültig – ohne Umbau, ohne Umplatzierung.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Umbenennung von `tools.plant_id` (Feldname bleibt; die Bedeutung wird
+  dokumentiert). Ein Umbenennen würde acht Abfragen und die gesamte Oberfläche berühren,
+  ohne fachlichen Gewinn.
+- **Kein** automatisches Setzen von `current_plant_id` beim Verschicken – erst der
+  **bestätigte Empfang** ändert den Ort. Sonst gäbe es einen Zustand, in dem niemand weiß,
+  ob das Werkzeug im LKW oder schon da ist.
+- **Keine** zweite Heimat: ein Werkzeug hat genau ein Heimatwerk.
+- **Kein** Anlegen eines Werkzeugs durch ein fremdes Werk mit fremdem Heimatwerk: wer
+  anlegt, legt für sein Arbeitswerk an (weiterhin änderbar, weil das Feld schon immer frei
+  war – aber die Vorbelegung kommt jetzt aus DEC-070).
+
+## Offene Fragen
+
+1. Soll ein Werk sein Heimatwerk **ändern** können (Werkzeug geht dauerhaft über)? Heute:
+   nur bewusst über das Bearbeiten-Formular, kein Logistik-Vorgang.
+2. Soll ein Werkzeug mit `current_plant_id != plant_id` in der **Matrix des aktuellen
+   Werks** auftauchen? Heute: nein – dort erscheint es in der Ablage, die Reservierung
+   steht in der Heimat-Matrix.
+
+---
+
+# DEC-072 – Werkzeug-Logistik: Auftrag, Transportweg, Empfang
+
+**Status:** Verbindlich
+**Bezug:** DEC-070 (Arbeitswerk), DEC-071 (Heimatwerk/aktueller Ort),
+DEC-074 (Empfangsrecht), `docs/21-werkzeug-logistik.md`, `docs/08-tool-movement.md`
+**Auftrag des Projektinhabers:** „Ein Button auf der Main Site ‚Werkzeug Logistik'. Im
+Formular: Auftrags-Nr., Suche nach Werkzeugen (Stempel, Abstreifer, Matrize), die in
+einem bestimmten Werk eingelagert sind, Auswahl, Liste der ausgewählten Werkzeuge,
+Textfeld für Infos. Der Lagerplatz darf sich nicht ändern – es wird nur markiert, dass
+das Werkzeug ausgeliehen ist. Das andere Werk bestätigt die Ankunft. Beim Zurückschicken
+geht man in den Auftrag und drückt ‚Zurück schicken'."
+
+## Ausgangslage
+
+- Ein Werkswechsel ist heute **nicht** modelliert: `movement_type = "transfer"` ist
+  wirkungslos (`docs/08` §2), `Tool.plant_id` ist ein Stammdatenfeld, und
+  `MovementStatus.OPEN` wird von keiner Anwendungsschicht erzeugt – es gibt keinen
+  Vorgang, der auf eine Bestätigung wartet.
+- `ToolStatus.IN_TRANSIT` existiert bereits im Enum, wird aber nirgends gesetzt.
+
+## Regel
+
+1. **Ein Auftrag = eine Richtung.** Der Rückweg ist ein **eigener** Auftrag mit
+   `parent_order_id` auf den Hinweg. Beide Richtungen sind derselbe Vorgangstyp, die
+   Spiegelung entsteht dadurch von selbst (DEC-070).
+2. **Zwei Entitäten:**
+   - `transport_orders`: `order_number` (**Freitext**, führendes Feld in Liste und Suche,
+     keine Validierung, keine Dublettenprüfung), `reference` (frei, z. B. Lieferschein),
+     `from_plant_id`, `to_plant_id`, `status`, `info` (Freitext), `parent_order_id`,
+     `created_by_id`, `sent_at`, `sent_by_id`, `closed_by_id`.
+   - `transport_items`: `order_id`, `tool_id`, `home_position_id` (Nachweis, DEC-071),
+     `received_at`, `received_by_id`, `received_plant_id` (Arbeitswerk der bestätigenden
+     Person).
+   - `tool_movements` erhält `transport_id` (nullable) und `plant_id` (nullable,
+     Arbeitswerk).
+3. **Statuswerte:** `draft → sent → partly_received → received`, dazu `cancelled`.
+   `movement_type = "transfer"` bleibt die Bewegungsart im Verlauf.
+4. **Beim Verschicken** (eine Transaktion):
+   `order.status = sent`, `sent_at/sent_by_id`, `Tool.status = in_transit`, je Werkzeug
+   ein Verlaufseintrag (`transfer`), `x-plant-id` als Nachweis.
+   **`position_id` und `plant_id` bleiben unverändert** – der Heimatplatz ist reserviert.
+5. **Beim Empfang** (eine Transaktion, je Werkzeug oder für alle):
+   `item.received_at/received_by_id/received_plant_id`, `Tool.status = available`,
+   `Tool.current_plant_id = to_plant_id` bei `to_plant_id != plant_id` (sonst zurück auf
+   `NULL`), Verlaufseintrag, danach `partly_received` bzw. `received`.
+6. **Verfügbarkeitsregeln** (serverseitig, nicht nur im Formular):
+   - Nur Werkzeuge mit `status = available` sind wählbar. `lent`, `defective`,
+     `maintenance` blockieren mit Begründung.
+   - Ein Werkzeug darf in **höchstens einem offenen** Auftrag stehen (`draft` oder `sent`)
+     – keine Doppelbuchung, keine zwei Werke mit derselben Anforderung.
+   - Verschickt werden darf nur, was **aktuell im Arbeitswerk** liegt
+     (`current_plant_id` bzw. `plant_id`) – die Suche zeigt alle Werke, gesperrte Zeilen
+     sind sichtbar, aber nicht wählbar.
+   - Werkzeuge **ohne** Heimatplatz (Ablage) dürfen mitfahren, dann ohne Reservierung.
+7. **Storno:** Nur ein `draft`-Auftrag ist stornierbar (`cancelled`). Ein `sent`-Auftrag
+   wird über einen Rück-Auftrag aufgelöst – niemand kann einen LKW zurückholen.
+8. **Löschen ist nicht vorgesehen:** Aufträge werden storniert oder geschlossen, nicht
+   gelöscht (Nachweis).
+9. **Sichtbarkeit je Werk, gleiche Oberfläche:** Jeder sieht „mein Ausgang" (Absenderwerk =
+   Arbeitswerk) und „mein Eingang" (Zielwerk = Arbeitswerk). Kein zweites Programm, keine
+   zweite Datenhaltung – die Spiegelung ist eine Abfrage, keine Kopie.
+10. **Konsistenz („zwei Wahrheiten"):** `Transport.status`, `transport_items.received_at`,
+    `Tool.current_plant_id` und der Verlauf werden **in einer Transaktion** geschrieben und
+    mit einem Konsistenztest geprüft (Muster: `backend/tests/test_platz_konsistenz.py`).
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Anfrage vom Empfängerwerk („wir brauchen X") in dieser Ausbaustufe.
+- **Kein** Anfordern von Material außerhalb der Logistik, keine Kostenstellen, kein Porto.
+- **Keine** Änderung des Lagerplatzes durch einen Transport.
+- **Kein** automatisches Zurückbuchen nach Fristablauf („Werkzeug ist zu lange weg") –
+  das ist ein eigener Ausbauschritt.
+- **Keine** Änderung an `Tool.plant_id` (Heimatwerk) durch die Logistik.
+- **Kein** zweiter Verlauf: die Logistik schreibt in **denselben** `tool_movements`-Verlauf
+  wie Ausleihe und Umplatzierung.
+
+## Offene Fragen
+
+1. Soll ein Empfänger ein Werkzeug **ablehnen** können (defekt angekommen)? Heute: nur
+   Empfang oder Rück-Auftrag mit Notiz.
+2. Soll eine Erinnerung erscheinen, wenn ein Werkzeug seit X Tagen unterwegs ist?
+3. Sollen Aufträge gedruckt/als PDF ausgegeben werden (Lieferschein)? Heute: nein.
+4. Soll die **Belegung** des Heimatplatzes nach dem Versand sichtbar gesperrt sein
+   (`tool_id` bleibt gesetzt) oder soll der Platz mit einem Sonderzustand geräumt werden?
+
+---
+
+# DEC-073 – Reihenfolge: Arbeitswerk → Rückgabe → Logistik → Historie
+
+**Status:** Verbindlich
+**Bezug:** DEC-066 (TASK-025 angekündigt), DEC-070, DEC-072, `docs/14-architecture.md` §10
+**Auftrag des Projektinhabers:** „So wie besser." (Reihenfolge nach Vorschlag)
+
+## Regel
+
+1. **TASK-030 – Arbeitswerk des Benutzers** (DEC-070). Fundament: ohne Arbeitswerk weiß
+   die Logistik nicht, wer sendet und wer bestätigt.
+2. **TASK-025a – Rückgabe und Benutzerzuordnung.** Die Ausleihe schreibt heute die
+   Personalnummer als Klartext in die Notiz und `user_id` bleibt leer (Anforderung 9
+   damit nicht erfüllt, `docs/08` §7); ein Rückgabe-UI fehlt vollständig, ausgeliehene
+   Werkzeuge bleiben dauerhaft auf `lent`. Die Logistik braucht diese Grundbewegung
+   zweimal (Rückweg, danach wieder „verfügbar").
+3. **TASK-025b – Werkzeug-Logistik** (DEC-072).
+4. **TASK-029 – Reiter „Historie" echt machen.** Zeigt Personen-Ausleihen **und**
+   Werks-Transporte in einer Ansicht. Der Platzhalter bleibt bis dahin bestehen
+   („Kein Löschen des Historie-Tabs", DEC-066).
+
+## Begründung
+
+- Jeder Schritt liefert dem nächsten eine Voraussetzung: Arbeitswerk → Werkzeug kommt
+  zurück und wird verfügbar → Werkzeug wandert zwischen Werken → alles ist sichtbar.
+- Alle Schritte benutzen dieselben Bausteine (Werk am Benutzer, Bewegung schreiben,
+  Status pflegen, alles in einer Transaktion) und werden jeweils mit Tests belegt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Zusammenlegung zu einem großen Umbau: jeder Schritt bleibt einzeln abnehmbar
+  und liefert für sich einen Nutzen.
+- **Kein** Anfassen der Logistik vor dem Arbeitswerk.
+
+---
+
+# DEC-074 – Empfangsbestätigung: Stufe 1 (Nachweis statt Recht)
+
+**Status:** Verbindlich
+**Bezug:** DEC-070 (Arbeitswerk), DEC-072 (Logistik), Anforderung 15
+**Auftrag des Projektinhabers:** „Stufe 1."
+
+## Regel
+
+1. **Bestätigen darf, wer sein Arbeitswerk auf das Zielwerk gestellt hat.** Es gibt
+   **keine** zusätzliche Rechteprüfung und **keine** Sonderrolle für Admins.
+2. **Jede Bestätigung wird protokolliert:** Person (`received_by_id`), Arbeitswerk
+   (`received_plant_id`), Zeitpunkt (`received_at`), dazu ein Verlaufseintrag mit
+   `plant_id`. Damit ist nachvollziehbar, wer wann für welches Werk bestätigt hat –
+   auch ohne Sperre.
+3. **Der Absender sieht das Ergebnis:** Wer den Auftrag verschickt hat, sieht im Auftrag
+   „bestätigt von <Name> · Werk <N> · <Zeitpunkt>".
+4. **Das Arbeitswerk ist keine Zugangskontrolle** (DEC-070 Punkt 6): Es schränkt keine
+   Daten ein, es ordnet nur zu.
+5. **Bewusste Folge:** Da sich das Arbeitswerk jederzeit umstellen lässt (rotierendes
+   Personal), kann theoretisch jeder bestätigen. Das ist eine bewusste Entscheidung des
+   Projektinhabers für ein kleines, vertrautes Umfeld; der Nachweis ersetzt die Sperre.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Rollen- oder Rechteverwaltung je Werk (Stufe 3 wäre das).
+- **Keine** Sperre „nur der Absender darf nicht bestätigen" – der Nachweis genügt.
+
+---
+
+# DEC-075 – Werkzeug-Logistik: Einordnung in die Main Site (Dropdowns, Fenster, Übersichtskarten)
+
+**Status:** Verbindlich
+**Bezug:** DEC-066 (Tab-Struktur), DEC-070 (Arbeitswerk), DEC-072 (Logistik-Vorgang),
+`docs/21-werkzeug-logistik.md` § 8
+**Auftrag des Projektinhabers:** „Das ist sehr unübersichtlich, zu viel belastet. Die
+Aufträge sollen als Dropdown sein. Ich habe auf der Main Site rechts inaktive Blöcke:
+Aktive Ausleihen, Verfügbare Werkzeuge, Lagerbestand, Serienartikel – vielleicht können wir
+dort was platzieren und alle kleiner halten und mit Modal arbeiten. Die Demo ist schon gut,
+aber sehr unklar, wie es im Main aussehen wird – vielleicht kannst du einen Entwurf von der
+Main in die Demo packen."
+
+## Ausgangslage
+
+Die erste Demo zeigte die Logistik als **eine lange Seite**: alle Aufträge mit allen
+Positionen gleichzeitig aufgeklappt, die Tabelle „Wo ist was" darunter, alles in einer
+Spalte. Fachlich war es richtig, aber unbedienbar: man sieht nicht, welcher Auftrag zu
+welchem Werkzeug gehört, und beim Suchen scrollt man an allem vorbei.
+
+Die rechte Spalte der Main Site (`StatisticsSidebar` in `App.tsx`) zeigt vier
+`.app-stat-card`-Karten mit dem Inhalt **„—"**: Aktive Ausleihen, Verfügbare Werkzeuge,
+Lagerbestand, Serienartikel. Sie sind bisher reine Platzhalter.
+
+## Regel
+
+1. **Der Bildschirm zeigt Zeilen, nicht Details.** Ein Auftrag ist **eine Zeile**
+   (Auftrags-Nr. · Zustand · Richtung · Anzahl · Datum) und **zugeklappt der Standard**.
+   Erst ein Klick klappt Positionen und Aktionen auf (Dropdown). Die Liste ist damit auch
+   bei 50 offenen Aufträgen lesbar.
+2. **Alles Ausfüllbare und Erklärende liegt in einem Fenster (Modal):** Neuer Auftrag
+   (Kopf, Suche, Auswahl), Empfang bestätigen, Zurück schicken, Auftrag öffnen (Nachweis),
+   Regeln & Datentypen. Kein Formular steht dauerhaft auf der Seite.
+3. **Nur zwei Tabellen bleiben sichtbar** – die beiden, die man vergleicht: „Wo ist was"
+   (Bestand mit Heimatwerk, Heimatplatz, aktuellem Ort) und die Positionen eines
+   **aufgeklappten** Auftrags. Beide kompakt: 12 px, einzeilig, ohne Doppelzeilen.
+4. **Die rechte Spalte wird echt.** Die vier vorhandenen Karten bleiben an ihrem Platz und
+   werden mit Zahlen und Klickzielen gefüllt:
+   - **Eingang offen** → öffnet den Eingang, **Unterwegs** → Aufträge auf dem Weg,
+     **Aktive Ausleihen** → Ausleihliste, **Verfügbare Werkzeuge** → Bestand des Arbeitswerks.
+   - `Lagerbestand` und `Serienartikel` bleiben als Information stehen (Serienartikel
+     zählt der eigene Bereich, nicht die Logistik).
+   - Neue Karten werden **nicht** hinzugefügt; die Logistik nutzt die vier bestehenden.
+5. **Das Arbeitswerk steht in der Sidebar** unter dem Benutzerblock (DEC-070) – sichtbar in
+   allen Bereichen, nicht nur in der Logistik.
+6. **Kein neuer Tab-Stil:** Die Logistik erscheint als Eintrag in der bestehenden
+   Tab-Leiste (DEC-066) mit Zähler am Wort „Eingang". Der Reiter „Historie" bleibt
+   Platzhalter, bis TASK-029 ihn füllt.
+7. **Der Prototyp zeigt den Rahmen mit.** `docs/demo-werkzeug-logistik.html` bildet Sidebar,
+   Tab-Leiste, rechte Spalte und Fenster nach, damit die Einordnung **vor** der Umsetzung
+   beurteilt werden kann.
+
+## Begründung
+
+- Ein Auftrag mit 10 Werkzeugen belegt aufgeklappt einen halben Bildschirm. Als Zeile
+  belegt er 32 Pixel – erst dadurch sind mehrere Aufträge vergleichbar.
+- Die vier Karten sind heute die einzige leere Fläche der Main Site; sie zu füllen kostet
+  keine neue Struktur und gibt der Logistik einen sichtbaren Ort außerhalb ihres eigenen
+  Tabs („1 zu bestätigen" sieht man, ohne den Tab zu öffnen).
+- Fenster statt Dauerformular: die Werkzeugsuche mit Sperr-Begründungen braucht Breite und
+  Höhe (Tabelle mit 7 Spalten) – auf der Seite würde sie die Auftragsliste verdrängen.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** neue Navigation und kein neues Menü (die Sidebar der Main Site hat außer
+  Profil und Admin-Panel keine Navigation – das bleibt so, der Einstieg läuft über die
+  Tab-Leiste).
+- **Keine** Änderung an den bestehenden Tabs oder ihrer Reihenfolge (DEC-066).
+- **Kein** Dashboard-Umbau: die vier Karten behalten Beschriftung und Reihenfolge.
+- **Keine** ausgeklappten Aufträge als Standard – „alles offen" war genau der Fehler der
+  ersten Demo.
+- **Keine** zweite Werkzeugsuche in der Logistik: die Suche im Fenster „Neuer Auftrag"
+  benutzt dieselben Bausteine wie die Werkzeugliste (Suche, Werk-Filter, Sortierung).
+
+---
+
+# DEC-076 – Werkfarbe: jedes Werk hat eine Farbe, das Arbeitswerk färbt die Oberfläche
+
+**Status:** Verbindlich
+**Bezug:** DEC-070 (Arbeitswerk), DEC-075 (Einordnung Main Site), `docs/15-ui-styleguide.md`
+(Primary `#0f766e`), Vorbild: `customers.color` (Migration `d1a4f6b2c9e3`) und `machines.color`
+(Migration `e7d1b9c34a52`)
+**Auftrag des Projektinhabers:** „Wir müssen das alles farblich trennen, dass es klar und
+deutlich wird. Wir haben generell die Primary-Farbe `#0f766e` – was ist, wenn sich beim
+Werkswechsel diese Farbe ändert, also jedes Werk seine Farbe? Dann weiß man sofort, welches
+Werk es ist."
+
+## Ausgangslage
+
+`plants` hat **keine** Farbe (`id`, `name`), Kunden und Maschinen haben eine. Alle Werke sehen
+identisch aus: Wer „Werk 2" ist, erkennt man nur am Text. Beim Arbeiten über Werk-Grenzen
+hinweg (Logistik) ist genau das die häufigste Verwechslung.
+
+## Regel
+
+1. **`plants.color`** (neu, `String(7)` = `#RRGGBB`, nullable) – **ohne** Farbe bleibt die
+   bisherige Primärfarbe `#0f766e`. Pflege im Admin-Panel → Stammdaten → Werke (derselbe
+   `ColorPicker` wie bei Kunden und Maschinen, inklusive „Keine Farbe").
+2. **Das Arbeitswerk färbt die Oberfläche – ohne Kanten.** Die Farbe wird als CSS-Variablen
+   gesetzt (`--werk`, `--werk-soft`, `--werk-line`) und wirkt an genau vier Stellen:
+   Knopf `.btn-primary`, der **aktive Reiter**, der **Werk-Name** in der Sidebar und der
+   **leise Schimmer der Werkzeug-ID** (Punkt 3). **Keine** farbigen Kanten an Karten,
+   Tab-Leiste, Aufträgen, Dropdowns oder Fenstern – farbige Kanten zerschneiden das
+   Glas-Design (Entscheidung des Projektinhabers, 2026-10).
+3. **Die ganze Tabellenzeile trägt die Farbe ihres Werks.** Jede Zeile mit Werkzeugbezug
+   (Auftragspositionen, Eingang, „Wo ist was", Auftragsdetail, Auswahl im Auftragsfenster,
+   Verlaufszeilen) ist in `rgba(<Werkfarbe>, 0.14)` geflutet, beim Überfahren `0.20`.
+   **Kein** Zebra in diesen Tabellen – die Zeilenfarbe ersetzt die Streifen. Ohne
+   Werkzuordnung bleibt die Zeile neutral.
+   **Verworfen (Entscheidung des Projektinhabers):** eine einzelne markierte **Zelle**
+   (Werkzeug-ID) – sie sieht zwischen sechs neutralen Zellen wie ein Fremdkörper aus und
+   zerreißt das Tabellenraster. **Verworfen:** 8,5 % – zu schwach, um die Herkunft zu zeigen.
+4. **Jeder Werk-Name trägt seine eigene Farbe** – als farbiger Punkt mit Namen
+   (`von **Werk 1** → an **Werk 2**`). Das gilt auch für fremde Werke in einer Ansicht:
+   Der Name färbt sich nach dem Werk, **nicht** nach dem Arbeitswerk.
+5. **Eine Farbe hat genau eine Bedeutung.** Die Werkfarbe steht **nur** auf Flächen, Knöpfen
+   und Werk-Namen. Zustände behalten ihre eigenen Töne:
+   `unterwegs` = Sky `#0284c7`, `empfangen/verfügbar` = Emerald `#047857`,
+   `teilweise/defekt` = Amber `#b45309`, `storniert/ausgeliehen` = Slate `#475569`,
+   Fehler = Rose `#be123c`.
+6. **Startpalette** (in den Stammdaten änderbar):
+   `Werk 1 = #0f766e` (Teal, bisheriges Primary) · `Werk 2 = #4338ca` (Indigo) ·
+   `Werk 3 = #a16207` (Ocker). Grund für genau diese drei: Teal ist die Bestandsfarbe, und
+   Indigo/Ocker sind deutlich von Skys Zustandsblau und Ambers Warnocker unterscheidbar,
+   weil Werkfarben und Zustandsfarben nie dieselbe Rolle tragen.
+7. **Kontrast:** Werkfarben werden für Text und dünne Ränder verwendet, deshalb mindestens
+   4,5:1 gegen Weiß (gemessen: Teal 4,84 · Indigo 6,31 · Ocker 5,51). Ein Werk ohne Farbe
+   fällt auf Slate `#475569` zurück.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine farbigen Kanten** – weder an Karten, Tab-Leiste, Aufträgen, Dropdowns noch am
+  Fensterkopf. Die Werkfarbe färbt **Flächen und Text**, keine Linien.
+- **Keine** Werkfarbe für Zustände (kein „Werk 2 ist unterwegs").
+- **Keine** Farbe je Werk im Sinne einer Ampel („Werk 3 ist rot = schlecht") – die Farbe ist
+  eine Kennung, keine Bewertung.
+- **Kein** Farbtext auf der Werkzeug-ID – nur der Schimmer, sonst wirkt die Tabelle bunt.
+- **Kein** Zwang: ein Werk ohne Farbe funktioniert unverändert.
+- **Keine** Änderung an den bestehenden Farben von Kunde und Maschine.
+- **Kein** neues Farb-Token im Guide: die Werkfarbe ist eine Variable, kein neuer Bauplan.
+
+## Offene Fragen
+
+1. Sollen Werkfarben auch die Matrix des Admin-Panels einfärben (Schrank-Kopf, Schubladen)?
+2. Sollen Serienartikel und Datenblätter (beide mit Werk-Bezug) den Werkpunkt ebenfalls zeigen?
+3. Soll die **leise ID-Markierung** auch in der Werkzeugliste erscheinen (dort ist die
+   Werk-Spalte schon vorhanden)? Heute trägt sie jede Werkzeug-ID in der Logistik; die
+   Entscheidung für die Werkzeugliste fällt mit dem Feinschliff von TASK-014.
+
+## Umsetzung (Prototyp)
+
+Im Prototyp `docs/demo-werkzeug-logistik.html` erprobt und geprüft (`.audit/pruefe-demo-logistik.mjs`):
+Die Karten, Auftragszeilen, die Tab-Leiste und der Fensterkopf tragen **keine** farbigen
+Kanten; die Werkfarbe wirkt an Knopf, aktivem Reiter, Werk-Namen und als **Zeilenfarbe**
+(14 % / Hover 20 %) in allen Tabellen. Fünf Prüfungen sichern das ab: „keine Kantenregel im
+Stylesheet", „kein `var(--werk)` in `.card`- oder `.drop`-Regeln", „die ganze Tabellenzeile
+trägt die Farbe des Heimatwerks", „Hover-Stufe gesetzt", „kein Zebra mehr" und „Zeilenfarbe
+in allen Ansichten vorhanden".
+
+---
+
+# DEC-077 – „Wo ist was" zeigt nur Unterwegs und Ausgeliehenes
+
+**Status:** Verbindlich
+**Bezug:** DEC-071 (Heimatplatz), DEC-072 (Transport), DEC-075 (Einordnung),
+Anforderung 13 (Suche/Übersicht)
+**Auftrag des Projektinhabers:** „Tab ‚Wo ist was' – hier sollen nur Werkzeuge angezeigt
+werden, die unterwegs oder ausgeliehen sind, keine, die sich auf dem Platz befinden."
+
+## Ausgangslage
+
+Die Liste „Wo ist was" zeigte **alle** Werkzeuge (29 Stück) mit Heimatwerk, Heimatplatz und
+aktuellem Ort. Damit wiederholte sie die Werkzeugliste: 16 von 29 Zeilen sind eingelagert und
+sagen nichts Neues. Die eigentlich interessante Frage – *was ist gerade nicht da?* – ging
+zwischen den anderen Zeilen unter.
+
+## Regel
+
+1. **Die Liste enthält ausschließlich Werkzeuge, die nicht an ihrem Platz liegen:**
+   `status = lent` (an eine Person ausgeliehen) oder `status = in_transit` (zwischen Werken
+   unterwegs). Eingelagerte Werkzeuge stehen in der **Werkzeugliste**.
+2. **Zwei Zahlen in der Kopfzeile** („Alles (5) · Unterwegs (3) · Ausgeliehen (2)") als
+   Segmente: sie filtern die Liste und zeigen gleichzeitig die Mengen.
+3. **Spalte „Ist jetzt"** beantwortet die Frage in Worten: bei Ausleihe „beim Ausleiher",
+   bei Transport das **Zielwerk in dessen Farbe** (DEC-076).
+4. **Spalte „Auftrag / Ausleiher"** nennt den offenen Auftrag (anklickbar → Auftragsfenster)
+   oder die Personalnummer des Ausleihers.
+5. **Der Heimatplatz bleibt sichtbar** – aber als reserviert, nicht als Fundort (DEC-071).
+6. Die Liste ist **werk-übergreifend** (kein Werk-Filter): die Frage „wo ist was" endet nicht
+   an der Werk-Grenze.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Liste aller Werkzeuge an dieser Stelle (das ist die Werkzeugliste).
+- **Kein** zusätzlicher Werk-Filter in dieser Liste – er wäre eine zweite Werkzeugliste.
+- **Keine** Ersatzteile in dieser Liste (sie sind kein Leihobjekt und nicht unterwegs,
+  DEC-064).
+
+---
+
+# DEC-078 – Rückgabe eines Werkzeugs an eine Person
+
+**Status:** Verbindlich
+**Bezug:** Anforderung 9/10 (Ausleihe/Rückgabe nachvollziehbar), DEC-070 (Arbeitswerk),
+`docs/08-tool-movement.md` §7 (offener Punkt), TASK-025a aus DEC-073
+**Auftrag des Projektinhabers:** „Rückgabe über das Zeilenmenü. Werkzeuge sollen auch
+einzeln zurückgegeben werden." Und: „was brauchen wir noch: die Rückgabe je Werkzeug."
+
+## Ausgangslage
+
+Es gab **keine** Rückgabe in der Oberfläche. Ein ausgeliehenes Werkzeug blieb für immer auf
+`lent`; die Rückgabe war nur über einen direkten API-Aufruf möglich (`docs/08` §7). Außerdem
+schrieb die Ausleihe die Personalnummer als **Klartext** in die Notiz, und `user_id` blieb
+leer – „welcher Benutzer hat ausgeliehen" war damit nicht auswertbar (Anforderung 9).
+
+## Regel
+
+1. **Rückgabe je Werkzeug über das Zeilenmenü.** Ist ein Werkzeug `lent`, bietet das Menü
+   seiner Zeile **„Zurückgeben"** an (statt „Ausleihen"); jedes Werkzeug wird **einzeln**
+   zurückgegeben. Eine Sammel-Rückgabe gibt es nicht – sie würde die Zuschreibung
+   verwischen.
+2. **Eigener Endpunkt** `POST /api/movements/return/{tool_id}` mit freiwilligem Body
+   (`{"note": "…"}`). Der Router verlangt `require_active` – zurückgeben darf, wer arbeitet;
+   ein Admin-Recht ist nicht nötig.
+3. **Der Ausführende kommt aus dem Token, das Arbeitswerk aus `X-Plant-Id`.** Beides landet
+   an der Bewegung (`user_id`, `plant_id`). Die Personalnummer wird **nicht** mehr als
+   Klartext in die Notiz geschrieben (die Ausleihe schreibt sie ab jetzt ebenfalls nicht
+   mehr).
+4. **Eine Transaktion:** Werkzeug-Status auf `available`, Bewegung mit
+   `movement_type = return`, `status = completed`, `from_location` = Heimatplatz
+   (`03-C-02`) bzw. `Ablage`, `to_location` = Name des Arbeitswerks, Benutzer, Arbeitswerk.
+5. **Nur Ausgeliehenes ist rückgabefähig.** Ein anderes Werkzeug führt zu **HTTP 400** mit
+   Begründung („nicht ausgeliehen (aktueller Status: …)") – und zu **keiner** Bewegung.
+6. **Der Heimatplatz bleibt unverändert** (DEC-071): Die Rückgabe ändert den Platz nicht,
+   das Werkzeug steht danach wieder auf „verfügbar".
+7. **Rückgabe-Liste** `GET /api/movements/active` liefert die laufenden Ausleihen des
+   Arbeitswerks (Werkzeug, Platz, Ausleiher, Zeitpunkt). Sie ist die Grundlage für die
+   spätere Logistik (DEC-072) und die Auswertung.
+8. **Alle Bewegungen tragen jetzt das Arbeitswerk** (`tool_movements.plant_id`, Migration
+   `c5e9f2b71d84`) – auch Ausleihe und Umbuchung, nicht nur die Rückgabe.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Sammel-Rückgabe („alle Ausleihen zurückgeben").
+- **Keine** Pflicht-Notiz: der Zustand ist freiwillig; ein leeres Feld bleibt leer.
+- **Kein** neuer Tab für die Rückgabe: sie sitzt im Zeilenmenü der Werkzeugliste, wo das
+  Werkzeug ohnehin steht.
+- **Keine** Änderung am Platz des Werkzeugs.
+- **Keine** Rückgabe ohne angemeldeten Benutzer: der Vorgang ist personenbezogen.
+
+## Offene Fragen
+
+1. Soll die Rückgabe-Liste (`/movements/active`) einen eigenen Bildschirm bekommen („Was ist
+   draußen") oder reicht die Werkzeugliste mit Statusfiltern?
+2. Sollen überfällige Ausleihen markiert werden („seit 14 Tagen draußen")? Dafür fehlt eine
+   Frist – das ist eine eigene Entscheidung.
+
+---
+
+# DEC-079 – Werkzeug-Logistik: Umsetzung (was die Regeln aus DEC-072 praktisch bedeuten)
+
+**Status:** Verbindlich
+**Bezug:** DEC-072 (Vorgang), DEC-074 (Empfang), DEC-075 (Einordnung), DEC-076
+(Werkfarbe), `docs/21-werkzeug-logistik.md`, `tasks/25b-werkzeug-logistik.md`
+
+## Ausgangslage
+
+DEC-072 hat den Vorgang festgelegt, DEC-075 die Einordnung in die Main Site,
+`docs/21` § 8 die Oberfläche. Bei der Umsetzung (TASK-025b) waren sieben Punkte zu
+entscheiden, die die Vorgaben offen ließen oder sich in der Praxis anders anfühlen.
+
+## Regel
+
+1. **Der Eingang ist eine Leseansicht – bestätigt wird im Fenster.** `docs/21` § 8
+   nannte für die Eingangs-Karte zwei Knöpfe („Nur angehakte bestätigen", „Alles
+   angekommen"). Umgesetzt ist **ein** Knopf „Empfang bestätigen", der das Fenster mit
+   den Häkchen öffnet. Zwei Stellen mit Auswahl (Karte **und** Fenster) wären zwei
+   Wahrheiten über denselben Vorgang; DEC-075 Punkt 2 sagt außerdem, dass alles
+   Ausfüllbare in einem Fenster liegt.
+2. **Im Bereich „Logistik" gibt es keinen zweiten „+ Anlegen"-Knopf.** Der Knopf der
+   Tab-Leiste entfällt dort; „+ Neuer Auftrag" steht im Bereich selbst, in der Farbe
+   des Arbeitswerks. Zwei Knöpfe nebeneinander, die Verschiedenes tun, sind eine Falle.
+3. **Der Rückweg bekommt die Nummer `…-R`** (`AUF-2026-0044-R`) und ist ein eigener
+   Auftrag mit `parent_order_id`. Er lässt sich wie jeder Auftrag verschicken; das
+   Heimatwerk bestätigt den Empfang, danach ist `current_plant_id` wieder `NULL`.
+4. **Beziehungen werden nach dem Schreiben frisch gelesen** (`populate_existing`).
+   Die Sitzung arbeitet mit `expire_on_commit=False`; ohne das Überschreiben meldete
+   die Antwort nach dem Verschicken „verschickt von: –" und nach dem Empfang
+   „bestätigt von: –", obwohl der Vorgang korrekt gespeichert war.
+5. **Ein teilweise empfangener Auftrag blockiert seine eigenen Werkzeuge nicht.**
+   Für den Rückweg zählt ein offener Auftrag nur, wenn er **nicht** der Auftrag ist,
+   um den es gerade geht (`exclude_order_id`).
+6. **Die Werkzeugliste sagt, wo das Werkzeug gerade ist:** Unter dem Heimatwerk steht
+   „unterwegs" (solange es im Auftrag steckt) bzw. „ausgeliehen" (bei einer Person),
+   und nach dem bestätigten Empfang „aktuell <Werk>" im Namen und in der Farbe des
+   Werks, in dem es liegt (DEC-071/076). Der **Heimatplatz** darüber bleibt als
+   reserviert stehen – er ist kein Fundort.
+7. **Aufträge werden nicht gelöscht.** Ein Transport ist ein Nachweis; storniert wird
+   im Entwurf, aufgelöst wird über den Rückweg. Deshalb braucht der Browser-Test eine
+   **Datenbank-Kopie** statt eines Aufräum-Endpunkts.
+
+## Begründung
+
+- Ein Vorgang, der an zwei Stellen halb bedienbar ist, wird an beiden Stellen falsch
+  bedient – die Häkchen auf der Karte waren in der Demo nur eine Abkürzung.
+- Der Nachweis („wer hat wann was verschickt und bestätigt") ist der eigentliche Wert
+  des Auftrags; ein Lösch-Endpunkt würde genau das wegwerfbar machen.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** zweiter Bestätigungsweg auf der Seite (keine Häkchen in der Karte).
+- **Kein** Lösch-Endpunkt für Aufträge und **keine** Bearbeitung nach dem Verschicken.
+- **Keine** farbigen Kanten an Aufträgen, Karten oder Fenstern (DEC-076).
+- **Kein** automatisches Verschicken: Anlegen und Verschicken bleiben zwei Schritte –
+  dazwischen ist der Auftrag ein Entwurf, den man noch ändern kann.
+
+## Offene Fragen
+
+1. Rechte Spalte der Main Site füllen (offene Frage 7 in `docs/21`).
+2. Matrix-Karte im Admin-Panel mit drittem Zustand „ausgeliehen nach W2".
+3. Zeilenaktion „In Logistik öffnen" in der Werkzeugliste.
+
+---
+
+# DEC-080 – Werkzeugliste bleibt neutral, „Zustand"-Spalte entfällt, „kein Status" gilt als verfügbar
+
+**Status:** Verbindlich
+**Bezug:** DEC-076 (Werkfarbe), DEC-079 (Umsetzung), `docs/21` § 8,
+`tasks/25b-werkzeug-logistik.md`
+**Auftrag des Projektinhabers (nach der Bild-Abnahme):** „1. Soll die Werkzeugliste
+auch nach Werk eingefärbt werden? **nein.** 2. Die Spalte ‚Zustand' im Auswahlfenster
+ist fast überall ‚—'. Ich weiß nicht ganz, wofür dieser Status gut sein soll …
+eigentlich unnötig?!"
+
+## Regel
+
+1. **Die Werkzeugliste behält Zebra und Bernstein für Favoriten.** Sie wird **nicht**
+   als ganze Zeile in der Werkfarbe eingefärbt. Die Werkfarbe steht dort weiterhin nur
+   am Werk-Namen: „unterwegs", „ausgeliehen" bzw. „aktuell Werk 2" in der Farbe des
+   Werks, in dem das Werkzeug liegt (DEC-071/076). Begründung des Inhabers: die Liste
+   ist nach Werkzeug sortiert, nicht nach Werk; zwei Ordnungsmuster (Zebra + Farbe)
+   heben sich gegenseitig auf.
+2. **Die Spalte „Zustand" entfällt** – im Fenster „Neuer Auftrag" **und** in den
+   Auftrags-Tabellen (aufgeklappter Auftrag, Eingang-Karte, Nachweis-Fenster).
+   - Im Auswahlfenster sagt die Spalte **„Hinweis"** bereits alles im Klartext
+     („wählbar", „liegt in Werk 2", „unterwegs (AUF-12)", „bereits im Auftrag …").
+   - In den Auftrags-Tabellen ist die eine Frage, ob das Werkzeug **angekommen** ist;
+     das sagt die Spalte **„Empfang"** („ausstehend" / „da · Zeitpunkt").
+3. **In „Wo ist was" bleibt die Zustandsmarke.** Dort ist der Unterschied
+   *unterwegs* ↔ *ausgeliehen* die eigentliche Information, im Segment „Alles" auch
+   die einzige Unterscheidung.
+4. **„Kein Status" gilt als verfügbar.** `tools.status IS NULL` heißt „nichts
+   Abweichendes bekannt" – nicht „gesperrt". Die Regel wirkt an drei Stellen:
+   - **Ausleihe** (`MovementService`): erlaubt bei „nicht gesetzt **oder**
+     `available`", setzt danach `lent`. Gesperrt bleibt, was einen gesetzten
+     abweichenden Zustand hat (ausgeliehen, unterwegs, defekt, in Wartung).
+   - **Filter und Sortierung** (`CRUDTool`): Der Filter „Verfügbar" schließt
+     `status IS NULL` ein (`IN (…)` allein fände NULL nie), und die fachliche
+     Sortierung stellt „ohne Status" auf denselben Rang wie „verfügbar".
+   - **Anzeige:** das Admin-Dashboard zählt und markiert diese Werkzeuge als
+     „Frei" statt „—".
+5. **„Ohne Status" ist als Auswahl entfallen, „verfügbar" ist vorausgewählt.**
+   Das Formular bietet nur noch die fünf Zustände; ein neues Werkzeug ist
+   **verfügbar**, und ein alter Datensatz ohne Status wird beim Öffnen als
+   „verfügbar" gezeigt (und beim Speichern so geschrieben). Der Bestand wurde
+   einmalig nachgezogen: **14 Werkzeuge** aus dem Altsystem stehen jetzt auf
+   `available`; `status IS NULL` kommt im Bestand nicht mehr vor. Die Regel aus
+   Punkt 4 bleibt als Sicherheitsnetz im Code (kein Absturz, falls wieder ein
+   leerer Wert entsteht).
+
+> **Fallstrick, der beim Nachziehen aufgefallen ist:** Die Enum-Werte liegen in
+> der Datenbank **groß** (`AVAILABLE`, `LENT` …), weil SQLAlchemy den Enum-Namen
+> speichert. Ein `UPDATE … SET status = 'available'` schreibt einen Wert, den der
+> ORM nicht mehr lesen kann. Das Nachziehen lief zuerst falsch und wurde sofort
+> korrigiert (`'AVAILABLE'`). Für Datenänderungen dieser Art ist der Weg über die
+> API/den Service der sichere.
+
+## Begründung
+
+Der Bestand kommt aus dem Altsystem: **14 von 16 Werkzeugen** haben keinen Status.
+Solange die Ausleihe `available` verlangte, waren sie **stumm gesperrt** („ist nicht
+verfügbar (aktueller Status: unbekannt)") – der Transport dagegen akzeptierte sie.
+Diese Ungleichheit war der eigentliche Fehler, nicht das leere Feld. Mit der neuen
+Regel trägt `status` nur noch die **Abweichungen**; „verfügbar" ist der Normalfall
+und muss nicht gepflegt werden.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Zeilenfarbe in der Werkzeugliste (Antwort des Inhabers).
+- **Keine** zweite Statusspalte in Logistik-Tabellen.
+- **Kein** Entfernen des Feldes `tools.status` – es trägt die Abweichungen und die
+  Sperren (Ausleihe und Transport).
+- **Kein** Default `available` beim Anlegen: Bestehende Datensätze würden davon
+  nicht erfasst, und ein gesetzter Wert behauptet eine Pflege, die es nicht gibt
+  (offene Frage 2 bleibt eigenständig).
+
+## Offene Fragen
+
+1. Soll beim **Anlegen** über die API ein Default-Status gesetzt werden? Die
+   Oberfläche sendet immer einen (vorausgewählt „verfügbar"), die API nimmt
+   weiterhin `null` an – dann greift Punkt 4.
+
+---
+
+# DEC-081 – Drei Wünsche aus der ersten Bedienung: Auswahl, „Wo ist was", Rückgabe-Liste
+
+**Status:** Verbindlich
+**Bezug:** DEC-072 (Transport), DEC-077 („Wo ist was"), DEC-078 (Rückgabe je Werkzeug),
+DEC-080 (Status), `docs/21` § 8, `tasks/25b-werkzeug-logistik.md`
+**Auftrag des Projektinhabers:** „Aufgefallen: Beim Auftrag zum Verschicken sehe ich die
+Werkzeuge vom anderen Werk, sie sind aber nicht wählbar – ist auch richtig so, aber dann
+braucht man die nicht auflisten. Noch sehe ich keine Werkzeuge in ‚Wo ist was'. Dann soll
+noch vielleicht ein Formular für ‚Werkzeug zurück', das dort nur die ausgeliehenen
+Werkzeuge auflistet."
+
+## Regel
+
+1. **Die Auswahl im Fenster „Neuer Auftrag" zeigt nur Werkzeuge des Arbeitswerks.**
+   Fremde Werkzeuge fallen ganz weg (`TransportService.candidates` filtert auf den
+   aktuellen Ort). Werkzeuge **im eigenen Werk**, die gerade nicht dürfen (ausgeliehen,
+   defekt, in Wartung, schon in einem Auftrag), bleiben sichtbar und nennen ihren Grund –
+   dort ist die Frage „warum geht das nicht?" berechtigt.
+   – *Damit ist DEC-072 Punkt 6 („Sperrgründe aller Werke sichtbar") überholt.*
+2. **„Wo ist was" bleibt, was es ist: nur Unterwegs und Ausgeliehenes** (DEC-077). Eine
+   leere Liste heißt „alles am Platz", nicht „Anzeige kaputt". Damit die Liste im
+   Testbetrieb nicht dauerhaft leer ist, stellt das Saat-Skript einen **Demo-Zustand**
+   her (`node .audit/seed-testdaten.mjs --zustand`): vier Ausleihen und ein Transport,
+   der unterwegs bleibt.
+3. **Es gibt ein Fenster „Werkzeug zurück"** (`components/logistics/ZurueckModal.tsx`),
+   erreichbar über den Knopf **„Werkzeug zurück"** im Bereich **Logistik**, direkt neben
+   **„+ Neuer Auftrag"**. Es listet **Werkzeuge aus anderen Werken, die hier liegen**
+   (`GET /api/transport/borrowed`): Werkzeug-ID, Art · Typ · Maß, **Heimatwerk**, Heimatplatz
+   und „hier seit" (letzter Empfang samt Auftragsnummer). Ein Knopf je Heimatwerk legt den
+   Rück-Auftrag an **und meldet ihn gleich als unterwegs**; das Heimatwerk bestätigt den
+   Empfang wie jeden Eingang.
+   *Korrektur des Inhabers:* „So war das nicht gemeint mit Werkzeugen zurück … der
+   jeweilige Werk schickt die Werkzeuge zurück." Gemeint ist also **nicht** die Rückgabe an
+   eine Person (die bleibt im Zeilenmenü, DEC-078), sondern der Rückweg zwischen Werken –
+   ohne dass jemand den Auftrag suchen muss, mit dem die Werkzeuge einmal kamen.
+5. **Das Fenster bedient sich wie die übrigen Fenster der Logistik** (Nachtrag des
+   Inhabers: „Suchleiste rein, ESC, soll identisch sein, Tooltip"):
+   - **Suche** über ID, Art, Typ, Maß und Heimatwerk, mit Treffer-Zähler
+     („3 Treffer · 2 ausgewählt"); die Suche bleibt nach dem Zurückschicken stehen.
+   - **Filter je Heimatwerk** als Reiter-Gruppe – nur wenn Werkzeuge aus mehr als einem
+     Werk vorliegen.
+   - **Auswahlhilfen** „Alle auswählen" (alle **sichtbaren**) und „Auswahl aufheben";
+     der Zurückschicken-Knopf nennt die Anzahl und ist ohne Auswahl gesperrt.
+   - **Escape schließt** das Fenster (auch mit dem Fokus im Suchfeld). Aufbau, Abstände,
+     Knopfreihenfolge und Fehlerhinweis entsprechen Empfang/Nachweis/Neuem Auftrag.
+   - **Tooltips** (`title=`) an Knöpfen und Werten (Heimatplatz, „hier seit"). An
+     **Eingabefeldern** bleiben sie verboten – die Beschriftung trägt die Information
+     (`docs/15-ui-styleguide.md` § Formulare).
+4. **Beide Richtungen sind gleichwertig.** Jedes Werk kann zurückschicken, was es von einem
+   anderen hat; es gibt kein „holen" beim anderen Werk. Unterwegs und ausgeliehene
+   Werkzeuge stehen dabei **nicht** in der Liste – sie liegen nicht mehr im Regal, auch
+   wenn `current_plant_id` erst beim Empfang wechselt.
+
+## Begründung
+
+- Eine Zeile, die man nicht anhaken kann, ist Ballast: Sie beantwortet keine Frage, die
+  der Benutzer in diesem Fenster hat („was kann ich mitschicken?"). Der Sperrgrund bleibt
+  dort stehen, wo er eine Entscheidung trägt – bei den Werkzeugen des eigenen Werks.
+- Der Rückweg zwischen Werken darf nicht am alten Auftrag hängen: „Der jeweilige Werk
+  schickt die Werkzeuge zurück" heißt, dass das **haltende** Werk die Liste sieht und
+  handelt. Das ist symmetrisch – jedes Werk schickt, jedes Werk bestätigt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** „Holen" beim anderen Werk (keine Anforderung, kein Fernauftrag).
+- **Keine** Sammel-Rückgabe an Personen – die Rückgabe an eine Person bleibt je Werkzeug
+  im Zeilenmenü (DEC-078).
+- **Kein** Anzeigen fremder Werkzeuge im Auftragsfenster (auch nicht ausgegraut).
+- **Kein** Füllen von „Wo ist was" mit verfügbaren Werkzeugen – dafür gibt es die
+  Werkzeugliste.
+
+## Offene Fragen
+
+1. Soll die Rückgabe-Liste zusätzlich als Karte in der rechten Spalte der Main Site
+   auftauchen („3 ausgeliehen", Klick öffnet sie)? Offene Frage 7 in `docs/21`.
+
+---
+
+# DEC-082 – Kosmetik der Logistik: Sprache, Abstände, Zustände
+
+**Status:** Verbindlich
+**Bezug:** DEC-075 (Dichte), DEC-076 (Werkfarbe), DEC-081 (Fenster), `docs/15-ui-styleguide.md`
+**Auftrag des Projektinhabers:** „Jetzt die Kosmetik der Logistik – schau, wie und was
+gemacht werden kann und muss." (nach dem ersten Durchklicken)
+
+## Regel
+
+1. **Sprache: richtige Plurale.** „1 Werkzeug / 3 Werkzeuge", „1 Auftrag / 3 Aufträge"
+   (`lib/format.ts`). Das alte „Werkzeug(e)" stand an neun Stellen – eine Schreibweise,
+   die für jede Zahl passt und deshalb nie richtig klingt.
+2. **Abstände wie in den übrigen Bereichen.** Karten `p-5` (vorher `p-4`), Abstand
+   zwischen Karten `space-y-4` (vorher `space-y-3`), Unterleiste der Logistik
+   `px-3 py-1.5` wie die Haupt-Tab-Leiste (vorher `py-2`). Die Logistik soll sich nicht
+   enger anfühlen als Werkzeuge/Serienartikel.
+3. **Ein Leerzustand für alle Ansichten** (`Leerzustand` in `logistikTeile.tsx`):
+   dieselbe ruhige Fläche, ein Satz, optional ein Hinweis auf den nächsten Schritt.
+   Vorher hatte jede Ansicht ihre eigene Form (gepolsterte Fläche, nackter Satz,
+   Tabellenzeile).
+4. **Zustände sind unterscheidbar.** „storniert" ist ein **Umriss** ohne Fläche
+   (erledigt/verfallen), „Entwurf" bleibt gefüllt (geplant); der „Rückweg" bekommt eine
+   eigene Marke mit ↩-Zeichen statt desselben Graus. Vorher sahen alle drei gleich aus.
+5. **Aktionen tragen ein Zeichen wie überall sonst:** „Neuer Auftrag" mit `AddIcon`
+   (statt eines getippten „+"), „Werkzeug zurück" mit neuem `ReturnIcon` (Lucide `Undo2`).
+   Ein Zeichen hat genau eine Bedeutung – `ResetIcon` heißt weiterhin „Filter
+   zurücksetzen", `LoginIcon` „Abmelden".
+6. **Ankreuzfelder tragen die Werkfarbe** (`accent-color: var(--werk)`), damit das native
+   Blau des Browsers nicht als Fremdfarbe dazwischenfunkt.
+7. **Nur eine verschachtelte Fläche, nicht drei.** Ein Block in einem Block bekommt
+   **einen** eigenen Schleier mit weißer Haarline: `border border-white/60 bg-white/30`
+   (das Muster, das die Leerzustände und die Werkzeugliste schon nutzen). Vorher lagen in
+   der Logistik bis zu **drei** weiße Schichten übereinander (Karte `white/48` →
+   Zeilencontainer `white/35` → Tabellenhülle `white/35`) – die Werkfarben-Tönung der
+   Zeilen wirkte dadurch milchig. Gemessene Ebenen jetzt: Zeile `rgba(Werkfarbe, .14)` →
+   Container `white/30` → Karte `white/48` → Seite.
+8. **Abstände im Dropdown auf demselben Rhythmus wie überall.** Kopfzeile `px-2.5 py-2.5`
+   (40 px statt 36), aufgeklappter Körper `space-y-3 px-2.5 pt-1 pb-3` (12-px-Rhythmus
+   statt 8 px und **mit** Abstand zur Kopfzeile), Zellen `px-2.5 py-1.5` statt `px-2`,
+   Tabellenkopf `bg-white/60` statt `45 %` (er muss sich von der Fläche abheben).
+9. **Kein Text unter 12 px.** Die Richtungsmarke („Ausgang/Eingang") und die
+   Nachweiszeile standen auf `text-[11px]`; jetzt `text-xs` (Guide §1.8: 12 px ist die
+   Untergrenze). Spaltenköpfe bleiben als Mikro-Beschriftung bei 10 px.
+
+## Begründung
+
+Die Logistik war funktional fertig, aber in Text und Abständen „neben" der App: andere
+Innenabstände, „Werkzeug(e)", drei verschiedene Leerzustände und zwei Zustände mit
+demselben Grau. Das sind lauter kleine Abweichungen, die zusammen den Eindruck machen,
+der Bereich sei nicht von derselben Hand gebaut.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** neue Schriftgröße für Tabellenköpfe: 10 px in Großbuchstaben ist im ganzen
+  Projekt die Marke für Spaltenköpfe und Mikro-Badges (14 Dateien) – die Logistik bleibt
+  dabei.
+- **Kein** Tooltip an Eingabefeldern (Styleguide § Formulare) – nur an Knöpfen und Werten.
+- **Keine** farbigen Kanten (DEC-076) – der „storniert"-Umriss ist neutralgrau, nicht
+  werkfarben.
+
+---
+
+# DEC-083 – Stempel-Beschichtung als eigene Stammdatenliste (Dachmarke MultiDur)
+
+**Status:** Verbindlich
+**Bezug:** DEC-055 (Stempel werden über ihre ID geführt), `docs/05-tools.md`,
+`docs/09-admin-panel.md`
+**Auftrag des Projektinhabers:** „In AdminPanel soll noch form für Stammdaten angelegt
+werden ‚Stempel Beschichtung' – Beschichtungen unter der Dachmarke MultiDur: MultiDur
+TiCN, MultiDur Performance und MultiDur Alu. Und ein Dropdownmenü in dem Anlege-Formular
+in Werkzeuge Stempel neben dem Lager/Ersatz mit trennen."
+**Nachtrag des Inhabers:** „Kannst du sofort anlegen – und eins ‚Standard' und
+vorauswählen."
+
+## Regel
+
+1. **Die Beschichtung ist eine eigene Stammdatenliste** (`coatings`, Admin-Panel →
+   Stammdaten → „Stempel-Beschichtung"), nicht ein Freitextfeld und **keine**
+   Marken-Tabelle. Gepflegt wird der vollständige Name („MultiDur TiCN"); solange es
+   **eine** Dachmarke gibt, wäre eine zweite Ebene (Marke → Variante) eine leere Spalte
+   in jeder Zeile.
+2. **Ein Werkzeug hängt mit `coating_id` an der Zeile** (freiwillig, `SET NULL`). Eine
+   gelöschte Beschichtung nimmt keinen Stempel mit – dieselbe Regel wie bei `machines`
+   und `customers`. Eine Umbenennung ändert nur die Bezeichnung.
+3. **Fachlich gehört die Beschichtung zum Stempel.** Im Anlege-/Bearbeitungs-Formular
+   steht das Dropdown deshalb **nur bei Kategorie Stempel**; beim Wechsel auf
+   Abstreifer oder Matrize verschwindet das Feld und der Wert wird verworfen (statt
+   unsichtbar gespeichert zu bleiben). Zurück beim Stempel steht wieder „Standard".
+4. **Platz im Formular: in der Kopfzeile neben „Lager/Ersatz", mit eigener senkrechter
+   Trennlinie.** Der Platz dafür kommt aus dem **Seitenraster**, nicht aus einem
+   gekürzten Namen: Inhalt `xl:col-span-10`, Statistik-Sidebar `xl:col-span-2`, kein
+   `max-w`-Deckel (Punkt 9).
+   **Gemessen (alle mit dem vollen Namen „MultiDur Performance"):** bei 9/12
+   Inhaltsspalte war die Kopfzeile innen 826 px breit, das Feld brauchte 857 px →
+   Umbruch. Mit 10/12 sind es **955 px** bei 1920 px Fensterbreite (jetzt 1008 px,
+   seit der Deckel weg ist): das Feld steht einzeilig (Zeile 63 px hoch). Unter etwa
+   1700 px Fensterbreite bricht die Zeile als **eine** Einheit um (Kategorie oben,
+   Lager/Ersatz + Beschichtung darunter) – nicht das Feld allein.
+5. **Der volle Name wird überall angezeigt** („MultiDur TiCN", „MultiDur Performance").
+   Ein Kurzname ohne Dachmarke („TiCN") war zwischenzeitlich eingebaut, um die
+   Kopfzeile zu retten; er ist **entfallen** (Nachtrag des Inhabers: „leider wird nicht
+   MultiDur angezeigt, nicht bei der Dropdown und nicht in der Liste"). Die Breite wird
+   über den Platz gelöst (Punkt 4 und 9), nicht über gekürzte Namen.
+6. **„Standard" ist die Vorgabe, ein leeres Feld gibt es nicht.** Ein neuer Stempel
+   bekommt die Beschichtung „Standard" vorbelegt; sie steht für den Stempel ohne
+   besondere Beschichtung. Die Option „Ohne Beschichtung" ist **entfallen** (Nachtrag
+   des Inhabers) – sie war eine zweite Bedeutung für denselben Zustand. Auch ein
+   alter Stempel ohne Beschichtung (`NULL`) zeigt „Standard", damit das Feld nicht
+   die erste Zeile anzeigt, während im Datensatz nichts steht. Die Vorgabe hängt am
+   Namen, nicht an einer ID: heißt die Zeile nach einer Umbenennung nicht mehr
+   „Standard", wird die erste gepflegte Beschichtung gezeigt – der Admin hat die
+   Liste dann selbst umbenannt.
+7. **Startdaten** (Migration `b5e2d8c41f97`): „MultiDur TiCN", „MultiDur Performance",
+   „MultiDur Alu" und „Standard". Eingefügt wird nur, solange die Tabelle leer ist –
+   eine gepflegte Liste bleibt unangetastet.
+8. **In der Werkzeugliste steht der volle Name in der Kategorie-Zeile**
+   („Stempel · MultiDur TiCN", bei Lager/Ersatz „Stempel · Lager/Ersatz · MultiDur
+   Performance"). Gemessen: mit 9/12 Inhaltsspalte wären dafür 913 px nötig gewesen,
+   der Bereich war 815 px breit (Überlauf bei 1440) – deshalb stand der Name
+   zwischenzeitlich in einer eigenen Zeile. Mit 10/12 ist der Bereich bei 1440 px
+   **913 px** breit: es paßt ohne seitlichen Überlauf, die Zeilen bleiben zweizeilig.
+   Unter 1440 px scrollt die Tabelle seitlich – das war auch vorher schon so.
+9. **Seitenraster: ein Kantenmaß, kein Deckel.** `main` ist nicht mehr auf
+   `max-w-[1600px]` gedeckelt und nicht zentriert; die Statistik-Sidebar rechts
+   schrumpft von 3 auf 2 Zwölftel. Grund (Nachtrag des Inhabers: „Abstands-Unterschiede
+   zwischen Sidebar und Blöcke sind unterschiedlich"):
+   **gemessen vorher** – Rand links 24 px, Rasterlücke 20 px, Rand rechts 24 px; ab
+   1840 px Fensterbreite wuchs der Außenrand durch den Deckel auf 64 px (1920) bzw.
+   384 px (2560), während die Rasterlücke 20 px blieb. **Jetzt:** 24 / 24 / 24 px an
+   jeder Fensterbreite; vertikal überall `space-y-4` = 16 px, auch zwischen den
+   Statistik-Karten (vorher 12 px gegen 16 px). Inhaltsbreite 1020 px (1280) ·
+   1152 (1440) · 1353 (1600) · 1620 (1920) · 2153 (2560). Der Verzicht auf den Deckel
+   ist der Preis für gleiche Abstände: mit Deckel gibt es zwangsläufig toten Raum, und
+   der liegt dann entweder rechts oder an beiden Außenkanten – nie zwischen den Blöcken.
+   Werkzeug-Ablage und Logistik bleiben inhaltlich unverändert.
+
+## Begründung
+
+Die Beschichtung ist eine Produkteigenschaft des Stempels (MultiDur als Dachmarke des
+Herstellers) und wird in der Werkstatt gleichgesetzt mit dem Stempel selbst. Ein
+Freitextfeld würde „TiCN", „ticn" und „MultiDur TiCN" nebeneinander entstehen lassen;
+eine Marken-Hierarchie wäre bei einer Marke reine Zeremonie. Die Liste ist deshalb
+flach und pflegbar – und weil sie fast immer dieselbe Antwort hat, ist der häufigste
+Fall vorausgewählt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** Pflichtfeld: ohne Beschichtung bleibt der Stempel vollständig (viele Stempel
+  laufen ohne besondere Beschichtung) – im Formular steht dafür „Standard", nicht ein
+  leeres Feld.
+- **Keine** Farbcodierung je Beschichtung – die Werkzeugliste trägt Farben nur für
+  Kategorie (Chip) und Kunde (Punkt), DEC-080 gilt unverändert.
+- **Keine** Beschichtung für Abstreifer und Matrize (Punkt 3).
+
+---
+
 # Ende der Projektentscheidungen
+
+---
+
+# DEC-084 – Jeder Auftrag ist eine eigene Karte (die Liste war „ein Block")
+
+**Status:** Verbindlich
+**Bezug:** DEC-075 (Zeilen statt Details), DEC-082 (Kosmetik), `docs/21` § 8,
+`docs/demo-werkzeug-logistik.html` (`.drop`)
+**Auftrag des Projektinhabers:** „In Aufträge die Dropdowns: sieht alles wie ein Block
+aus. Sehr unklar für einen neuen Benutzer! Schau, wie man es am besten und logischer macht,
+auch Kosmetik anpassen. Gilt auch für andere Bereiche in Logistik."
+
+## Ausgangslage
+
+Die Auftragsliste stand in **einem** Container; die Aufträge waren nur durch eine
+Haarlinie getrennt (`border-b`). Aufgeklappt wuchs der Inhalt im selben Block – von außen
+war nicht zu erkennen, wo ein Auftrag endet und der nächste beginnt, und dass eine Zeile
+überhaupt aufgeht, verriet nur ein kleines Dreieck am rechten Rand.
+
+Der abgenommene Prototyp hatte es anders gelöst (`.drop`: eigene Karte je Auftrag, Kopf
+mit Aufklapp-Zeichen, Körper mit eigener Fläche und Trennlinie). Die Umsetzung war davon
+abgewichen.
+
+## Regel
+
+1. **Ein Auftrag = eine Karte:** `rounded-xl border border-white/60`, 8 px Abstand
+   zwischen den Karten (`space-y-2`). Kein gemeinsamer Container mehr.
+2. **Kopf und Körper sind getrennt:** Der Körper liegt auf einer eigenen, etwas tieferen
+   Fläche (`bg-white/30`) mit Trennlinie zum Kopf (`border-t border-white/70`).
+3. **Die Karte zeigt, dass sie offen ist:** offen `bg-white/55`, zu `bg-white/35` mit
+   Hover `bg-white/50`.
+4. **Der Aufklapp-Hinweis ist Text, nicht nur ein Dreieck:** rechts „**Details**" bzw.
+   „**Zuklappen**" mit Chevron (dreht sich). „Zuklappen" statt „Schließen", damit es nicht
+   mit dem Schließen der Fenster verwechselt wird.
+5. **Dieselbe Sprache im Eingang:** Jede Eingangs-Karte hat ebenfalls einen abgesetzten
+   Kopf (Nummer, Zustand, von → an) mit Trennlinie, darunter den Inhalt auf eigener
+   Fläche. „Wo ist was" bleibt eine Tabelle – sie **ist** eine Liste mit Kopfzeile.
+
+## Begründung
+
+Ein neuer Benutzer liest eine Liste als Abfolge von Einträgen, wenn jeder Eintrag eine
+eigene Form hat. Eine Haarlinie in einem gemeinsamen Block ist eine Feingliederung für
+geübte Augen – für den ersten Blick ist sie keine Grenze. Die Karte kostet rund 10 px
+Höhe je Auftrag; bei den üblichen 5–20 Aufträgen ist das der bessere Handel.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Zebra-Streifen als Ersatz für die Karten (DEC-076: Farbe ist Ordnung, zwei
+  Muster heben sich auf).
+- **Keine** farbigen Kanten an den Karten – die Haarline bleibt weiß (DEC-076).
+- **Kein** Aufklappen mehrerer Aufträge „von selbst": zugeklappt bleibt der Standard
+  (DEC-075 Punkt 1); die Liste klappt nur den Auftrag auf, den man angeklickt hat.
+
+---
+
+# DEC-085 – Datenblatt ohne Werk: gilt für alle Werke
+
+**Status:** Verbindlich
+**Bezug:** DEC-065 (Datenblatt), DEC-070 (Arbeitswerk), `docs/20-datenblatt.md`,
+`tasks/24-ersatzteile-und-datenblatt.md`
+**Auftrag des Projektinhabers:** „Wenn ich ein Datenblatt anlegen will, was nichts mit
+Werkzeugen zu tun hat – z. B. eine allgemeine Info –, muss ich ein Werk auswählen. Die Info
+soll aber für beide Werke gehen."
+
+## Ausgangslage
+
+`data_sheets.plant_id` war `NOT NULL` und im Formular ein Pflichtfeld („Pflicht ist nur das
+Werk", DEC-065). Damit ließ sich keine allgemeine Information ablegen: Eine
+Bedienungsanleitung oder ein Prozesshinweis gilt für **alle** Werke, nicht für eines.
+
+## Regel
+
+1. **Das Werk ist freiwillig.** `plant_id` ist nullable; **`NULL` = gilt für alle Werke.**
+   Im Formular steht die Auswahl auf „**Alle Werke (allgemein)**", das Feld ist nicht mehr
+   Pflicht und lässt sich auch wieder leeren (vorher blieb ein gesetztes Werk stehen).
+2. **Ein Datensatz für alle Werke erscheint in jedem Werk.** Der Listenfilter auf ein Werk
+   schließt `plant_id IS NULL` ausdrücklich **ein** (der Join auf `plants` wird zum
+   `LEFT JOIN`, sonst fiele die Zeile aus jeder Liste).
+3. **Die Liste sagt es:** In der Spalte „Werk" steht **„Alle Werke"** – ein Strich sähe
+   aus wie „fehlt noch".
+4. **Ein *angegebenes* Werk muss weiter existieren** (gleiche Prüfung wie bei der Maschine);
+   ein unbekanntes Werk bleibt ein Fehler, kein stiller Datensatz.
+5. **Die Maschine braucht ein Werk.** Ohne Werk ist die Maschinenauswahl gesperrt
+   („nur mit Werk wählbar") – eine Maschine gehört zu genau einem Werk.
+
+## Begründung
+
+Ein Datenblatt beantwortet „wie richte ich das ein". Für eine allgemeine Info („wie wird
+der Prüfstand gehalten") ist das Werk keine sinnvolle Angabe: Wer sie in Werk 2 braucht,
+fände sie sonst nicht. Alle übrigen Angaben des Datenblatts waren schon freiwillig
+(Werkzeug-ID, Maschine, Name) – das Werk war die letzte Pflicht, die fachlich nicht trägt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Auswahl „beide Werke" (Mehrfachzuordnung): `NULL` heißt *alle* – auch wenn ein
+  drittes Werk dazukommt. Eine Liste von Werk-IDs müsste bei jedem neuen Werk nachgepflegt
+  werden.
+- **Kein** Aufweichen der Werk-Pflicht bei **Serienartikeln** und **Ersatzteilen**: dort
+  gehört der Datensatz zu einem Werk, weil er über die Artikelnummer im Werk gesucht wird.
+- **Keine** Änderung an bestehenden Datensätzen – sie behalten ihr Werk (Migration setzt
+  nichts um).

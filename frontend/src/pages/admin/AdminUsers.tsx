@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getUsers, createUser, updateUser, deleteUser } from '../../api/users'
-import type { User, UserInput } from '../../api/types'
+import { getPlants } from '../../api/admin'
+import type { Plant, User, UserInput } from '../../api/types'
 import { AddIcon } from '../../components/icons'
 
 const inputClass = 'admin-input'
@@ -14,6 +15,7 @@ function emptyInput(): UserInput {
     is_active: true,
     is_admin: false,
     hashed_password: '',
+    default_plant_id: null,
   }
 }
 
@@ -34,11 +36,19 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
           is_active: initial.is_active,
           is_admin: initial.is_admin,
           hashed_password: '',
+          default_plant_id: initial.default_plant_id ?? null,
         }
       : emptyInput(),
   )
+  const [werke, setWerke] = useState<Plant[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Werke für die Vorgabe des Arbeitswerks (DEC-070) – das ist nur der Startwert
+  // für den Werksumschalter, kein Pflichtfeld: das Personal rotiert.
+  useEffect(() => {
+    getPlants().then(setWerke).catch(() => setWerke([]))
+  }, [])
 
   function set<K extends keyof UserInput>(key: K, value: UserInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }))
@@ -59,6 +69,9 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
         ...input,
         display_name: input.display_name?.trim() || null,
         hashed_password: input.hashed_password?.trim() || null,
+        // Vorgabe des Arbeitswerks (DEC-070) – ausdrücklich mitschicken, damit ein
+        // geleertes Feld die Vorgabe auch wirklich entfernt.
+        default_plant_id: input.default_plant_id ?? null,
       }
       await onSave(payload)
     } catch (err) {
@@ -137,6 +150,31 @@ function UserForm({ initial, onSave, onClose }: UserFormProps) {
               />
             </div>
           )}
+          {/* Vorgabe für das Arbeitswerk (DEC-070): Startwert des Werksumschalters.
+              Der Benutzer kann sein Werk jederzeit oben in der App wechseln. */}
+          <div>
+            <label
+              htmlFor="user-default-plant"
+              className="block text-xs font-semibold admin-text-muted mb-1"
+            >
+              Arbeitswerk (Vorgabe)
+            </label>
+            <select
+              id="user-default-plant"
+              className={inputClass}
+              value={input.default_plant_id ?? ''}
+              onChange={(e) =>
+                set('default_plant_id', e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">Keine Vorgabe (erstes Werk)</option>
+              {werke.map((werk) => (
+                <option key={werk.id} value={werk.id}>
+                  {werk.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex gap-4">

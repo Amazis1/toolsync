@@ -6,6 +6,11 @@ __pycache__/
 *.log
 backend/toolsync.db
 backend/test.db
+# Wegwerf-Kopie für die Browser-Tests der Logistik (docs/21 § 9): Aufträge sind
+# Nachweise und werden nicht gelöscht, deshalb läuft der Test gegen eine Kopie.
+backend/toolsync-ui-test.db
+backend/toolsync-ui-test.db-journal
+backend/toolsync-vor-*.db
 
 # Umgebungsvariablen mit Zugangsdaten (JWT-Secret, DB-URL, API-Keys).
 # .env.example bleibt versioniert, .env selbst NICHT.

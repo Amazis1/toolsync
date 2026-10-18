@@ -26,12 +26,13 @@ Tabelle `tools` (`class Tool(Base, AuditMixin)`); `id`, `created_at`, `updated_a
 | `description` | `String(500)` | ja | nein | Freitext; Spalte „Bezeichnung“ in der Liste |
 | `plant_id` | `FK plants.id` (`RESTRICT`) | nein | ja | Werk |
 | `tool_type_id` | `FK tool_types.id` (`RESTRICT`) | nein | ja | Werkzeugtyp |
+| `coating_id` | `FK coatings.id` (`SET NULL`) | ja | nein (Dropdown, **nur** bei `Stempel`) | Stempel-Beschichtung unter der Dachmarke MultiDur (DEC-083); **voller** Name im Feld, „Standard" vorausgewählt, ein leeres Feld gibt es nicht |
 | `position_id` | `FK positions.id` (`SET NULL`) | ja | bedingt | Lagerplatz; `NULL` = Werkzeug-Ablage (DEC-050) |
 | `machine_id` | `FK machines.id` (`SET NULL`) | ja | nein | Optionale Maschine |
 | `customer_id` | `FK customers.id` (`SET NULL`) | ja | nein | Optionaler Kunde (DEC-051) |
 | `is_favorite` | `Boolean` | nein, Default `False` | nein (Stern in der Liste) | **Globaler** Favorit: gilt für alle Benutzer, siehe Abschnitt 6.3 |
 
-> **Wichtig:** Ein Lagerplatz (`Position`) kann nur **ein** Werkzeug halten. Die Belegung wird doppelt geführt – über `Tool.position_id` **und** über `Position.tool_id`. `create_tool()` / `update_tool()` prüfen `position.tool_id is not None` und antworten mit `ValueError` → HTTP 400 („Platz … ist bereits belegt.“). Beim Ändern oder Löschen gibt `_release_position()` den alten Platz frei. `Tool.plant`, `Tool.tool_type`, `Tool.customer` **und `Tool.machine`** sind `lazy="joined"`, damit `GET /api/tools/` sie direkt mitliefert (die Liste zeigt Kunde und Maschine als eigene Spalte).
+> **Wichtig:** Ein Lagerplatz (`Position`) kann nur **ein** Werkzeug halten. Die Belegung wird doppelt geführt – über `Tool.position_id` **und** über `Position.tool_id`. `create_tool()` / `update_tool()` prüfen `position.tool_id is not None` und antworten mit `ValueError` → HTTP 400 („Platz … ist bereits belegt.“). Beim Ändern oder Löschen gibt `_release_position()` den alten Platz frei. `Tool.plant`, `Tool.tool_type`, `Tool.coating`, `Tool.customer` **und `Tool.machine`** sind `lazy="joined"`, damit `GET /api/tools/` sie direkt mitliefert (die Liste zeigt Kunde und Maschine als eigene Spalte).
 
 > **Hinweis (erledigt):** In `backend/app/schemas/tool.py` war ein Kommentar verstümmelt
 > (das Wort „Für" war zu einem Ersatzzeichen zerstört). Behoben — ebenso vier
@@ -229,7 +230,7 @@ Die Liste wird **abgeleitet geladen**: „lädt gerade“ ergibt sich daraus, ob
 | Spalte | Hauptzeile | Unterzeile | sortierbar |
 |---|---|---|---|
 | Favorit | Stern (`aria-pressed`, gefüllt = gesetzt, mit amber getönter Fläche) | — | nein |
-| Werkzeug-ID / Kategorie | farbiger Kategorie-Chip (Anfangsbuchstabe) + `tool_id` als Glas-Markierung in `text-sm` (14 px, Mono, teal-getönte Kante) | Kategorie, bei Lager/Ersatz zusätzlich „ · Lager/Ersatz“ | `tool_id` |
+| Werkzeug-ID / Kategorie | farbiger Kategorie-Chip (Anfangsbuchstabe) + `tool_id` als Glas-Markierung in `text-sm` (14 px, Mono, teal-getönte Kante) | Kategorie, bei Lager/Ersatz zusätzlich „ · Lager/Ersatz"; bei gepflegter Beschichtung „ · MultiDur TiCN" (DEC-083, voller Name – paßt seit dem breiteren Seitenraster ohne Überlauf) | `tool_id` |
 | Lagerplatz / Werk | `position_code` als Mono-Markierung („Ablage“ als neutrales Badge) | `plant.name` | `location` |
 | Typ / Maße | Typ-Code als eigener kleiner Chip + Bezeichnung (`01` + `Rund`) | Maße (`2,00/4,00 mm`) oder „keine Maße“ | `tool_type` |
 | Beschreibung | `description` (ohne Rückfall auf den Typ); leer = „—“; gekürzt auf 10 rem | — | `description` |

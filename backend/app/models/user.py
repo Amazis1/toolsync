@@ -35,4 +35,14 @@ class User(Base, AuditMixin):
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     role_id: Mapped[int | None] = mapped_column(ForeignKey("roles.id", ondelete="SET NULL"), nullable=True)
     role: Mapped["Role | None"] = relationship(back_populates="users")
+    # Vorgabe für das Arbeitswerk (DEC-070). Kein Pflichtfeld: das Personal rotiert
+    # zwischen den Werken, die eigentliche Wahl trifft es beim Anmelden bzw. über den
+    # Werksumschalter (Header `X-Plant-Id`, im Browser gemerkt). Diese Spalte ist nur
+    # der Startwert, solange der Benutzer noch nichts gewählt hat.
+    default_plant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("plants.id", ondelete="SET NULL"), nullable=True
+    )
+    default_plant: Mapped["Plant | None"] = relationship(
+        foreign_keys=[default_plant_id], lazy="joined"
+    )
     movements: Mapped[list["ToolMovement"]] = relationship(back_populates="user")

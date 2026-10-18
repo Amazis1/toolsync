@@ -556,7 +556,11 @@ export default function DataSheetList({
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-slate-600">
-                  {sheet.plant?.name ?? '—'}
+                  {/* Ohne Werk gilt der Datensatz für alle Werke (DEC-085) – das
+                      muss dastehen, ein Strich sähe wie „fehlt noch" aus. */}
+                  {sheet.plant?.name ?? (
+                    <span className="font-semibold text-slate-700">Alle Werke</span>
+                  )}
                 </td>
                 {/* Maschine mit dem Farbpunkt aus den Stammdaten – wie der Kunde in
                     der Serienartikel-Liste. */}
