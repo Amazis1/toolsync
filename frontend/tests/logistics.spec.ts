@@ -559,6 +559,108 @@ test.describe('Werkzeug-Logistik', () => {
     await filter.getByRole('button', { name: /^Alle \(/ }).click()
     await expect(dialog.getByText(/^\d+ Treffer · \d+ davon ausgewählt$/)).toBeVisible()
   })
+  test('Logistik steht als eigener Knopf neben den Reitern (DEC-086)', async ({ page }) => {
+    await anmelden(page)
+    const nav = page.getByRole('navigation', { name: 'Bereiche wechseln' })
+
+    // Die Stammdaten-Reiter stehen in ihrer Gruppe – „Logistik" nicht.
+    const reiter = nav.locator('.ui-tabs')
+    await expect(reiter.getByRole('button', { name: 'Werkzeuge' })).toBeVisible()
+    await expect(reiter.getByRole('button', { name: 'Logistik' })).toHaveCount(0)
+
+    // Der eigene Knopf ist sichtbar, hat eine eigene Form und ein Zeichen.
+    const knopf = nav.getByRole('button', { name: 'Logistik' })
+    await expect(knopf).toBeVisible()
+    await expect(knopf).toHaveClass(/tab-logistik/)
+    await expect(knopf.locator('svg')).toHaveCount(1)
+
+    // Rechts davon steht der Trennstrich, links die Reiter – er ist also getrennt.
+    const lage = await page.evaluate(() => {
+      const nav = document.querySelector("nav[aria-label='Bereiche wechseln']")
+      const gruppe = nav?.querySelector('.ui-tabs')
+      const strich = nav?.querySelector("span[aria-hidden='true'].w-px")
+      const pille = nav?.querySelector('.tab-logistik')
+      if (!gruppe || !strich || !pille) return null
+      const g = gruppe.getBoundingClientRect()
+      const p = pille.getBoundingClientRect()
+      return {
+        abstand: Math.round(p.left - g.right),
+        strichHoehe: Math.round(strich.getBoundingClientRect().height),
+      }
+    })
+    expect(lage, 'Trennstrich und Abstand sind messbar').not.toBeNull()
+    expect(lage!.abstand, 'Logistik steht mit Abstand neben den Reitern').toBeGreaterThan(8)
+    expect(lage!.strichHoehe).toBeGreaterThan(10)
+
+    // Im aktiven Zustand trägt er die Fläche der Werkfarbe. `expect.poll`:
+    // Der Farbwechsel ist animiert (0,18 s) – ein einzelner Messwert läge sonst
+    // mitten im Übergang und meldete noch die Ruhefarbe.
+    await knopf.click()
+    await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
+    await expect(knopf).toHaveAttribute('aria-pressed', 'true')
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const pille = document.querySelector('.tab-logistik')
+            const werk = getComputedStyle(document.documentElement)
+              .getPropertyValue('--werk')
+              .trim()
+            const zahl = Number.parseInt(werk.replace('#', ''), 16)
+            const soll = `rgb(${(zahl >> 16) & 255}, ${(zahl >> 8) & 255}, ${zahl & 255})`
+            return pille ? getComputedStyle(pille).backgroundColor === soll : false
+          }),
+        { message: 'aktive Pille trägt die Werkfarbe als Fläche' },
+      )
+      .toBe(true)
+  })
+
+  test('Auftragsköpfe stehen untereinander in denselben Spalten (DEC-086)', async ({
+    page,
+    request,
+  }) => {
+    // Zwei leere Entwürfe als Vergleichszeilen – unabhängig davon, ob der
+    // serielle Teil vorher Aufträge angelegt hat (ein Einzellauf dieser Prüfung
+    // hätte sonst gar keine Zeile zum Vergleichen).
+    for (const index of [1, 2]) {
+      await request.post('/api/transport/orders', {
+        headers: kopf(werk1.id),
+        data: {
+          order_number: `SP-${index}-${String(Date.now()).slice(-5)}`,
+          to_plant_id: werk2.id,
+          items: [],
+        },
+      })
+    }
+
+    await anmelden(page)
+    await logistik(page)
+    await expect(page.locator('.kopf-auftrag').first()).toBeVisible({ timeout: 10_000 })
+
+    const links = await page.evaluate(() =>
+      [...document.querySelectorAll('.kopf-auftrag')].map((kopf) =>
+        [...kopf.children].slice(0, 4).map((teil) => Math.round(teil.getBoundingClientRect().left)),
+      ),
+    )
+    expect(links.length, 'mehrere Aufträge zum Vergleichen').toBeGreaterThan(1)
+    for (const zeile of links) {
+      for (const [index, x] of zeile.entries()) {
+        expect(Math.abs(x - links[0][index]), `Spalte ${index + 1} liegt bündig`).toBeLessThanOrEqual(1)
+      }
+    }
+
+    // Der Eingang nutzt dieselben zwei festen Spalten (Nr, Zustand).
+    await unterbereich(page, /^Eingang/).click()
+    const eingang = await page.evaluate(() => {
+      const kopf = document.querySelector('.kopf-eingang')
+      if (!kopf) return null
+      return [...kopf.children].slice(0, 2).map((teil) => Math.round(teil.getBoundingClientRect().left))
+    })
+    if (eingang) {
+      expect(eingang[0]).toBe(links[0][0])
+      expect(eingang[1]).toBe(links[0][1])
+    }
+  })
 })
 
 /** `#4338ca` → `67, 56, 202` (für `toHaveCSS('color', …)`). */

@@ -127,35 +127,45 @@ function OrderRow({
         type="button"
         onClick={() => onToggle(order.id)}
         aria-expanded={offen}
-        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-left"
+        // Gleiche Spalten in jeder Karte (`.kopf-auftrag`, DEC-086): Nr · Zustand ·
+        // Rückweg · Werke · rechts Anzahl/Datum/Details. Untereinander liegen die
+        // Angaben damit auf denselben Linien; vorher stand jedes Element dort, wo
+        // seine Breite es zuließ.
+        className="kopf-auftrag px-3 py-2.5"
       >
-        <span className="font-mono text-sm font-bold text-slate-900">{order.order_number}</span>
-        <StatusMarke status={order.status} />
-        {order.parent_order_id !== null && <RueckwegMarke />}
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {richtung}
+        <span className="truncate font-mono text-sm font-bold text-slate-900">
+          {order.order_number}
         </span>
-        <span className="flex items-center gap-1.5 text-xs">
+        <StatusMarke status={order.status} />
+        {order.parent_order_id !== null ? <RueckwegMarke /> : <span aria-hidden="true" />}
+        <span className="flex min-w-0 items-center gap-1.5 text-xs">
+          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {richtung}
+          </span>
           <WerkName plant={order.from_plant} />
           <span className="text-slate-500">→</span>
           <WerkName plant={order.to_plant} />
         </span>
-        <span className="text-xs text-slate-600">
-          {werkzeugAnzahl(order.item_count)}
-          {order.received_count > 0 ? ` · ${order.received_count} davon da` : ''}
-        </span>
-        <span className="text-xs text-slate-600">
-          {order.sent_at ? `verschickt ${formatTag(order.sent_at)}` : `angelegt ${formatTag(order.created_at)}`}
-        </span>
-        {/* Sichtbarer Hinweis, dass die Zeile aufgeht – ein nacktes Dreieck am
-            Rand reichte für neue Benutzer nicht (DEC-084). „Zuklappen" statt
-            „Schließen", damit es nicht mit dem Schließen der Fenster verwechselt
-            wird. */}
-        <span className="ml-auto inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-semibold text-slate-600">
-          {offen ? 'Zuklappen' : 'Details'}
-          <ChevronDownIcon
-            className={`h-4 w-4 transition-transform ${offen ? 'rotate-180' : ''}`}
-          />
+        <span className="kopf-rechts flex items-center gap-3 text-xs text-slate-600">
+          <span className="whitespace-nowrap">
+            {werkzeugAnzahl(order.item_count)}
+            {order.received_count > 0 ? ` · ${order.received_count} davon da` : ''}
+          </span>
+          <span className="whitespace-nowrap">
+            {order.sent_at
+              ? `verschickt ${formatTag(order.sent_at)}`
+              : `angelegt ${formatTag(order.created_at)}`}
+          </span>
+          {/* Sichtbarer Hinweis, dass die Zeile aufgeht – ein nacktes Dreieck am
+              Rand reichte für neue Benutzer nicht (DEC-084). „Zuklappen" statt
+              „Schließen", damit es nicht mit dem Schließen der Fenster verwechselt
+              wird. */}
+          <span className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 font-semibold text-slate-600">
+            {offen ? 'Zuklappen' : 'Details'}
+            <ChevronDownIcon
+              className={`h-4 w-4 transition-transform ${offen ? 'rotate-180' : ''}`}
+            />
+          </span>
         </span>
       </button>
 

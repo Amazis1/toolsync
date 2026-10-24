@@ -484,6 +484,85 @@
     accent-color: var(--werk, #0f766e);
   }
 
+  /* ============================================ */
+  /* KOPFZEILEN DER LOGISTIK (DEC-086)            */
+  /* ============================================ */
+  /* Ein Auftrag ist eine Karte; die Angaben im Kopf (Nr · Zustand · Rückweg ·
+     Werke · rechts Anzahl/Datum/Details) stehen in **festen Spalten**, damit sie
+     über alle Karten hinweg untereinander auf denselben Linien liegen. Ohne
+     Raster stand jedes Element dort, wo seine Breite es zuließ – bei mehreren
+     Aufträgen untereinander wirkte das unruhig.
+     Auf schmalen Fenstern entfällt das Raster (`flex-wrap`), sonst liefen die
+     festen Spalten über den Rand. */
+  .kopf-auftrag,
+  .kopf-eingang {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    column-gap: 0.75rem;
+    row-gap: 0.25rem;
+    text-align: left;
+  }
+  @media (min-width: 900px) {
+    .kopf-auftrag {
+      display: grid;
+      /* Nr · Zustand · Rückweg · Werke (flexibel) · rechts der Rest */
+      grid-template-columns: 7.5rem 6.75rem 6.5rem minmax(0, 1fr) auto;
+      row-gap: 0;
+    }
+    .kopf-eingang {
+      display: grid;
+      /* dieselben zwei festen Spalten wie die Auftragsliste, dann die Werke */
+      grid-template-columns: 7.5rem 6.75rem minmax(0, 1fr);
+      row-gap: 0;
+    }
+    .kopf-auftrag > .kopf-rechts {
+      justify-self: end;
+    }
+  }
+
+  /* ============================================ */
+  /* LOGISTIK-BUTTON DER TAB-LEISTE (DEC-086)     */
+  /* ============================================ */
+  /* Der Bereich „Logistik" steht **neben** den Stammdaten-Reitern, nicht in
+     ihnen: eigene Pille, eigenes Zeichen, und im aktiven Zustand die Fläche in
+     der Werkfarbe. Damit findet man ihn, ohne die Reiter zu lesen. */
+  .tab-logistik {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.7rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.18s ease;
+    cursor: pointer;
+  }
+  .tab-logistik:hover {
+    color: #115e59;
+    background: rgba(255, 255, 255, 0.8);
+  }
+  .tab-logistik.is-active {
+    color: #fff;
+    background: var(--werk, #0f766e);
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+  }
+  .tab-logistik:focus-visible {
+    outline: 2px solid var(--werk, #0f766e);
+    outline-offset: 2px;
+  }
+
   /* Senkrechte Reiterleiste im Anlege-Formular (lg:flex-col).
      Der aktive Reiter trägt zusätzlich einen Primary-Streifen am linken Rand:
      in einer senkrechten Spalte ist „weiße Fläche" allein schwer zu finden,

@@ -51,18 +51,17 @@ export default function IncomingCards({ orders, onReceive, onDetail }: IncomingC
             aria-label={`Auftrag ${order.order_number}`}
             className="overflow-hidden rounded-xl border border-white/60 bg-white/50"
           >
-            {/* Kopf und Inhalt getrennt wie in der Auftragsliste (DEC-084): der
-                Kopf trägt Nummer und Werke, darunter beginnt die Fläche mit den
-                Werkzeugen – sonst wirkt die Karte wie ein einziger Textblock. */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/70 px-3 py-2.5">
-              <span className="font-mono text-sm font-bold text-slate-900">
+            {/* Kopf mit denselben Spalten wie in der Auftragsliste (`.kopf-eingang`,
+                DEC-086): Nr · Zustand · Werke. Untereinander liegen die Angaben
+                damit auf denselben Linien. */}
+            <div className="kopf-eingang border-b border-white/70 px-3 py-2.5">
+              <span className="truncate font-mono text-sm font-bold text-slate-900">
                 {order.order_number}
               </span>
               <StatusMarke status={order.status} />
-              <span className="flex items-center gap-1.5 text-xs">
-                <span className="text-slate-500">von</span>
+              <span className="flex min-w-0 items-center gap-1.5 text-xs">
                 <WerkName plant={order.from_plant} />
-                <span className="text-slate-500">an</span>
+                <span className="text-slate-500">→</span>
                 <WerkName plant={order.to_plant} />
               </span>
             </div>

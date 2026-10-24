@@ -2550,3 +2550,59 @@ fände sie sonst nicht. Alle übrigen Angaben des Datenblatts waren schon freiwi
   gehört der Datensatz zu einem Werk, weil er über die Artikelnummer im Werk gesucht wird.
 - **Keine** Änderung an bestehenden Datensätzen – sie behalten ihr Werk (Migration setzt
   nichts um).
+
+---
+
+# DEC-086 – Logistik als eigener Knopf; gleiche Spalten in den Auftragsköpfen
+
+**Status:** Verbindlich
+**Bezug:** DEC-066 (Tab-Leiste), DEC-075 (Einordnung), DEC-084 (Karte je Auftrag),
+`docs/21` § 8
+**Auftrag des Projektinhabers:** „Auf der Hauptseite im Tabmenü ist der Logistik-Knopf –
+der muss separat stehen und deutlich sein. Und in der Logistik sind die Dropdowns und die
+Info (Auftragsstatus, Ausgang, Werk …) – bitte anpassen, dass es gleich aussieht, wenn sie
+untereinander stehen, und zwar in den anderen Tabs auch."
+
+## Ausgangslage
+
+1. „Logistik" stand als **sechster Reiter** in derselben Leiste wie Werkzeuge,
+   Serienartikel, Datenblätter, Ersatzteile und Historie – fachlich ein anderer Bereich
+   (Bewegung zwischen Werken statt Stammdaten), optisch aber nicht zu unterscheiden.
+2. Die Kopfzeilen der Aufträge waren `flex-wrap`: Jede Angabe stand dort, wo ihre Breite
+   es zuließ. Bei mehreren Aufträgen untereinander begann der Status in jeder Karte an
+   einer anderen Stelle, die Werke ebenso – die Liste wirkte unruhig, obwohl jede Zeile für
+   sich ordentlich war.
+
+## Regel
+
+1. **„Logistik" steht neben der Reiter-Gruppe, nicht in ihr.** Eigener Knopf
+   (`.tab-logistik`), durch einen **Trennstrich** (1 × 24 px) von den Reitern getrennt,
+   mit eigenem Zeichen (`TruckIcon`, Lucide `Truck`). Im Ruhezustand eine helle Pille mit
+   Rand, im **aktiven** Zustand Fläche in der **Werkfarbe** mit weißer Schrift;
+   `aria-pressed` nennt den Zustand.
+2. **Feste Spalten in den Auftragsköpfen** (`.kopf-auftrag`, ab 900 px Breite):
+   **Nr (7,5 rem) · Zustand (6,75 rem) · Rückweg (6,5 rem) · Werke (flexibel) · rechts
+   Anzahl/Datum/Details**. Der „Rückweg"-Platz bleibt auch leer erhalten, damit die
+   Spalten nicht verrutschen; der rechte Block schließt bündig am Rand ab.
+3. **Der Eingang nutzt dieselben zwei festen Spalten** (`.kopf-eingang`):
+   Nr (7,5 rem) · Zustand (6,75 rem) · Werke. Damit liegen Auftragsliste und Eingang
+   untereinander auf denselben Linien.
+4. **Schmale Fenster** (< 900 px): kein Raster, sondern `flex-wrap` – sonst liefen die
+   festen Spalten über den Rand.
+5. **Die Richtung wird zur Werke-Angabe gezogen** („AUSGANG Werk 1 → Werk 2"), damit die
+   Spaltenzahl klein bleibt und die Zeile auch bei 900 px noch passt.
+
+## Begründung
+
+Der Bereich „Logistik" wird gesucht, nicht gefunden – wer Werkzeuge verschicken will,
+denkt nicht in Stammdaten-Reitern. Ein eigener Knopf mit Zeichen und Werkfarbe ist ohne
+Lesen zu finden. Und eine Liste, in der gleichartige Angaben untereinander auf denselben
+Linien liegen, ist schneller zu vergleichen als eine, in der jede Zeile ihre eigene
+Ordnung hat – bei den Karten (DEC-084) fällt das besonders auf.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** neue Navigationsleiste oder ein zweites Menü: Es bleibt **eine** Leiste, der
+  Knopf sitzt nur außerhalb der Reiter-Gruppe.
+- **Keine** Änderung an den übrigen Reitern und ihrer Reihenfolge (DEC-066).
+- **Keine** Werkfarben-Kante am Knopf (DEC-076) – die Farbe steht als Fläche.

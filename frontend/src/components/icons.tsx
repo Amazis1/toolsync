@@ -59,6 +59,7 @@ import {
   Star,
   Trash,
   TrendingUp,
+  Truck,
   Undo2,
   Upload,
   User,
@@ -172,6 +173,11 @@ export function FilterIcon(props: IconProps) {
 /** Lucide `TrendingUp` – Entwicklung in der Statistik. */
 export function TrendingIcon(props: IconProps) {
   return fromLucideBody(TrendingUp, props)
+}
+
+/** Lucide `Truck` – Bereich „Logistik": Werkzeuge zwischen den Werken (DEC-086). */
+export function TruckIcon(props: IconProps) {
+  return fromLucideBody(Truck, props)
 }
 
 /** Lucide `ShieldCheck` – Admin-Panel: Rechte und Verwaltung. */

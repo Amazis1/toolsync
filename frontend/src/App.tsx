@@ -16,7 +16,7 @@ import type { ViewerRequest } from './types/viewer';
 import { dataSheetViewer, serialArticleViewer } from './lib/viewerSources';
 import { getDataSheets } from './api/dataSheets';
 import { getDisplayName } from './lib/api';
-import { LoginIcon, AddIcon, AdminIcon } from './components/icons';
+import { LoginIcon, AddIcon, AdminIcon, TruckIcon } from './components/icons';
 import AdminLayout from './pages/admin/AdminLayout';
 import SessionTimer from './components/SessionTimer';
 import SessionWarning from './components/SessionWarning';
@@ -35,15 +35,15 @@ type TabKey =
 type ViewMode = 'main' | 'admin';
 
 // Tab-Leiste der Hauptansicht (DEC-066): Werkzeuge · Serienartikel ·
-// Datenblätter · Ersatzteile · Logistik · Historie. „Lager/Ersatz" ist entfallen:
-// Ersatzwerkzeuge stehen in der Werkzeugliste, Ersatzteile im eigenen Tab.
-// „Logistik" ist der Werkzeugtransport zwischen den Werken (DEC-072/075).
+// Datenblätter · Ersatzteile · Historie – das sind die **Stammdaten-Bereiche**.
+// „Logistik" steht bewusst **daneben** und nicht in dieser Gruppe (DEC-086): dort
+// geht es nicht um Stammdaten, sondern um Bewegung zwischen den Werken. Eigene
+// Pille, eigenes Zeichen, im aktiven Zustand die Fläche in der Werkfarbe.
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'werkzeuge', label: 'Werkzeuge' },
   { key: 'serienartikel', label: 'Serienartikel' },
   { key: 'datenblaetter', label: 'Datenblätter' },
   { key: 'ersatzteile', label: 'Ersatzteile' },
-  { key: 'logistik', label: 'Logistik' },
   { key: 'historie', label: 'Historie' },
 ];
 
@@ -494,16 +494,32 @@ const MainApp: React.FC = () => {
           <div className="col-span-12 xl:col-span-10 space-y-4">
             {/* TABBAR (.app-tabbar): NUR über dem Content, + Anlegen rechts */}
             <nav aria-label="Bereiche wechseln" className="app-tabbar flex items-center justify-between gap-2 px-3 py-1.5 rounded-2xl shadow-xs">
-              <div className="ui-tabs min-w-0 overflow-x-auto">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => switchTab(tab.key)}
-                    className={activeTab === tab.key ? 'is-active' : undefined}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="ui-tabs min-w-0 overflow-x-auto">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => switchTab(tab.key)}
+                      className={activeTab === tab.key ? 'is-active' : undefined}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Trennstrich: Logistik ist ein eigener Bereich, kein Reiter der
+                    Stammdaten (DEC-086). */}
+                <span aria-hidden="true" className="h-6 w-px shrink-0 bg-white/70" />
+
+                <button
+                  onClick={() => switchTab('logistik')}
+                  className={`tab-logistik ${activeTab === 'logistik' ? 'is-active' : ''}`}
+                  aria-pressed={activeTab === 'logistik'}
+                  title="Werkzeuge zwischen den Werken transportieren"
+                >
+                  <TruckIcon className="h-4 w-4" />
+                  Logistik
+                </button>
               </div>
 
               {/* + Anlegen öffnet das passende Formular je nach aktivem Tab.
