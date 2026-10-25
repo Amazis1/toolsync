@@ -223,7 +223,14 @@ const MainApp: React.FC = () => {
   // Zähler am Logistik-Knopf (DEC-089): offene Aufträge des Arbeitswerks. Der
   // Knopf steht hier in der Leiste, die Liste im Bereich – der Zähler wird
   // deshalb außerhalb geladen und bei jeder Änderung im Bereich nachgeführt.
-  const statistik = useStatistik(user?.id ?? null, user?.plant_id ?? null, logisticsRefreshKey);
+  // Aktionen **im** Bereich (verschicken, empfangen, zurück) melden sich über
+  // `onAktion` – Kennzahlen und Zähler oben sollen sofort nachziehen (DEC-090).
+  const [logistikAktionen, setLogistikAktionen] = useState(0);
+  const statistik = useStatistik(
+    user?.id ?? null,
+    user?.plant_id ?? null,
+    logisticsRefreshKey + logistikAktionen,
+  );
   // Der Zähler am Logistik-Knopf ist `orders_open` aus derselben Antwort – eine
   // Quelle für Knopf und rechte Spalte (DEC-089).
   const offeneAuftraege = statistik?.orders_open ?? 0;
@@ -705,6 +712,8 @@ const MainApp: React.FC = () => {
                   <Logistics
                     refreshKey={logisticsRefreshKey}
                     eingangWunsch={eingangWunsch}
+                    kennzahlen={statistik}
+                    onAktion={() => setLogistikAktionen((alt) => alt + 1)}
                     notify={showToast}
                   />
                 )}

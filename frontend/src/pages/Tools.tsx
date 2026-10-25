@@ -247,8 +247,19 @@ export default function Tools({
 
   // Adresszeile mitführen: die Ansicht ist damit teilbar und übersteht Reload.
   useEffect(() => {
-    const params = writeToolQuery(query)
-    const url = `${window.location.pathname}${params ? `?${params}` : ''}`
+    // Die Werkzeugliste **ergänzt** die Adresszeile, statt sie zu ersetzen: seit
+    // DEC-090 stehen auch die Filter der Logistik darin (`log-suche` …). Ein
+    // frisches `?…` würde sie beim Öffnen der Werkzeugliste löschen – nach einem
+    // Neuladen wäre die Ansicht der Logistik weg.
+    // Werkzeug-Parameter neu setzen, `log-*` (Logistik, DEC-090) unangetastet lassen.
+    const eigene = new URLSearchParams(writeToolQuery(query))
+    const params = new URLSearchParams(window.location.search)
+    for (const name of [...params.keys()]) {
+      if (!name.startsWith('log-')) params.delete(name)
+    }
+    for (const [name, wert] of eigene) params.set(name, wert)
+    const eigeneZeichenkette = params.toString()
+    const url = `${window.location.pathname}${eigeneZeichenkette ? `?${eigeneZeichenkette}` : ''}`
     const current = `${window.location.pathname}${window.location.search}`
     if (url === current) return
     if (historyMode.current === 'push') {

@@ -14,6 +14,7 @@ import Tooltip from '../ui/Tooltip'
 import {
   AlterMarke,
   Leerzustand,
+  PersonenKette,
   RueckwegMarke,
   StatusMarke,
   WerkName,
@@ -21,6 +22,7 @@ import {
   WerkzeugKurz,
   formatTag,
   formatZeitpunkt,
+  initialen,
   useWerkFarben,
   werkZeile,
 } from './logistikTeile'
@@ -66,7 +68,14 @@ function ItemRow({ item }: { item: TransportItem }) {
       </td>
       <td className="px-2.5 py-1.5 whitespace-nowrap">
         {item.received_at ? (
-          <span className="text-xs text-emerald-800">da · {formatZeitpunkt(item.received_at)}</span>
+          <span className="text-xs text-emerald-800">
+            da · {formatZeitpunkt(item.received_at)}
+            {item.received_by_name ? (
+              <span className="ml-1 font-mono text-[10px] font-bold text-emerald-900">
+                {initialen(item.received_by_name)}
+              </span>
+            ) : null}
+          </span>
         ) : (
           // Keine eigene Spalte „Zustand" mehr: im Auftrag ist die eine Frage,
           // ob das Werkzeug angekommen ist. „ausstehend" sagt das, ohne den
@@ -189,6 +198,12 @@ function OrderRow({
               <span className="font-semibold">Info:</span> {order.info}
             </div>
           )}
+
+          {/* Wer hat gehandelt (DEC-090): Initialen-Plaketten mit Vollname im
+              Tooltip. Vorher stand nur „Angelegt von …" als graue Fußzeile ganz
+              unten – verschickt und bestätigt waren nur im Nachweis-Fenster zu
+              sehen. */}
+          <PersonenKette order={order} />
 
           {/* Kein eigenes Weiß: Die Zeilen tragen die Werkfarbe selbst. Drei
               übereinanderliegende weiße Schichten (Karte → Container → Tabelle)

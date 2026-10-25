@@ -278,7 +278,7 @@ deutlich sein, welche Werkzeuge sich jetzt wo befinden".
 
 | Methode | Pfad | Zweck | Recht |
 |---|---|---|---|
-| GET | `/api/transport/orders` | Liste (Filter: `status`, `from_plant_id`, `to_plant_id`, `direction=out\|in`, `q` über Auftrags-Nr./Reference, Pagination) | `require_active` |
+| GET | `/api/transport/orders` | Liste (Filter: `status`, `from_plant_id`, `to_plant_id`, `direction=out\|in`, `mine=true` = nur eigene, `q` über Auftrags-Nr., Reference, Info, Werkzeug-ID und Personennamen – DEC-090, Pagination) | `require_active` |
 | POST | `/api/transport/orders` | Auftrag anlegen (Entwurf, mit Zeilen) | `require_active` |
 | GET | `/api/transport/orders/{id}` | Detail mit Zeilen, Werkzeugen, Nachweisen | `require_active` |
 | PUT | `/api/transport/orders/{id}` | Kopf und Zeilen im Entwurf ändern | `require_active` |

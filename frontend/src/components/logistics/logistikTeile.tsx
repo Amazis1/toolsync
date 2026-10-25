@@ -6,6 +6,8 @@
 // Namen und als ganze Zeile (Vorgabe des Projektinhabers, DEC-076).
 
 import type { CSSProperties, ReactElement } from 'react'
+import type { TransportOrder } from '../../types/transport'
+import Tooltip from '../ui/Tooltip'
 import { plantColor, usePlants, withAlpha } from '../../lib/plantTheme'
 import type { Plant } from '../../api/types'
 import {
@@ -229,6 +231,81 @@ export function WerkzeugMarke({ status }: { status: string | null }) {
 }
 
 /** „18.10.2026, 14:05" – oder ein Strich, wenn nichts gesetzt ist. */
+/** Initialen einer Person: „Anna Ausleiherin" → „AA" (höchstens zwei Buchstaben). */
+export function initialen(name: string | null | undefined): string {
+  if (!name) return '–'
+  const teile = name.trim().split(/\s+/)
+  if (teile.length === 1) return teile[0].slice(0, 2).toUpperCase()
+  return (teile[0][0] + teile[teile.length - 1][0]).toUpperCase()
+}
+
+/**
+ * Eine Person in der Kette „angelegt → verschickt → bestätigt" (DEC-090).
+ *
+ * Angezeigt werden die **Initialen** – der volle Name steht im Tooltip. So bleibt
+ * die Zeile schmal, und trotzdem ist zu sehen, wer gehandelt hat: das war die
+ * Lücke, die der Inhaber genannt hat („wer angelegt hat, wer verschickt hat, wer
+ * angenommen hat").
+ */
+export function PersonMarke({
+  rolle,
+  name,
+  farbe = 'neutral',
+}: {
+  /** Was die Person getan hat („angelegt"). */
+  rolle: string
+  name: string
+  /** `neutral` (grau) oder `werk` (in der Farbe des Arbeitswerks). */
+  farbe?: 'neutral' | 'werk'
+}) {
+  return (
+    <Tooltip text={`${rolle}: ${name}`}>
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+          farbe === 'werk'
+            ? 'bg-[var(--werk-soft,rgba(15,118,110,0.1))] text-[var(--werk-text,#115e59)]'
+            : 'bg-slate-900/[0.06] text-slate-700'
+        }`}
+      >
+        <span className="font-normal opacity-80">{rolle}</span>
+        <span className="font-mono">{initialen(name)}</span>
+      </span>
+    </Tooltip>
+  )
+}
+
+/** Die Personen eines Auftrags als Kette: wer angelegt, verschickt, bestätigt hat. */
+export function PersonenKette({ order }: { order: TransportOrder }) {
+  const bestaetiger = [
+    ...new Set(
+      order.items
+        .map((item) => item.received_by_name)
+        .filter((name): name is string => !!name),
+    ),
+  ]
+  const teile: { rolle: string; name: string }[] = []
+  if (order.created_by_name) teile.push({ rolle: 'angelegt', name: order.created_by_name })
+  if (order.sent_by_name) teile.push({rolle: 'verschickt', name: order.sent_by_name })
+  bestaetiger.forEach((name) => teile.push({ rolle: 'bestätigt', name }))
+  if (teile.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {teile.map((teil, index) => (
+        <PersonMarke
+          key={`${teil.rolle}-${teil.name}-${index}`}
+          rolle={teil.rolle}
+          name={teil.name}
+        />
+      ))}
+      {order.item_count > 0 && (
+        <span className="text-[10px] font-semibold text-slate-600">
+          {order.received_count}/{order.item_count} angekommen
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function formatZeitpunkt(iso: string | null | undefined): string {
   if (!iso) return '—'
   const datum = new Date(iso)

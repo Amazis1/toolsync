@@ -23,6 +23,11 @@ export interface StatsOverview {
   orders_sent: number
   orders_incoming_open: number
   orders_old: number
+  /** Nur ausgehend – die Zahlen der drei Filter-Karten über der Auftragsliste. */
+  orders_out_open: number
+  orders_out_draft: number
+  orders_out_sent: number
+  orders_out_old: number
 }
 
 export async function getStatsOverview(): Promise<StatsOverview> {

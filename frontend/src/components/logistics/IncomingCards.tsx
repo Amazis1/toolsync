@@ -73,7 +73,11 @@ export default function IncomingCards({ orders, onReceive, onDetail }: IncomingC
                   {offen.length} von {werkzeugAnzahl(order.item_count)} noch nicht bestätigt
                 </strong>
                 {da.length > 0 ? ` · ${da.length} schon angekommen` : ''}
-                {order.sent_at ? ` · verschickt ${formatZeitpunkt(order.sent_at)}` : ''}
+                {order.sent_at
+                  ? ` · verschickt ${formatZeitpunkt(order.sent_at)}${
+                      order.sent_by_name ? ` von ${order.sent_by_name}` : ''
+                    }`
+                  : ''}
                 {/* Wie lange es unterwegs ist (DEC-089) – Amber, wenn zu lange. */}
                 {order.sent_at ? (
                   <>

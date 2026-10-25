@@ -19,6 +19,7 @@ import { cancelOrder, getOrders, sendOrder } from '../api/transport'
 import type { Plant } from '../api/types'
 import type { ToastVariant } from '../lib/useToasts'
 import type { TransportOrder } from '../types/transport'
+import type { StatsOverview } from '../api/stats'
 import AwayTable from '../components/logistics/AwayTable'
 import IncomingCards from '../components/logistics/IncomingCards'
 import NewOrderModal from '../components/logistics/NewOrderModal'
@@ -51,28 +52,93 @@ interface LogisticsProps {
    * hintereinander wirkt.
    */
   eingangWunsch: number
+  /**
+   * Kennzahlen des Arbeitswerks (DEC-089/090). Die drei Filter-Karten zeigen
+   * damit die **Gesamtzahl** des Arbeitswerks – auch während eine Suche läuft,
+   * sonst stünde auf der Karte die Zahl der Treffer.
+   */
+  kennzahlen: StatsOverview | null
+  /** Meldet dem App-Rahmen, dass sich Zahlen geändert haben (Zähler, Karten). */
+  onAktion: () => void
   notify: (variant: ToastVariant, title: string, message?: string) => void
+}
+
+/** Zeitraum-Filter der Auftragsliste (DEC-090). */
+type Zeitraum = 'alle' | '7' | '30'
+
+/**
+ * Adresszeile: gelesen beim Öffnen, geschrieben bei jeder Änderung.
+ *
+ * Warum überhaupt: „die offenen Aufträge von letzter Woche" ist eine Ansicht, die
+ * man weitergeben oder neu laden will. Dasselbe Muster nutzt die Werkzeugliste
+ * (`lib/toolQuery.ts`); hier mit eigenem Präfix `log-…`, damit die Parameter
+ * beider Bereiche nicht kollidieren.
+ */
+function leseAusUrl(name: string): string {
+  if (typeof window === 'undefined') return ''
+  return new URLSearchParams(window.location.search).get(name) ?? ''
+}
+
+function leseZeitraumAusUrl(): Zeitraum {
+  const wert = leseAusUrl('log-zeit')
+  return wert === '7' || wert === '30' ? wert : 'alle'
+}
+
+function leseBereichAusUrl(): Bereich {
+  const wert = leseAusUrl('log-bereich')
+  return wert === 'eingang' || wert === 'wowas' ? wert : 'auftraege'
+}
+
+/** Liegt der Zeitpunkt höchstens `tage` Tage zurück? */
+function innerhalb(iso: string | null | undefined, tage: number): boolean {
+  if (!iso) return false
+  const zeit = new Date(iso).getTime()
+  if (Number.isNaN(zeit)) return false
+  return Date.now() - zeit <= tage * 86_400_000
 }
 
 /** Aufträge, die noch unterwegs sind (`sent`/`partly_received`). */
 const UNTERWEGS = new Set(['sent', 'partly_received'])
 
-export default function Logistics({ refreshKey, eingangWunsch, notify }: LogisticsProps) {
+export default function Logistics({
+  refreshKey,
+  eingangWunsch,
+  kennzahlen,
+  onAktion,
+  notify,
+}: LogisticsProps) {
   const { user } = useAuth()
   const plants = usePlants()
   const aktivId = useActivePlantId(user?.id ?? null, user?.plant_id ?? null)
   const werk: Plant | null = plants.find((p) => p.id === aktivId) ?? null
 
-  const [bereich, setBereich] = useState<Bereich>('auftraege')
+  const [bereich, setBereich] = useState<Bereich>(() => leseBereichAusUrl())
   const [orders, setOrders] = useState<TransportOrder[]>([])
   const [laden, setLaden] = useState(true)
   const [fehler, setFehler] = useState<string | null>(null)
   const [aufgeklappt, setAufgeklappt] = useState<number[]>([])
   const [busyId, setBusyId] = useState<number | null>(null)
   /** Schnellfilter aus den Kennzahl-Kacheln (DEC-089); `null` = alles. */
-  const [schnellfilter, setSchnellfilter] = useState<Schnellfilter | null>(null)
+  const [schnellfilter, setSchnellfilter] = useState<Schnellfilter | null>(() => {
+    const wert = leseAusUrl('log-filter')
+    return wert === 'entwurf' || wert === 'unterwegs' || wert === 'alt' ? wert : null
+  })
   /** Zähler „Liste wurde neu geladen" – „Wo ist was" hängt daran. */
   const [stand, setStand] = useState(0)
+
+  // Suche und Filter (DEC-090). Sie stehen in der Adresszeile: Ein Lesezeichen
+  // auf „die offenen Aufträge" oder ein Neuladen behält die Ansicht (dasselbe
+  // Muster wie die Werkzeugliste).
+  const [suche, setSuche] = useState(() => leseAusUrl('log-suche'))
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(() => leseZeitraumAusUrl())
+  const [nurMeine, setNurMeine] = useState(() => leseAusUrl('log-meine') === '1')
+  /** Verzögerter Suchbegriff – erst nach 300 ms geht die Anfrage los. */
+  const [suchbegriff, setSuchbegriff] = useState(suche)
+
+  useEffect(() => {
+    const takt = window.setTimeout(() => setSuchbegriff(suche.trim()), 300)
+    return () => window.clearTimeout(takt)
+  }, [suche])
 
   // Fenster (DEC-075 Punkt 2)
   const [neuOffen, setNeuOffen] = useState(false)
@@ -86,7 +152,15 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
     setLaden(true)
     setFehler(null)
     try {
-      const seite = await getOrders({ direction: 'both', limit: 200 })
+      // Suche und „nur meine" fragt der **Server**: Sonst fände man nur, was in
+      // den geladenen 200 Zeilen steht – und die Werkzeug-ID ist erst seit
+      // DEC-090 überhaupt suchbar.
+      const seite = await getOrders({
+        direction: 'both',
+        limit: 200,
+        q: suchbegriff || undefined,
+        mine: nurMeine || undefined,
+      })
       setOrders(seite.items)
       setStand((alt) => alt + 1)
     } catch (e) {
@@ -94,11 +168,28 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
     } finally {
       setLaden(false)
     }
-  }, [])
+  }, [suchbegriff, nurMeine])
 
   useEffect(() => {
     void ladeAuftraege()
   }, [ladeAuftraege, refreshKey])
+
+  // Ansicht in die Adresszeile schreiben (ohne neuen Verlaufseintrag, damit die
+  // Zurück-Taste weiter seitenweise arbeitet wie bisher).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const setze = (name: string, wert: string | null) => {
+      if (wert) params.set(name, wert)
+      else params.delete(name)
+    }
+    setze('log-suche', suche.trim() || null)
+    setze('log-zeit', zeitraum === 'alle' ? null : zeitraum)
+    setze('log-meine', nurMeine ? '1' : null)
+    setze('log-filter', schnellfilter)
+    setze('log-bereich', bereich === 'auftraege' ? null : bereich)
+    const neu = `${window.location.pathname}?${params.toString()}`
+    window.history.replaceState(null, '', neu)
+  }, [suche, zeitraum, nurMeine, schnellfilter, bereich])
 
   // Sprung aus der rechten Spalte: „Eingang offen" öffnet den Eingang. Der erste
   // Lauf (0) tut nichts – sonst stünde der Bereich immer schon im Eingang.
@@ -123,6 +214,16 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
   const eingegangen = useMemo(
     () => orders.filter((order) => order.direction === 'in' && order.status === 'received'),
     [orders],
+  )
+
+  /** Zahlen auf den Filter-Karten: aus der Kennzahlen-Antwort, sonst Liste. */
+  const karten = useMemo(
+    () => ({
+      entwuerfe: kennzahlen?.orders_out_draft ?? 0,
+      unterwegs: kennzahlen?.orders_out_sent ?? 0,
+      alt: kennzahlen?.orders_out_old ?? 0,
+    }),
+    [kennzahlen],
   )
 
   const zahlen = useMemo(() => {
@@ -154,21 +255,27 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
    * stattdessen den Unterbereich.
    */
   const ausgangGefiltert = useMemo(() => {
+    const imZeitraum = (order: TransportOrder) => {
+      if (zeitraum === 'alle') return true
+      const tage = Number(zeitraum)
+      return innerhalb(order.sent_at ?? order.created_at, tage)
+    }
+    const basis = ausgang.filter(imZeitraum)
     if (schnellfilter === 'entwurf') {
-      return ausgang.filter((order) => order.status === 'draft')
+      return basis.filter((order) => order.status === 'draft')
     }
     if (schnellfilter === 'unterwegs') {
-      return ausgang.filter((order) => UNTERWEGS.has(order.status))
+      return basis.filter((order) => UNTERWEGS.has(order.status))
     }
     if (schnellfilter === 'alt') {
-      return ausgang.filter((order) => {
+      return basis.filter((order) => {
         if (!UNTERWEGS.has(order.status) && order.status !== 'draft') return false
         const tage = alterTage(order.sent_at ?? order.created_at)
         return tage !== null && tage >= LANGE_OFFEN
       })
     }
-    return ausgang
-  }, [ausgang, schnellfilter])
+    return basis
+  }, [ausgang, schnellfilter, zeitraum])
 
   function umschalten(orderId: number) {
     setAufgeklappt((alt) =>
@@ -191,6 +298,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
     setBusyId(order.id)
     try {
       await sendOrder(order.id)
+      onAktion()
       notify(
         'success',
         `${order.order_number} ist unterwegs`,
@@ -215,6 +323,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
     setBusyId(order.id)
     try {
       await cancelOrder(order.id)
+      onAktion()
       notify('success', `${order.order_number} wurde storniert`, 'Die Werkzeuge sind wieder frei.')
       await ladeAuftraege()
     } catch (e) {
@@ -328,7 +437,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
         >
           <div className="w-36">
             <KpiKarte
-              zahl={zahlen.entwuerfe}
+              zahl={karten.entwuerfe}
               name="Entwürfe"
               farbe="sky"
               icon={<FileTextIcon className="h-4 w-4" />}
@@ -341,7 +450,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
           </div>
           <div className="w-36">
             <KpiKarte
-              zahl={zahlen.unterwegs}
+              zahl={karten.unterwegs}
               name="unterwegs"
               farbe="teal"
               icon={<TruckIcon className="h-4 w-4" />}
@@ -354,7 +463,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
           </div>
           <div className="w-36">
             <KpiKarte
-              zahl={zahlen.alt}
+              zahl={karten.alt}
               name={`älter als ${LANGE_OFFEN} Tage`}
               farbe="amber"
               icon={<AlertCircleIcon className="h-4 w-4" />}
@@ -373,8 +482,70 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
               Aufträge aus <WerkName plant={werk} fallback="dem Arbeitswerk" />
             </h2>
             <span className="text-xs text-slate-600">
-              {zahlen.gesamt} gesamt · {zahlen.unterwegs} unterwegs · {zahlen.entwuerfe}{' '}
+              {suche.trim() || nurMeine
+                ? `${ausgangGefiltert.length} Treffer`
+                : `${zahlen.gesamt} gesamt`}{' '}
+              · {zahlen.unterwegs} unterwegs · {zahlen.entwuerfe}{' '}
               {zahlen.entwuerfe === 1 ? 'Entwurf' : 'Entwürfe'}
+            </span>
+          </div>
+
+          {/* Suche und Filter (DEC-090). Die Suche fragt den **Server**: Sie
+              findet auch Auftrags-Nr., Info, Werkzeug-ID und Personennamen – und
+              zwar in allen Aufträgen, nicht nur in den geladenen 200 Zeilen. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              value={suche}
+              onChange={(e) => setSuche(e.target.value)}
+              placeholder="Suche: Auftrags-Nr., Werkzeug-ID, Person, Info …"
+              aria-label="Aufträge durchsuchen"
+              className="input-bordered min-w-[16rem] flex-1 text-sm"
+            />
+            <div className="ui-tabs" role="group" aria-label="Zeitraum">
+              {([
+                ['alle', 'Alle'],
+                ['7', 'letzte 7 Tage'],
+                ['30', 'letzte 30 Tage'],
+              ] as const).map(([wert, text]) => (
+                <button
+                  key={wert}
+                  type="button"
+                  className={zeitraum === wert ? 'is-active' : undefined}
+                  aria-pressed={zeitraum === wert}
+                  onClick={() => setZeitraum(wert)}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={nurMeine}
+                onChange={(e) => setNurMeine(e.target.checked)}
+                className="h-4 w-4 rounded accent-teal-700"
+              />
+              nur meine
+            </label>
+            {(suche.trim() || zeitraum !== 'alle' || nurMeine) && (
+              <Tooltip text="Suche und Zeitraum zurücksetzen">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuche('')
+                    setZeitraum('alle')
+                    setNurMeine(false)
+                  }}
+                  className="ui-btn ui-btn-ghost ui-btn-sm inline-flex items-center gap-1"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                  zurücksetzen
+                </button>
+              </Tooltip>
+            )}
+            <span className="text-xs text-slate-600">
+              {ausgangGefiltert.length} {ausgangGefiltert.length === 1 ? 'Auftrag' : 'Aufträge'}
             </span>
           </div>
 
@@ -508,6 +679,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
                 ? `${werkzeugAnzahl(order.item_count)} nach ${order.to_plant?.name ?? '?'}.`
                 : 'Der Auftrag liegt als Entwurf bereit – verschickt wird er aus der Liste.',
             )
+            onAktion()
             void ladeAuftraege()
             if (!weiterOffen) {
               setNeuOffen(false)
@@ -530,6 +702,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
               }.`,
             )
             setEmpfang(null)
+            onAktion()
             void ladeAuftraege()
             // Im Eingang bleiben und den Auftrag dort aufklappen – dort steht er
             // gleich darauf unter „Angenommen".
@@ -550,6 +723,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
                 + 'verschickt wird er aus der Auftragsliste.',
             )
             setRueck(null)
+            onAktion()
             void ladeAuftraege()
             oeffnen(angelegt.id)
           }}
@@ -581,6 +755,7 @@ export default function Logistics({ refreshKey, eingangWunsch, notify }: Logisti
               `${auftragsNummer}: zurück an ${anWerk} – dort im Eingang bestätigen.`,
             )
             setRueckListeOffen(false)
+            onAktion()
             void ladeAuftraege()
           }}
         />

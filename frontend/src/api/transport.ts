@@ -20,6 +20,8 @@ export async function getOrders(params?: {
   direction?: 'out' | 'in' | 'both'
   status?: TransportStatus[]
   q?: string
+  /** Nur Aufträge, die **ich** angelegt habe (DEC-090). */
+  mine?: boolean
   skip?: number
   limit?: number
 }): Promise<TransportPage> {
@@ -27,6 +29,7 @@ export async function getOrders(params?: {
   if (params?.direction) such.set('direction', params.direction)
   if (params?.status?.length) such.set('status', params.status.join(','))
   if (params?.q?.trim()) such.set('q', params.q.trim())
+  if (params?.mine) such.set('mine', 'true')
   if (params?.skip !== undefined) such.set('skip', String(params.skip))
   if (params?.limit !== undefined) such.set('limit', String(params.limit))
   const query = such.toString()

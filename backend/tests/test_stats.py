@@ -162,6 +162,13 @@ async def test_kennzahlen_des_arbeitswerks(session):
     # „alt": nur A-3 (seit 10 Tagen unterwegs).
     assert zahlen.orders_old == 1
 
+    # Ausgehend (die Liste im Bereich „Aufträge aus <Werk>" zeigt nur das):
+    # A-1 (Entwurf), A-2 (unterwegs) – A-3 ist eingehend.
+    assert zahlen.orders_out_open == 2
+    assert zahlen.orders_out_draft == 1
+    assert zahlen.orders_out_sent == 1
+    assert zahlen.orders_out_old == 0
+
 
 async def test_zahlen_gelten_nur_fuer_das_eigene_werk(session):
     _werk1, werk2 = await aufbau(session)
@@ -180,6 +187,9 @@ async def test_zahlen_gelten_nur_fuer_das_eigene_werk(session):
     assert zahlen.orders_incoming_open == 2
     # „Alt": A-3 (10 Tage) und A-5 (9 Tage).
     assert zahlen.orders_old == 2
+    # Ausgehend aus Werk 2: A-3 (10 Tage alt) und A-5 (9 Tage alt).
+    assert zahlen.orders_out_open == 2
+    assert zahlen.orders_out_old == 2
 
 
 async def test_leeres_werk_liefert_nullen(session):

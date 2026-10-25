@@ -38,6 +38,7 @@ from ..models.movement import ToolMovement
 from ..models.storage import Cabinet, Drawer, Position
 from ..models.tool import Tool
 from ..models.transport import TransportItem, TransportOrder
+from ..models.user import User
 from ..schemas.master_data import PlantRead
 from ..schemas.transport import (
     AwayTool,
@@ -47,6 +48,38 @@ from ..schemas.transport import (
     TransportOrderCreate,
     TransportOrderRead,
 )
+
+
+def _namenssuche(muster: str):
+    """Bedingung „eine Person passt zum Suchbegriff" (Vor- oder Nachname)."""
+    return or_(
+        User.first_name.ilike(muster),
+        User.last_name.ilike(muster),
+        (User.first_name + " " + User.last_name).ilike(muster),
+    )
+
+
+def _suchbedingung(q: str):
+    """Was der Suchbegriff in der Auftragsliste findet (DEC-090).
+
+    Vorher nur **Auftrags-Nr.** und **Reference** – damit war „welcher Auftrag
+    hatte dieses Werkzeug?" und „was hat Frau Maier verschickt?" nicht zu
+    beantworten. Jetzt:
+
+    * Auftrags-Nr., Reference, **Info** des Auftrags,
+    * **Werkzeug-ID** über die Positionen (`ANY`, keine doppelten Zeilen),
+    * **Personen**: angelegt, verschickt, je Werkzeug bestätigt.
+    """
+    muster = f"%{q.strip()}%"
+    return or_(
+        TransportOrder.order_number.ilike(muster),
+        TransportOrder.reference.ilike(muster),
+        TransportOrder.info.ilike(muster),
+        TransportOrder.items.any(TransportItem.tool.has(Tool.tool_id.ilike(muster))),
+        TransportOrder.created_by.has(_namenssuche(muster)),
+        TransportOrder.sent_by.has(_namenssuche(muster)),
+        TransportOrder.items.any(TransportItem.received_by.has(_namenssuche(muster))),
+    )
 
 
 class TransportService:
@@ -446,6 +479,7 @@ class TransportService:
         direction: str = "both",
         statuses: Optional[Sequence[TransportStatus]] = None,
         q: Optional[str] = None,
+        mine_user_id: Optional[int] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> Tuple[List[TransportOrder], int]:
@@ -464,14 +498,12 @@ class TransportService:
             )
         if statuses:
             bedingungen.append(TransportOrder.status.in_(statuses))
+        # „nur meine": von mir angelegt (DEC-090). Ein Parameter, kein
+        # Namensvergleich im Frontend – Namen sind nicht eindeutig.
+        if mine_user_id is not None:
+            bedingungen.append(TransportOrder.created_by_id == mine_user_id)
         if q:
-            muster = f"%{q.strip()}%"
-            bedingungen.append(
-                or_(
-                    TransportOrder.order_number.ilike(muster),
-                    TransportOrder.reference.ilike(muster),
-                )
-            )
+            bedingungen.append(_suchbedingung(q))
 
         query = (
             select(TransportOrder)

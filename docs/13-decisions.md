@@ -2980,3 +2980,99 @@ offen" keine Karte des Bereichs mehr ist. Nebenbei mussten zwei ältere Tests ih
 Navigation eingrenzen: die Kennzahl-Karten sind Knöpfe, und „Verfügbare Werkzeuge" enthält das Wort
 „Werkzeuge" – ohne Eingrenzung war der Treffer mehrdeutig.
 
+---
+
+# DEC-090 – Logistik: Suche, Zeitraum, „nur meine", Personenkette
+
+**Status:** Verbindlich
+**Bezug:** DEC-072 (Vorgang), DEC-081 (Suche im Auswahlfenster), DEC-089 (Kennzahlen),
+`docs/21-werkzeug-logistik.md` §7/§8
+**Auftrag des Projektinhabers:** „In der Logistik fehlen mir Filter, suchen, wer angelegt hat,
+wer verschickt hat, wer angenommen hat." – freigegeben zusammen mit: „wenn es nötig ist, das
+Backend zu ändern, dann machen wir das."
+
+## Ausgangslage
+
+1. **Die Suche fand fast nichts.** `q` im Endpunkt `/api/transport/orders` durchsuchte
+   **nur** Auftrags-Nr. und Reference. Die beiden Alltagsfragen der Logistik – „welcher
+   Auftrag hatte dieses Werkzeug?" und „was hat Frau Maier verschickt?" – waren damit nicht
+   zu beantworten, obwohl alle Angaben in der Datenbank stehen.
+2. **Kein Zeitraum, kein „nur meine".** Wer wissen wollte, was in der letzten Woche lief,
+   musste die Liste von Hand durchsehen. „Meine Aufträge" gab es gar nicht.
+3. **Die Personen waren unsichtbar.** `created_by_name`, `sent_by_name` und je Position
+   `received_by_name` liegen seit DEC-072 vor – sichtbar waren sie nur im Fenster
+   „Auftrag öffnen" und als graue Fußzeile („Angelegt von … · verschickt …"). Wer ein
+   Werkzeug angenommen hatte, stand **nur** im Nachweis.
+4. **Keine teilbare Ansicht.** Nach einem Neuladen war jeder Filter weg.
+
+## Regel
+
+1. **Die Suche läuft über den Server und findet mehr** (`TransportService.list_orders` →
+   `_suchbedingung`): Auftrags-Nr., Reference, **Info**, **Werkzeug-ID** der Positionen und
+   **Personennamen** (angelegt, verschickt, je Werkzeug bestätigt – Vor-, Nach- und
+   Vor+Nachname). Die Werkzeug- und Personentreffer laufen über `ANY`/`has` (Unterabfragen):
+   ein Auftrag mit zwei passenden Werkzeugen erscheint **einmal**, nicht zweimal.
+2. **„nur meine" filtert auf dem Server** (`mine=true` → `created_by_id = current_user.id`).
+   Ein Namensvergleich im Frontend wäre falsch: Namen sind nicht eindeutig.
+3. **Der Zeitraum ist eine Stufe** (Alle · letzte 7 Tage · letzte 30 Tage) und wirkt
+   **im Browser** auf `sent_at`, sonst `created_at`. Er braucht keine Serverabfrage – die
+   Liste ist geladen, und der Filter soll sofort reagieren. Ein Bereich „von … bis …" ist
+   **nicht** umgesetzt (offene Frage 1).
+4. **Die Filterleiste steht über der Liste:** Suchfeld (300 ms Verzögerung), Zeitraum-Segment,
+   Kontrollkästchen „nur meine", „zurücksetzen" (erscheint nur bei aktivem Filter) und die
+   Zahl der Treffer. Danach folgen die drei Kennzahl-Karten als Schnellfilter (DEC-089).
+5. **Die Karten zeigen Gesamtzahlen, nicht Treffer.** Ihre Zahlen kommen aus den
+   Kennzahlen (`orders_out_draft/out_sent/out_old`, neu im Endpunkt) – sonst stünde auf der
+   Karte „5 unterwegs" über einer Liste mit zwei Suchtreffern. Nach jeder Aktion
+   (verschicken, empfangen, zurück, anlegen) ruft der Bereich `onAktion()`; der App-Rahmen
+   lädt Zähler und Karten damit sofort neu.
+6. **Personenkette im aufgeklappten Auftrag:** Plaketten `angelegt AA` · `verschickt BA` ·
+   `bestätigt CK` mit den **Initialen** und dem Vollnamen im Tooltip (DEC-088), dahinter
+   „n/m angekommen". In der Spalte „Empfang" steht hinter der Zeit die Initiale der Person,
+   die bestätigt hat; im Eingang heißt es „verschickt … von <Name>".
+7. **Die Ansicht steht in der Adresszeile:** `log-suche`, `log-zeit`, `log-meine`,
+   `log-filter`, `log-bereich` (Präfix `log-`, damit sie mit den Werkzeug-Filtern
+   derselben Seite nicht kollidieren). Zurück-Taste und Lesezeichen funktionieren damit.
+   **Dabei gefunden und behoben:** Die Werkzeugliste ersetzte die ganze Adresszeile
+   (`?…` neu geschrieben) – beim Öffnen der Werkzeugliste waren die `log-*`-Parameter weg.
+   Sie **ergänzt** sie jetzt und lässt fremde Präfixe stehen.
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Suchfelder | Auftrags-Nr., Reference | + Info, Werkzeug-ID, Personen (3 Rollen) |
+| Zeitraum-Filter | – | Alle · 7 · 30 Tage |
+| „nur meine" | – | Serverfilter `mine=true` |
+| Personen in der Liste | Fußzeile (nur angelegt/verschickt) | Kette mit Initialen + Vollname im Tooltip, Initiale je Werkzeug |
+| Kennzahlen im Endpunkt | 13 | 17 (`orders_out_open/draft/sent/old`) |
+| Ansicht nach Neuladen | weg | aus der Adresszeile |
+
+## Begründung
+
+Wer ein Werkzeug sucht, kennt selten die Auftragsnummer – er kennt das Werkzeug oder die
+Person. Genau diese beiden Wege fehlten. Der Zeitraum ist die zweite Frage („was ist diese
+Woche passiert"), und „nur meine" ist die dritte („was liegt bei mir"). Alles drei sind
+billig, wenn die Daten schon da sind – teuer ist nur, dass niemand sie zeigt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Volltextsuche über Beschreibung, Typ oder Maß der Werkzeuge im Auftrag – gesucht
+  wird die **Werkzeug-ID**. (Die Werkzeugliste selbst sucht weiterhin alles, `docs/05`.)
+- **Kein** Datumsbereich „von … bis …", keine gespeicherten Filter, keine Benachrichtigungen.
+- **Keine** Personenfilter als eigene Auswahl („nur Aufträge von X"): „nur meine" deckt den
+  Alltag ab; für alles andere ist die Suche über den Namen da.
+- **Kein** serverseitiger Zeitraumfilter: Er wäre eine zweite Wahrheit über dieselbe Liste
+  und würde bei jedem Klick eine Anfrage kosten.
+
+## Prüfung
+
+**Browser** (`frontend/tests/logistik-suche.spec.ts`, 4 Tests, eigener Testauftrag über die
+API): Suche über Werkzeug-ID, Person (Vorname des Anlegers) und Info-Text; „nur meine" +
+Zeitraum (kein sichtbarer Auftrag älter als 7 Tage, Filter in der Adresszeile); Ansicht
+übersteht ein Neuladen (Suchfeld, Zeitraum, Kontrollkästchen); Personenkette mit Vollname im
+Tooltip.
+**Backend** (`backend/tests/test_transport_suche.py`, 3 Tests): Werkzeug-ID, Info, Reference,
+Personen (Vor-/Nachname, drei Rollen), kein doppelter Treffer bei zwei Werkzeugen, `mine`.
+`backend/tests/test_stats.py` prüft die vier neuen `orders_out_*`-Zahlen.
+

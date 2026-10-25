@@ -56,7 +56,17 @@ async def list_orders(
         default=None,
         description="Kommagetrennt: draft, sent, partly_received, received, cancelled",
     ),
-    q: Optional[str] = None,
+    q: Optional[str] = Query(
+        default=None,
+        description=(
+            "Suche über Auftrags-Nr., Reference, Info, Werkzeug-ID der Positionen "
+            "und Personennamen (angelegt, verschickt, bestätigt)"
+        ),
+    ),
+    mine: bool = Query(
+        default=False,
+        description="Nur Aufträge, die **ich** angelegt habe (DEC-090)",
+    ),
     skip: int = 0,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
@@ -79,6 +89,7 @@ async def list_orders(
         direction=direction,
         statuses=statusliste or None,
         q=q,
+        mine_user_id=current_user.id if mine else None,
         skip=skip,
         limit=limit,
     )

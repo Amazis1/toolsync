@@ -48,3 +48,16 @@ class StatsOverview(BaseModel):
     """Eingehende Aufträge, die hier noch bestätigt werden müssen."""
     orders_old: int
     """Offene Aufträge, die seit mindestens 7 Tagen laufen."""
+
+    # --- Logistik, nur ausgehend ------------------------------------------
+    # Die Liste im Bereich „Aufträge aus <Werk>" zeigt nur den Ausgang; die drei
+    # Filter-Karten darüber brauchen deshalb die Zahlen **dieser** Richtung,
+    # sonst stünde auf der Karte „5 unterwegs" über einer Liste mit 2 Zeilen.
+    orders_out_open: int
+    """Offene Aufträge, die aus diesem Werk kommen."""
+    orders_out_draft: int
+    """Entwürfe dieses Werks."""
+    orders_out_sent: int
+    """Ausgehende Aufträge, die unterwegs sind."""
+    orders_out_old: int
+    """Ausgehende offene Aufträge, die seit mindestens 7 Tagen laufen."""

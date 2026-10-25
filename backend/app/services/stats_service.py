@@ -91,16 +91,31 @@ class StatsService:
             TransportOrder.status.in_(UNTERWEGS),
         )
 
+        # Nur ausgehend – für die Filter-Karten über der Auftragsliste.
+        ausgehend = TransportOrder.from_plant_id == plant_id
+        orders_out_open = await self._zahl(
+            TransportOrder, ausgehend, TransportOrder.status.in_(OFFEN)
+        )
+        orders_out_draft = await self._zahl(
+            TransportOrder, ausgehend, TransportOrder.status == TransportStatus.DRAFT
+        )
+        orders_out_sent = await self._zahl(
+            TransportOrder, ausgehend, TransportOrder.status.in_(UNTERWEGS)
+        )
+
         # „läuft zu lange": offene Aufträge, deren Versand (sonst Anlage) zu lange
         # zurückliegt – in Python gerechnet, siehe Modulkopf.
         offene = await self.db.execute(
-            select(TransportOrder.sent_at, TransportOrder.created_at).where(
-                beteiligt, TransportOrder.status.in_(OFFEN)
-            )
+            select(
+                TransportOrder.sent_at,
+                TransportOrder.created_at,
+                TransportOrder.from_plant_id,
+            ).where(beteiligt, TransportOrder.status.in_(OFFEN))
         )
         grenze = datetime.now(timezone.utc) - timedelta(days=LANGE_TAGE)
         orders_old = 0
-        for sent_at, created_at in offene.all():
+        orders_out_old = 0
+        for sent_at, created_at, from_plant_id in offene.all():
             zeitpunkt = sent_at or created_at
             if zeitpunkt is None:
                 continue
@@ -108,6 +123,8 @@ class StatsService:
                 zeitpunkt = zeitpunkt.replace(tzinfo=timezone.utc)
             if zeitpunkt < grenze:
                 orders_old += 1
+                if from_plant_id == plant_id:
+                    orders_out_old += 1
 
         return StatsOverview(
             tools_total=tools_total,
@@ -123,4 +140,8 @@ class StatsService:
             orders_sent=orders_sent,
             orders_incoming_open=orders_incoming_open,
             orders_old=orders_old,
+            orders_out_open=orders_out_open,
+            orders_out_draft=orders_out_draft,
+            orders_out_sent=orders_out_sent,
+            orders_out_old=orders_out_old,
         )
