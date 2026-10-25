@@ -68,8 +68,8 @@ async function werkWaehlen(page: Page, name: string) {
 
 async function logistik(page: Page) {
   await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name: 'Logistik' })
+    .getByRole('complementary')
+    .getByRole('button', { name: /Logistik/ })
     .click()
   await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
 }

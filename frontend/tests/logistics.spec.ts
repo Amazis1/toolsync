@@ -144,8 +144,8 @@ async function werkWaehlen(page: Page, werk: Werk) {
 /** In den Bereich „Logistik" wechseln. */
 async function logistik(page: Page) {
   await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name: 'Logistik' })
+    .getByRole('complementary')
+    .getByRole('button', { name: /Logistik/ })
     .click()
   await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
 }
@@ -563,75 +563,65 @@ test.describe('Werkzeug-Logistik', () => {
     await filter.getByRole('button', { name: /^Alle \(/ }).click()
     await expect(dialog.getByText(/^\d+ Treffer · \d+ davon ausgewählt$/)).toBeVisible()
   })
-  test('Logistik steht als eigener Knopf neben den Reitern (DEC-086)', async ({ page }) => {
+  test('Logistik ist eine Karte der rechten Spalte, ihre Reiter stehen oben (DEC-095)', async ({
+    page,
+  }) => {
     await anmelden(page)
     const nav = page.getByRole('navigation', { name: 'Bereiche wechseln' })
+    const spalte = page.getByRole('complementary')
 
-    // Die Stammdaten-Reiter stehen in ihrer Gruppe – „Logistik" nicht.
-    const reiter = nav.locator('.ui-tabs')
+    // 1. Die Stammdaten-Reiter enthalten „Logistik" **nicht** mehr, „Historie" auch
+    //    nicht (es ist ein Unterreiter).
+    const reiter = nav.locator('.ui-tabs').first()
     await expect(reiter.getByRole('button', { name: 'Werkzeuge' })).toBeVisible()
     await expect(reiter.getByRole('button', { name: 'Logistik' })).toHaveCount(0)
+    await expect(reiter.getByRole('button', { name: 'Historie' })).toHaveCount(0)
 
-    // Der eigene Knopf ist sichtbar, hat eine eigene Form und ein Zeichen.
-    const knopf = nav.getByRole('button', { name: 'Logistik' })
-    await expect(knopf).toBeVisible()
-    await expect(knopf).toHaveClass(/tab-logistik/)
-    await expect(knopf.locator('svg')).toHaveCount(1)
+    // 2. Die Logistik-Karte steht in der rechten Spalte, **über** den Kennzahlen,
+    //    und trägt Zeichen und Zahl.
+    const karte = spalte.getByRole('button', { name: /Logistik/ })
+    await expect(karte).toBeVisible()
+    await expect(karte).toHaveClass(/app-stat-card/)
+    await expect(karte.locator('svg').first()).toBeVisible()
 
-    // Rechts davon steht der Trennstrich, links die Reiter – er ist also getrennt.
     const lage = await page.evaluate(() => {
-      const nav = document.querySelector("nav[aria-label='Bereiche wechseln']")
-      const gruppe = nav?.querySelector('.ui-tabs')
-      const strich = nav?.querySelector("span[aria-hidden='true'].w-px")
-      const pille = nav?.querySelector('.tab-logistik')
-      if (!gruppe || !strich || !pille) return null
-      const g = gruppe.getBoundingClientRect()
-      const p = pille.getBoundingClientRect()
+      const karten = [...document.querySelectorAll('aside .app-stat-card')]
+      const logistik = karten.find((el) => (el.textContent ?? '').includes('Logistik'))
+      const ersteKennzahl = karten.find((el) => (el.textContent ?? '').includes('Aktive Ausleihen'))
+      if (!logistik || !ersteKennzahl) return null
       return {
-        abstand: Math.round(p.left - g.right),
-        strichHoehe: Math.round(strich.getBoundingClientRect().height),
+        oben: logistik.getBoundingClientRect().top,
+        kennzahlOben: ersteKennzahl.getBoundingClientRect().top,
+        breite: Math.round(logistik.getBoundingClientRect().width),
       }
     })
-    expect(lage, 'Trennstrich und Abstand sind messbar').not.toBeNull()
-    expect(lage!.abstand, 'Logistik steht mit Abstand neben den Reitern').toBeGreaterThan(8)
-    expect(lage!.strichHoehe).toBeGreaterThan(10)
+    expect(lage, 'Karten sind messbar').not.toBeNull()
+    expect(lage!.oben, 'Logistik steht über den Kennzahlen').toBeLessThan(lage!.kennzahlOben)
+    // „ein bisschen schmaler": Die Spalte ist 2/12 breit, die Karte bleibt darin.
+    expect(lage!.breite).toBeLessThanOrEqual(240)
 
-    // Die Schrift ist so schwer wie die der übrigen Reiter. Vorher stand hier
-    // 800 gegen 700 – der Knopf wirkte „fetter" als die ganze Leiste
-    // („wenn ich font-weight: 800 ausschalte, gefällt mir es sehr").
-    const schrift = await page.evaluate(() => {
-      const nav = document.querySelector("nav[aria-label='Bereiche wechseln']")
-      const reiter = nav?.querySelector('.ui-tabs button') as HTMLElement | null
-      const pille = nav?.querySelector('.tab-logistik') as HTMLElement | null
-      if (!reiter || !pille) return null
-      const a = getComputedStyle(reiter)
-      const b = getComputedStyle(pille)
-      return { gewicht: [a.fontWeight, b.fontWeight], groesse: [a.fontSize, b.fontSize] }
-    })
-    expect(schrift?.gewicht).toEqual(['700', '700'])
-    expect(schrift?.groesse).toEqual(['11.52px', '11.52px'])
-
-    // Im aktiven Zustand trägt er die Fläche der Werkfarbe. `expect.poll`:
-    // Der Farbwechsel ist animiert (0,18 s) – ein einzelner Messwert läge sonst
-    // mitten im Übergang und meldete noch die Ruhefarbe.
-    await knopf.click()
+    // 3. Ein Klick öffnet den Bereich; die Karte ist markiert und die Unterreiter
+    //    stehen in der oberen Leiste (inklusive „Historie").
+    await karte.click()
     await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
-    await expect(knopf).toHaveAttribute('aria-pressed', 'true')
-    await expect
-      .poll(
-        async () =>
-          page.evaluate(() => {
-            const pille = document.querySelector('.tab-logistik')
-            const werk = getComputedStyle(document.documentElement)
-              .getPropertyValue('--werk')
-              .trim()
-            const zahl = Number.parseInt(werk.replace('#', ''), 16)
-            const soll = `rgb(${(zahl >> 16) & 255}, ${(zahl >> 8) & 255}, ${zahl & 255})`
-            return pille ? getComputedStyle(pille).backgroundColor === soll : false
-          }),
-        { message: 'aktive Pille trägt die Werkfarbe als Fläche' },
-      )
-      .toBe(true)
+    await expect(karte).toHaveAttribute('aria-pressed', 'true')
+    for (const name of ['Aufträge', 'Eingang', 'Wo ist was', 'Historie']) {
+      await expect(
+        page.getByRole('group', { name: 'Logistik' }).getByRole('button', { name }),
+      ).toBeVisible()
+    }
+
+    // 4. „Werkzeug zurück" und „Neuer Auftrag" stehen rechts in der Leiste,
+    //    abgesetzt durch Trennstriche.
+    for (const name of ['Werkzeug zurück', 'Neuer Auftrag']) {
+      await expect(nav.getByRole('button', { name })).toBeVisible()
+    }
+    const striche = await page.evaluate(
+      () =>
+        document.querySelectorAll("nav[aria-label='Bereiche wechseln'] span[aria-hidden='true'].w-px")
+          .length,
+    )
+    expect(striche, 'zwei Trennstriche in der Leiste').toBeGreaterThanOrEqual(2)
   })
 
   test('Auftragsköpfe stehen untereinander in denselben Spalten (DEC-086)', async ({

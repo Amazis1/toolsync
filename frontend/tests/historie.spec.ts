@@ -32,9 +32,16 @@ async function anmelden(page: Page) {
 }
 
 async function historie(page: Page) {
+  // Seit DEC-095 ist „Historie" ein **Unterreiter der Logistik** (und die Logistik
+  // selbst eine Karte in der rechten Spalte).
   await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name: 'Historie', exact: true })
+    .getByRole('complementary')
+    .getByRole('button', { name: /Logistik/ })
+    .click()
+  await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
+  await page
+    .getByRole('group', { name: 'Logistik' })
+    .getByRole('button', { name: 'Historie' })
     .click()
   await expect(page.getByRole('heading', { name: 'Historie' })).toBeVisible()
 }

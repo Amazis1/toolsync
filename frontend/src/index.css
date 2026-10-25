@@ -523,96 +523,6 @@
   }
 
   /* ============================================ */
-  /* LOGISTIK-BUTTON DER TAB-LEISTE (DEC-086/089) */
-  /* ============================================ */
-  /* Der Bereich „Logistik" steht **neben** den Stammdaten-Reitern, nicht in
-     ihnen – und er ist **immer** in der Farbe des Arbeitswerks (DEC-089):
-     ruhend 18 % Tinte mit gleichfarbigem Rand, aktiv voll gefüllt mit weißer
-     Schrift. Damit ist er der einzige farbige Fleck in einer sonst hellen
-     Leiste; man findet ihn, ohne zu lesen. Der Zähler nennt die Zahl der
-     offenen Aufträge. */
-  .tab-logistik {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 0.4rem;
-    border-radius: 0.7rem;
-    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
-    font-size: 0.72rem;
-    /* **700 wie die übrigen Reiter** (`.ui-tabs button`). Vorher stand hier 800:
-       Der Knopf sollte auffallen, war damit aber schwerer als alles andere in der
-       Leiste – „wenn ich font-weight: 800 ausschalte, gefällt mir es sehr"
-       (Projektinhaber). Er hebt sich schon durch Pille, Zeichen und Trennstrich ab;
-       die Schrift muss nicht mitschreien (Nachtrag zu DEC-086). */
-    font-weight: 700;
-    white-space: nowrap;
-    color: var(--werk-text, #115e59);
-    background: var(--werk-tinte, rgba(15, 118, 110, 0.18));
-    border: 1px solid var(--werk-line, rgba(15, 118, 110, 0.3));
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-    transition:
-      background-color 0.18s ease,
-      color 0.18s ease,
-      box-shadow 0.18s ease;
-    cursor: pointer;
-  }
-  .tab-logistik:hover {
-    background: var(--werk-tinte-hover, rgba(15, 118, 110, 0.28));
-  }
-  .tab-logistik.is-active {
-    color: #fff;
-    background: var(--werk, #0f766e);
-    border-color: transparent;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
-  }
-  .tab-logistik:focus-visible {
-    outline: 2px solid var(--werk, #0f766e);
-    outline-offset: 2px;
-  }
-
-  /* Zähler im Logistik-Knopf: Zahl der offenen Aufträge. Auf der getönten
-     Fläche liegt er als gefüllte Marke in der Werkfarbe, im aktiven Zustand
-     umgekehrt (weiß auf farbig). */
-  .tab-zaehler {
-    display: inline-flex;
-    min-width: 1.15rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 0 0.25rem;
-    font-size: 0.62rem;
-    font-weight: 700;
-    line-height: 1.35;
-    color: #fff;
-    background: var(--werk, #0f766e);
-  }
-  .tab-logistik.is-active .tab-zaehler {
-    color: var(--werk-text, #115e59);
-    background: rgba(255, 255, 255, 0.92);
-  }
-
-  /* Marke für Aufträge, die zu lange laufen (DEC-092): Amber, mit Zeichen und
-     Zahl. Sie steht **neben** dem Zähler, damit die Gesamtzahl nicht verschwindet. */
-  .tab-ueberfaellig {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.15rem;
-    border-radius: 999px;
-    padding: 0 0.3rem 0 0.2rem;
-    font-size: 0.62rem;
-    font-weight: 700;
-    line-height: 1.35;
-    color: #92400e;
-    background: rgba(245, 158, 11, 0.22);
-    border: 1px solid rgba(217, 119, 6, 0.35);
-  }
-  .tab-logistik.is-active .tab-ueberfaellig {
-    color: #7c2d12;
-    background: rgba(255, 255, 255, 0.86);
-    border-color: rgba(217, 119, 6, 0.45);
-  }
-
-  /* ============================================ */
   /* STATUS-MARKEN DER LOGISTIK (DEC-089)         */
   /* ============================================ */
   /* Gefüllte Marke mit Verlauf und Zeichen statt einer 15-%-Tinte: Der Zustand
@@ -669,20 +579,24 @@
     font-weight: 700;
   }
 
-  /* ============================================ */
-  /* KENNZAHL-KARTEN (DEC-089)                    */
-  /* ============================================ */
-  /* Die Gestalt selbst kommt aus `components/ui/KpiKarte.tsx` (Styleguide
-     „KPI- & Statistik-Karten": Zeichen-Kachel, große Zahl, Glow, Fußzeile).
-     Hier steht nur, was eine Karte als **Filter** zusätzlich braucht:
-     `aria-pressed` markiert die aktive Kachel mit dem Ring der Werkfarbe –
-     vorher sahen zwei aktive Kacheln wie zwei gesetzte Filter aus. */
+  /* Kennzahl-Karte als **Filter**: `aria-pressed` markiert die aktive Karte mit
+     dem Ring der Werkfarbe (DEC-089) – vorher sahen zwei aktive Kacheln wie zwei
+     gesetzte Filter aus. */
   .app-stat-card[aria-pressed='true'] {
     background: rgba(255, 255, 255, 0.72);
     box-shadow:
       0 0 0 2px var(--werk-line, rgba(15, 118, 110, 0.3)),
       0 12px 24px rgba(15, 23, 42, 0.08);
   }
+
+  /* ================================================== */
+  /* HINWEIS: .tab-logistik ist entfallen (DEC-095)     */
+  /* ================================================== */
+  /* Der Logistik-Knopf war seit DEC-086 eine eigene Pille neben den Reitern.
+     Seit DEC-095 ist er eine **Karte der rechten Spalte** (`.app-stat-card` mit
+     `KpiKarte mini`) – die Regeln `.tab-logistik`, `.tab-zaehler` und
+     `.tab-ueberfaellig` sind damit gegenstandslos und wurden entfernt. Zähler und
+     Überfällig-Marke stehen jetzt **in** der Karte (Amber-Plakette). */
 
   /* Senkrechte Reiterleiste im Anlege-Formular (lg:flex-col).
      Der aktive Reiter trägt zusätzlich einen Primary-Streifen am linken Rand:

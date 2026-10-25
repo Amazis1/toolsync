@@ -30,8 +30,8 @@ async function anmelden(page: Page) {
 
 async function woIstWas(page: Page) {
   await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name: 'Logistik' })
+    .getByRole('complementary')
+    .getByRole('button', { name: /Logistik/ })
     .click()
   await page
     .getByRole('group', { name: 'Logistik' })

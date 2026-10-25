@@ -54,6 +54,8 @@ interface KpiKarteProps {
   fuss?: ReactNode
   /** Kompakte Form für die schmale rechte Spalte. */
   kompakt?: boolean
+  /** Noch schmaler (Seitenleiste, Filterzeile): ohne Glow, kleine Zahl. */
+  mini?: boolean
   /** Filter aktiv (nur sinnvoll mit `onClick`). */
   aktiv?: boolean
   /** Steht auf dem Knopf, wenn kein `onClick` gesetzt ist. */
@@ -69,22 +71,26 @@ export default function KpiKarte({
   marke,
   fuss,
   kompakt = false,
+  mini = false,
   aktiv = false,
   titel,
 }: KpiKarteProps) {
   const ton = FARBEN[farbe]
   const innen = (
     <>
-      {/* Dekorativer Glow, aus der Styleguide-KPI-Karte. */}
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full blur-3xl ${ton.glow}`}
-      />
+      {/* Dekorativer Glow, aus der Styleguide-KPI-Karte (nicht in der Mini-Form:
+          dort zählt jede Zeile Platz). */}
+      {!mini && (
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full blur-3xl ${ton.glow}`}
+        />
+      )}
       <span className="relative flex items-start justify-between gap-2">
         <span
           aria-hidden="true"
           className={`flex items-center justify-center ${
-            kompakt ? 'h-10 w-10 rounded-lg' : 'h-9 w-9 rounded-lg'
+            kompakt ? 'h-10 w-10 rounded-lg' : mini ? 'h-7 w-7 rounded-md' : 'h-9 w-9 rounded-lg'
           } ${ton.zeichen}`}
         >
           {icon}
@@ -92,19 +98,27 @@ export default function KpiKarte({
         {marke}
       </span>
       <span
-        className={`relative mt-3 block font-extrabold tracking-tight text-slate-800 tabular-nums ${
-          kompakt ? 'text-2xl' : 'text-xl'
+        className={`relative block font-extrabold tracking-tight text-slate-800 tabular-nums ${
+          mini ? 'mt-1.5 text-lg leading-tight' : kompakt ? 'mt-3 text-2xl' : 'mt-3 text-xl'
         }`}
       >
         {zahl === null ? '—' : zahl}
       </span>
-      <span className="relative mt-0.5 block text-xs font-medium text-slate-600">{name}</span>
-      {fuss && <span className="relative mt-3 block border-t border-white/50 pt-2">{fuss}</span>}
+      <span
+        className={`relative block font-medium text-slate-600 ${
+          mini ? 'mt-0 text-[11px]' : 'mt-0.5 text-xs'
+        }`}
+      >
+        {name}
+      </span>
+      {fuss && !mini && (
+        <span className="relative mt-3 block border-t border-white/50 pt-2">{fuss}</span>
+      )}
     </>
   )
 
   const klassen = `app-stat-card group relative block w-full overflow-hidden text-left ${
-    kompakt ? 'rounded-2xl p-4' : 'rounded-xl p-3'
+    mini ? 'rounded-xl px-2.5 py-2' : kompakt ? 'rounded-2xl p-4' : 'rounded-xl p-3'
   } ${ton.rand} shadow-lg transition-all duration-300 ${
     onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl' : ''
   } ${aktiv ? 'is-aktiv' : ''}`

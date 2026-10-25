@@ -39,8 +39,8 @@ async function anmelden(page: Page) {
 
 async function logistik(page: Page) {
   await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name: 'Logistik' })
+    .getByRole('complementary')
+    .getByRole('button', { name: /Logistik/ })
     .click()
   await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
 }
@@ -62,36 +62,10 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
     await anmelden(page)
   })
 
-  test('der Knopf trägt die Werkfarbe und den Zähler der offenen Aufträge', async ({ page }) => {
-    const knopf = page
-      .getByRole('navigation', { name: 'Bereiche wechseln' })
-      .getByRole('button', { name: 'Logistik' })
+  test('die Logistik-Karte nennt offene Aufträge und markiert überfällige', async ({ page }) => {
+    // Seit DEC-095 ist der Logistik-Knopf eine **Karte der rechten Spalte**.
+    const karte = page.getByRole('complementary').getByRole('button', { name: /Logistik/ })
 
-    // Ruhezustand: die Fläche ist die **Tinte der Werkfarbe**, nicht Weiß.
-    const farbe = await knopf.evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(farbe, 'Fläche ist nicht mehr weiß').not.toBe('rgba(255, 255, 255, 0.5)')
-    const tinte = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--werk-tinte').trim(),
-    )
-    expect(tinte, 'Werkfarbe ist gesetzt').toMatch(/^rgba\(/)
-
-    // Der Zähler nennt genau `orders_open` aus der Kennzahlen-Antwort.
-    const zahl = (await knopf.locator('.tab-zaehler').innerText().catch(() => '')).trim()
-    if (zahl !== '') {
-      const kennzahlen = await page.evaluate(async () => {
-        const antwort = await fetch('/api/stats/overview', {
-          headers: {
-            Authorization: `Bearer ${window.localStorage.getItem('token')}`,
-            'X-Plant-Id': String(document.documentElement.dataset.werk),
-          },
-        })
-        return antwort.json()
-      })
-      expect(Number(zahl)).toBe(kennzahlen.orders_open)
-    }
-
-    // Überfällige Aufträge (DEC-092): Die Amber-Marke steht genau dann am Knopf,
-    // wenn die Kennzahlen welche melden – mit derselben Zahl.
     const kennzahlen = await page.evaluate(async () => {
       const antwort = await fetch('/api/stats/overview', {
         headers: {
@@ -101,13 +75,19 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
       })
       return antwort.json()
     })
-    const marke = knopf.locator('.tab-ueberfaellig')
+
+    await expect(karte).toBeVisible()
+    // Die Zahl der Karte ist `orders_open` aus den Kennzahlen.
+    await expect(karte).toContainText(String(kennzahlen.orders_open))
+    // Überfällige (DEC-092): Amber-Marke mit `orders_old`, sonst keine.
     if (kennzahlen.orders_old > 0) {
-      await expect(marke).toBeVisible()
-      await expect(marke).toContainText(String(kennzahlen.orders_old))
-    } else {
-      await expect(marke).toHaveCount(0)
+      await expect(karte).toContainText(String(kennzahlen.orders_old))
+      await expect(karte.locator('svg')).toHaveCount(2)
     }
+    // Ein Klick öffnet den Bereich und markiert die Karte.
+    await karte.click()
+    await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
+    await expect(karte).toHaveAttribute('aria-pressed', 'true')
 
     await page.screenshot({ path: `${SHOTS}/logistik-01-knopf.png` })
   })
@@ -141,7 +121,7 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
 
     const entwuerfe = filterKarte(page, /Entwürfe/)
     const unterwegs = filterKarte(page, /unterwegs/)
-    const alt = filterKarte(page, /älter als 7 Tage/)
+    const alt = filterKarte(page, /über 7 Tage|alter als 7 Tage/)
     for (const karte of [entwuerfe, unterwegs, alt]) {
       await expect(karte).toBeVisible()
       await expect(karte).toHaveAttribute('aria-pressed', 'false')

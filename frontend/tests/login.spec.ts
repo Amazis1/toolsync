@@ -97,9 +97,7 @@ test('Mitarbeiter-Login mit gültiger Personalnummer zeigt die Oberfläche', asy
   await expect(
     page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Ersatzteile' }),
   ).toBeVisible()
-  await expect(
-    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Historie' }),
-  ).toBeVisible()
+
 })
 
 // ----------------------------------------------------------------

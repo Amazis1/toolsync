@@ -57,10 +57,18 @@ async function anmelden(page: Page) {
 
 /** Bereich wählen und warten, bis er wirklich bedienbar ist. */
 async function bereich(page: Page, name: string) {
-  await page
-    .getByRole('navigation', { name: 'Bereiche wechseln' })
-    .getByRole('button', { name })
-    .click()
+  if (name === 'Logistik') {
+    // Seit DEC-095 eine Karte der rechten Spalte, kein Reiter.
+    await page
+      .getByRole('complementary')
+      .getByRole('button', { name: /Logistik/ })
+      .click()
+  } else {
+    await page
+      .getByRole('navigation', { name: 'Bereiche wechseln' })
+      .getByRole('button', { name })
+      .click()
+  }
   await expect(page.locator('.login-overlay')).toHaveCount(0)
 }
 

@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext'
 import { useActivePlantId } from '../lib/activePlant'
 import { usePlants } from '../lib/plantTheme'
 import { auftraege as auftragAnzahl, werkzeuge as werkzeugAnzahl } from '../lib/format'
-import { AddIcon, ReturnIcon } from '../components/icons'
+import { AlertCircleIcon, FileTextIcon, TruckIcon, XIcon } from '../components/icons'
 import Tooltip from '../components/ui/Tooltip'
 import { cancelOrder, getOrders, sendOrder } from '../api/transport'
 import type { Plant } from '../api/types'
@@ -21,6 +21,7 @@ import type { ToastVariant } from '../lib/useToasts'
 import type { TransportOrder } from '../types/transport'
 import type { StatsOverview } from '../api/stats'
 import AwayTable from '../components/logistics/AwayTable'
+import History from './History'
 import IncomingCards from '../components/logistics/IncomingCards'
 import NewOrderModal from '../components/logistics/NewOrderModal'
 import OrderDetailModal from '../components/logistics/OrderDetailModal'
@@ -29,10 +30,10 @@ import ReceiveModal from '../components/logistics/ReceiveModal'
 import ReturnOrderModal from '../components/logistics/ReturnOrderModal'
 import ZurueckModal from '../components/logistics/ZurueckModal'
 import { WerkName, alterTage } from '../components/logistics/logistikTeile'
-import { AlertCircleIcon, FileTextIcon, TruckIcon, XIcon } from '../components/icons'
 import KpiKarte from '../components/ui/KpiKarte'
 
-type Bereich = 'auftraege' | 'eingang' | 'wowas'
+/** Unterbereiche der Logistik (DEC-095: „Historie“ ist dazugekommen). */
+type LogistikBereich = 'auftraege' | 'eingang' | 'wowas' | 'historie'
 
 /**
  * Schnellfilter der Auftragsliste (DEC-089) – gesetzt durch einen Klick auf eine
@@ -47,11 +48,15 @@ interface LogisticsProps {
   /** Wechsel des Arbeitswerks oder abgeschlossener Vorgang: Liste neu laden. */
   refreshKey: number
   /**
-   * Zähler aus der rechten Spalte (DEC-089): Ändert er sich, springt der Bereich
-   * in den Eingang. Ein Zähler statt eines Bool, damit derselbe Sprung mehrfach
-   * hintereinander wirkt.
+   * Unterbereich (DEC-095). Er lebt in der App, weil die Reiter in der **oberen
+   * Leiste** stehen (neben „Werkzeug zurück“ und „Neuer Auftrag“) – der Bereich
+   * selbst hat dafür keine Kopfzeile mehr.
    */
-  eingangWunsch: number
+  bereich: LogistikBereich
+  onBereich: (bereich: LogistikBereich) => void
+  /** Zähler: Die Knöpfe oben öffnen die Fenster, die hier liegen. */
+  neuAuftragWunsch: number
+  zurueckWunsch: number
   /**
    * Kennzahlen des Arbeitswerks (DEC-089/090). Die drei Filter-Karten zeigen
    * damit die **Gesamtzahl** des Arbeitswerks – auch während eine Suche läuft,
@@ -84,11 +89,6 @@ function leseZeitraumAusUrl(): Zeitraum {
   return wert === '7' || wert === '30' ? wert : 'alle'
 }
 
-function leseBereichAusUrl(): Bereich {
-  const wert = leseAusUrl('log-bereich')
-  return wert === 'eingang' || wert === 'wowas' ? wert : 'auftraege'
-}
-
 /** Liegt der Zeitpunkt höchstens `tage` Tage zurück? */
 function innerhalb(iso: string | null | undefined, tage: number): boolean {
   if (!iso) return false
@@ -102,7 +102,10 @@ const UNTERWEGS = new Set(['sent', 'partly_received'])
 
 export default function Logistics({
   refreshKey,
-  eingangWunsch,
+  bereich,
+  onBereich,
+  neuAuftragWunsch,
+  zurueckWunsch,
   kennzahlen,
   onAktion,
   notify,
@@ -112,7 +115,9 @@ export default function Logistics({
   const aktivId = useActivePlantId(user?.id ?? null, user?.plant_id ?? null)
   const werk: Plant | null = plants.find((p) => p.id === aktivId) ?? null
 
-  const [bereich, setBereich] = useState<Bereich>(() => leseBereichAusUrl())
+  // Unterbereich und Sprünge kommen von außen (DEC-095) – die Reiter und die
+  // beiden Aktionen stehen in der oberen Leiste.
+  const setBereich = onBereich
   const [orders, setOrders] = useState<TransportOrder[]>([])
   const [laden, setLaden] = useState(true)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -147,6 +152,15 @@ export default function Logistics({
   const [detailId, setDetailId] = useState<number | null>(null)
   /** Rückgabe-Liste: nur die ausgeliehenen Werkzeuge (DEC-081). */
   const [rueckListeOffen, setRueckListeOffen] = useState(false)
+
+  // „Neuer Auftrag“ und „Werkzeug zurück“ stehen seit DEC-095 in der oberen Leiste;
+  // der Klick kommt als Zähler herein und öffnet das Fenster hier.
+  useEffect(() => {
+    if (neuAuftragWunsch > 0) setNeuOffen(true)
+  }, [neuAuftragWunsch])
+  useEffect(() => {
+    if (zurueckWunsch > 0) setRueckListeOffen(true)
+  }, [zurueckWunsch])
 
   const ladeAuftraege = useCallback(async () => {
     setLaden(true)
@@ -191,11 +205,6 @@ export default function Logistics({
     window.history.replaceState(null, '', neu)
   }, [suche, zeitraum, nurMeine, schnellfilter, bereich])
 
-  // Sprung aus der rechten Spalte: „Eingang offen" öffnet den Eingang. Der erste
-  // Lauf (0) tut nichts – sonst stünde der Bereich immer schon im Eingang.
-  useEffect(() => {
-    if (eingangWunsch > 0) setBereich('eingang')
-  }, [eingangWunsch])
 
   const ausgang = useMemo(
     () => orders.filter((order) => order.direction === 'out'),
@@ -353,125 +362,10 @@ export default function Logistics({
 
   return (
     <div className="space-y-4">
-      {/* Kopfzeile: Bereichsreiter links, Aktionen rechts in der Werkfarbe.
-          Höhe und Abstände wie die Haupt-Tab-Leiste (px-3 py-1.5); Innenabstand
-          der Karten wie in den übrigen Bereichen (p-5) – die Logistik soll sich
-          nicht „enger" anfühlen als Werkzeuge/Serienartikel (DEC-082). */}
-      <div className="app-content-block flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-1.5 shadow-xs">
-        <div className="ui-tabs min-w-0 overflow-x-auto" role="group" aria-label="Logistik">
-          <button
-            type="button"
-            className={bereich === 'auftraege' ? 'is-active' : undefined}
-            aria-pressed={bereich === 'auftraege'}
-            onClick={() => setBereich('auftraege')}
-          >
-            Aufträge
-          </button>
-          <button
-            type="button"
-            className={bereich === 'eingang' ? 'is-active' : undefined}
-            aria-pressed={bereich === 'eingang'}
-            onClick={() => setBereich('eingang')}
-          >
-            Eingang
-            {zahlen.eingangAuftraege > 0 && (
-              <span className="ml-1.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-[var(--werk,#0f766e)] px-1 text-[10px] font-bold text-white">
-                {zahlen.eingangAuftraege}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            className={bereich === 'wowas' ? 'is-active' : undefined}
-            aria-pressed={bereich === 'wowas'}
-            onClick={() => setBereich('wowas')}
-          >
-            Wo ist was
-          </button>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          {/* „Werkzeug zurück" (DEC-081): der zweite Weg neben dem Zeilenmenü –
-              hier, weil es eine Aktion des Logistik-Bereichs ist. */}
-          <Tooltip text="Werkzeuge aus anderen Werken an ihr Heimatwerk zurückschicken">
-            <button
-              type="button"
-              onClick={() => setRueckListeOffen(true)}
-              className="ui-btn ui-btn-secondary ui-btn-sm"
-            >
-              <ReturnIcon className="h-3.5 w-3.5" />
-              Werkzeug zurück
-            </button>
-          </Tooltip>
-          <Tooltip text="Neuen Transportauftrag anlegen">
-            <button
-              type="button"
-              onClick={() => setNeuOffen(true)}
-              className="ui-btn ui-btn-werk ui-btn-sm"
-            >
-              <AddIcon className="h-3.5 w-3.5" />
-              Neuer Auftrag
-            </button>
-          </Tooltip>
-        </div>
-      </div>
-
       {fehler && (
         <div className="ui-alert ui-alert-error">
           <span>×</span>
           <div>{fehler}</div>
-        </div>
-      )}
-
-      {/* Kennzahl-Karten über der Liste (DEC-089): **drei Filter**, jeder ein
-          Knopf. „Eingang offen" steht nicht mehr hier – die Zahl sitzt in der
-          rechten Spalte (sie gilt für den ganzen Bereich, nicht für diese Liste),
-          und der Reiter „Eingang" ist zwei Zentimeter weiter links. Dadurch ist
-          immer **höchstens eine** Karte gedrückt; vorher sahen „unterwegs" und
-          „Eingang offen" gleichzeitig aktiv aus. */}
-      {bereich === 'auftraege' && (
-        <div
-          className="bereich-in flex flex-wrap gap-3"
-          role="group"
-          aria-label="Schnellfilter"
-        >
-          <div className="w-36">
-            <KpiKarte
-              zahl={karten.entwuerfe}
-              name="Entwürfe"
-              farbe="sky"
-              icon={<FileTextIcon className="h-4 w-4" />}
-              aktiv={schnellfilter === 'entwurf'}
-              titel="Nur Entwürfe zeigen"
-              onClick={() =>
-                setSchnellfilter((alt) => (alt === 'entwurf' ? null : 'entwurf'))
-              }
-            />
-          </div>
-          <div className="w-36">
-            <KpiKarte
-              zahl={karten.unterwegs}
-              name="unterwegs"
-              farbe="teal"
-              icon={<TruckIcon className="h-4 w-4" />}
-              aktiv={schnellfilter === 'unterwegs'}
-              titel="Nur unterwegs befindliche Aufträge zeigen"
-              onClick={() =>
-                setSchnellfilter((alt) => (alt === 'unterwegs' ? null : 'unterwegs'))
-              }
-            />
-          </div>
-          <div className="w-36">
-            <KpiKarte
-              zahl={karten.alt}
-              name={`älter als ${LANGE_OFFEN} Tage`}
-              farbe="amber"
-              icon={<AlertCircleIcon className="h-4 w-4" />}
-              aktiv={schnellfilter === 'alt'}
-              titel={`Offene Aufträge, die seit mindestens ${LANGE_OFFEN} Tagen laufen`}
-              onClick={() => setSchnellfilter((alt) => (alt === 'alt' ? null : 'alt'))}
-            />
-          </div>
         </div>
       )}
 
@@ -494,6 +388,57 @@ export default function Logistics({
               findet auch Auftrags-Nr., Info, Werkzeug-ID und Personennamen – und
               zwar in allen Aufträgen, nicht nur in den geladenen 200 Zeilen. */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Drei Filter-Karten in **Mini-Form** (DEC-095): Sie standen vorher in
+                einer eigenen Reihe über der Liste und kosteten rund 110 px Höhe.
+                Ein Klick setzt den Filter, ein zweiter hebt ihn auf; nur eine Karte
+                ist je gedrückt. */}
+            <div
+              className="flex flex-wrap items-center gap-2"
+              role="group"
+              aria-label="Schnellfilter"
+            >
+              <div className="w-[6.5rem]">
+                <KpiKarte
+                  mini
+                  zahl={karten.entwuerfe}
+                  name="Entwürfe"
+                  farbe="sky"
+                  icon={<FileTextIcon className="h-3.5 w-3.5" />}
+                  aktiv={schnellfilter === 'entwurf'}
+                  titel="Nur Entwürfe zeigen"
+                  onClick={() =>
+                    setSchnellfilter((alt) => (alt === 'entwurf' ? null : 'entwurf'))
+                  }
+                />
+              </div>
+              <div className="w-[6.5rem]">
+                <KpiKarte
+                  mini
+                  zahl={karten.unterwegs}
+                  name="unterwegs"
+                  farbe="teal"
+                  icon={<TruckIcon className="h-3.5 w-3.5" />}
+                  aktiv={schnellfilter === 'unterwegs'}
+                  titel="Nur unterwegs befindliche Aufträge zeigen"
+                  onClick={() =>
+                    setSchnellfilter((alt) => (alt === 'unterwegs' ? null : 'unterwegs'))
+                  }
+                />
+              </div>
+              <div className="w-[6.5rem]">
+                <KpiKarte
+                  mini
+                  zahl={karten.alt}
+                  name={`über ${LANGE_OFFEN} Tage`}
+                  farbe="amber"
+                  icon={<AlertCircleIcon className="h-3.5 w-3.5" />}
+                  aktiv={schnellfilter === 'alt'}
+                  titel={`Offene Aufträge, die seit mindestens ${LANGE_OFFEN} Tagen laufen`}
+                  onClick={() => setSchnellfilter((alt) => (alt === 'alt' ? null : 'alt'))}
+                />
+              </div>
+            </div>
+
             <input
               type="search"
               value={suche}
@@ -565,7 +510,7 @@ export default function Logistics({
                     ? 'nur Entwürfe'
                     : schnellfilter === 'unterwegs'
                       ? 'nur unterwegs'
-                      : `älter als ${LANGE_OFFEN} Tage`}
+                      : `über ${LANGE_OFFEN} Tage`}
                   <XIcon className="h-3 w-3" />
                 </button>
               </Tooltip>
@@ -657,6 +602,8 @@ export default function Logistics({
           )}
         </>
       )}
+
+      {bereich === 'historie' && <History refreshKey={stand} />}
 
       {bereich === 'wowas' && (
         <div className="bereich-in app-content-block rounded-2xl p-5 shadow-xs">

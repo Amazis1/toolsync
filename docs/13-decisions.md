@@ -3350,3 +3350,91 @@ ohne Überschneidung.
 findet die Werkzeug-ID und meldet „Keine Bewegung passt zu dieser Auswahl"; Vorgangs-Marke
 filtert (und hebt sich auf), Zeitraum-Filter setzt „(gefiltert)".
 
+---
+
+# DEC-095 – Logistik als Karte in der rechten Spalte, Historie als Logistik-Reiter, Aktionen in die obere Leiste
+
+**Status:** Verbindlich
+**Bezug:** DEC-086 (eigener Knopf), DEC-089 (KPI-Karten), DEC-094 (Historie),
+`docs/15-ui-styleguide.md` §1.6, `frontend/src/App.tsx`, `pages/Logistics.tsx`
+**Auftrag des Projektinhabers (wörtlich):** „Logistik Button diesen bitte als KPI karte machen
+nur bisschen schmaler und über die karten rechts plazieren. Historie gehört eigentlich in die
+Logistik. In der Historie die Buttons Werkzeug zurück, Neuer Auftrag und das Tabmenü in das
+schon vorhandene app-tabbar plazieren von rechts mit Trennstrichen, so sparen wir Platz. In den
+Aufträgen haben wir drei app-stat-card, wenn wir sie dort umplazieren oder kleiner machen
+könnten wäre es gut!"
+
+## Ausgangslage
+
+1. **Logistik war ein Reiter** (seit DEC-086 als eigene Pille neben der Reiter-Gruppe). Damit
+   stand sie in der Leiste, obwohl sie fachlich kein Stammdaten-Bereich ist.
+2. **„Historie" war ein eigener Hauptreiter** (DEC-094) – obwohl sie Bewegungen zeigt, also
+   genau das, was die Logistik beschreibt.
+3. **Der Logistik-Bereich hatte eine eigene Kopfzeile**: Unterreiter links, „Werkzeug zurück"
+   und „Neuer Auftrag" rechts – eine zweite Leiste unter der ersten, mit eigenem Glasblock.
+4. **Drei Filter-Karten standen in einer eigenen Reihe** über der Auftragsliste (rund 110 px).
+
+## Regel
+
+1. **Die Logistik ist eine Karte der rechten Spalte**, **über** den Kennzahlen, in der
+   **Mini-Form** von `KpiKarte` (`mini`: Zeichen 28 px, Zahl `text-lg`, ohne Glow, ohne
+   Fußzeile). Sie zeigt `orders_open`, die Überfällig-Marke (Amber, DEC-092) und ist im
+   offenen Zustand markiert (`aria-pressed`). Sie ersetzt den Reiter vollständig – der
+   `TabKey` `historie` ist entfallen, die Reiter-Gruppe zeigt nur noch Werkzeuge,
+   Serienartikel, Datenblätter, Ersatzteile.
+2. **„Historie" ist der vierte Unterreiter der Logistik**: Aufträge · Eingang · Wo ist was ·
+   **Historie** (`pages/History.tsx`, unverändert).
+3. **Unterreiter und Aktionen stehen in der oberen Leiste** (`.app-tabbar`), nur wenn die
+   Logistik offen ist: rechts neben der Reiter-Gruppe, jeweils durch einen **Trennstrich**
+   (1 × 24 px) abgesetzt – *Reiter | Unterreiter | Aktionen*. Der Bereich hat dadurch **keine
+   eigene Kopfzeile** mehr; der Unterbereich lebt in `App.tsx` (`logistikBereich`), die beiden
+   Aktionen öffnen die Fenster der Logistik über Zähler (`neuAuftragWunsch`, `zurueckWunsch`).
+   Der Eingang-Zähler sitzt als Plakette am Unterreiter (aus `orders_incoming_open`).
+4. **Die drei Filter-Karten sind Mini-Karten in der Filterzeile** (je 6,5 rem breit, Höhe einer
+   Eingabezeile) – dieselbe Zeile wie Suche, Zeitraum und „nur meine". Die eigene Kartenreihe
+   entfällt; die Liste rückt rund 110 px nach oben.
+5. **Die Regeln `.tab-logistik`, `.tab-zaehler`, `.tab-ueberfaellig` entfallen** (toter CSS-Code).
+   Zähler und Überfällig-Marke stehen jetzt in der Karte.
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Logistik | Reiter in der Leiste | Karte in der rechten Spalte (über den Kennzahlen), `mini` |
+| „Historie" | eigener Hauptreiter | 4. Unterreiter der Logistik |
+| Hauptreiter | 5 | 4 (Werkzeuge, Serienartikel, Datenblätter, Ersatzteile) |
+| Kopfzeile des Bereichs | eigener Glasblock mit Reitern + 2 Knöpfen | entfallen – alles in `.app-tabbar`, mit 2 Trennstrichen |
+| Filter-Karten | eigene Reihe, ~110 px | Mini-Karten in der Filterzeile, ~44 px |
+| CSS | `.tab-logistik` + 2 Marken | entfernt |
+
+## Begründung
+
+Die obere Leiste ist der Ort, an dem man den Bereich und seine Unterbereiche erwartet – zwei
+Leisten untereinander (eine für die Bereiche, eine für die Unterbereiche) kosten Höhe und
+verwirren, weil beide gleich aussehen. Die Logistik dagegen wird **gesucht**, nicht
+durchgeblättert; sie als farbige Kennzahl-Karte in der Spalte zu zeigen, macht sie mit ihrer
+Zahl („8 offene Aufträge, 6 überfällig") zugleich zur Anzeige. Und die drei Filter-Karten waren
+der letzte Rest „Kachel über der Liste" – ihre Zahl ist nützlich, ihre Höhe war es nicht.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** eigener „Logistik"-Reiter mehr (auch nicht ausgeblendet) – die Karte ist der Weg.
+- **Keine** zweite Leiste im Bereich: Unterreiter und Aktionen sind **eine** Zeile mit der
+  Hauptleiste.
+- **Keine** Filter-Karten in der Seitenleiste und keine vierte Kennzahl dort (die Spalte hält
+  vier Karten + Logistik, DEC-083).
+- **Kein** Verlust der Adresszeilen-Ansicht: Suche, Zeitraum, „nur meine" und der Schnellfilter
+  stehen weiterhin in `log-*` (DEC-090); der Unterbereich wird nicht mehr in die Adresszeile
+  geschrieben (er war dort nie ein Lesezeichenziel).
+
+## Prüfung
+
+`frontend/tests/logistics.spec.ts` (Test „Logistik ist eine Karte der rechten Spalte, ihre Reiter
+stehen oben (DEC-095)"): Logistik ist nicht in der Reiter-Gruppe · Karte steht in der rechten
+Spalte **über** den Kennzahlen und ist höchstens 240 px breit · Klick öffnet den Bereich, Karte
+trägt `aria-pressed` · die Gruppe „Logistik" hat die vier Unterreiter · „Werkzeug zurück" und
+„Neuer Auftrag" stehen in der Navigation · mindestens zwei Trennstriche.
+`logistik-kacheln.spec.ts` prüft Zahl (`orders_open`) und Überfällig-Marke der Karte; alle
+übrigen Logistik-Specs öffnen den Bereich jetzt über die Karte (`getByRole('complementary')`).
+Browser 129 Tests grün.
+

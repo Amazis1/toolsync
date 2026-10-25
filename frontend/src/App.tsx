@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import Tools from './pages/Tools';
 import Logistics from './pages/Logistics';
-import History from './pages/History';
 import PlantSwitch from './components/PlantSwitch';
 import { usePlantTheme } from './lib/plantTheme';
 import SerialArticleList from './components/serial-articles/SerialArticleList';
@@ -26,6 +25,7 @@ import {
   CheckIcon,
   ClipboardListIcon,
   AlertCircleIcon,
+  ReturnIcon,
 } from './components/icons';
 import AdminLayout from './pages/admin/AdminLayout';
 import SessionTimer from './components/SessionTimer';
@@ -44,20 +44,29 @@ type TabKey =
   | 'datenblaetter'
   | 'ersatzteile'
   | 'logistik'
-  | 'historie'
   | 'create';
 type ViewMode = 'main' | 'admin';
 
-// Tab-Leiste der Hauptansicht (DEC-066): Werkzeuge · Serienartikel ·
-// Datenblätter · Ersatzteile · Historie – das sind die **Stammdaten-Bereiche**.
-// „Logistik" steht bewusst **daneben** und nicht in dieser Gruppe (DEC-086): dort
-// geht es nicht um Stammdaten, sondern um Bewegung zwischen den Werken. Eigene
-// Pille, eigenes Zeichen, im aktiven Zustand die Fläche in der Werkfarbe.
+// Tab-Leiste der Hauptansicht (DEC-066): die **Stammdaten-Bereiche**.
+//
+// Seit DEC-095 steht „Logistik" nicht mehr in dieser Leiste, sondern als
+// **Kennzahl-Karte in der rechten Spalte** (über den übrigen Karten), und der
+// frühere Reiter „Historie" ist ein **Unterreiter der Logistik** – er zeigt
+// Bewegungen, also Bewegung zwischen Werken, und gehört dorthin.
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'werkzeuge', label: 'Werkzeuge' },
   { key: 'serienartikel', label: 'Serienartikel' },
   { key: 'datenblaetter', label: 'Datenblätter' },
   { key: 'ersatzteile', label: 'Ersatzteile' },
+];
+
+/** Unterbereiche der Logistik (DEC-095: „Historie" ist dazugekommen). */
+type LogistikBereich = 'auftraege' | 'eingang' | 'wowas' | 'historie';
+
+const LOGISTIK_BEREICHE: { key: LogistikBereich; label: string }[] = [
+  { key: 'auftraege', label: 'Aufträge' },
+  { key: 'eingang', label: 'Eingang' },
+  { key: 'wowas', label: 'Wo ist was' },
   { key: 'historie', label: 'Historie' },
 ];
 
@@ -77,11 +86,14 @@ function getInitials(firstName: string, lastName: string): string {
 // Spaltenform: `text-2xl`, Zeichen `h-10 w-10`, höchstens vier Karten).
 function StatisticsSidebar({
   zahlen,
+  aktiv,
   onWerkzeuge,
   onLogistik,
   onEingang,
 }: {
   zahlen: StatsOverview | null;
+  /** Steht die Logistik gerade offen? Dann ist ihre Karte markiert. */
+  aktiv: boolean;
   onWerkzeuge: () => void;
   onLogistik: () => void;
   onEingang: () => void;
@@ -93,7 +105,29 @@ function StatisticsSidebar({
   return (
     // `space-y-4` wie die Blöcke im Inhaltsbereich (vorher 12 px gegen 16 px –
     // die Karten standen enger als die Blöcke daneben, DEC-083).
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Der Logistik-Knopf ist seit DEC-095 eine **Karte der rechten Spalte** –
+          schmal und über den Kennzahlen. Damit verschwindet er aus der Reiter-
+          leiste (dort stand er seit DEC-086 als eigene Pille) und der Bereich ist
+          trotzdem von jedem Bildschirm aus einen Klick entfernt. */}
+      <KpiKarte
+        mini
+        farbe="teal"
+        zahl={zahlen?.orders_open ?? null}
+        name="Logistik"
+        icon={<TruckIcon className="h-4 w-4" />}
+        aktiv={aktiv}
+        titel="Werkzeuge zwischen den Werken – Aufträge, Eingang, Historie"
+        onClick={onLogistik}
+        marke={
+          zahlen && zahlen.orders_old > 0 ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 ring-1 ring-amber-600/30">
+              <AlertCircleIcon className="h-3 w-3" />
+              {zahlen.orders_old}
+            </span>
+          ) : null
+        }
+      />
       <KpiKarte
         kompakt
         farbe="sky"
@@ -221,12 +255,13 @@ const MainApp: React.FC = () => {
   );
   // Der Zähler am Logistik-Knopf ist `orders_open` aus derselben Antwort – eine
   // Quelle für Knopf und rechte Spalte (DEC-089).
-  const offeneAuftraege = statistik?.orders_open ?? 0;
-  // „Läuft zu lange“ (DEC-092): offene Aufträge ab 7 Tagen. Sie bekommen am
-  // Logistik-Knopf eine Amber-Marke und beim Anmelden **einen** Hinweis.
-  const ueberfaellig = statistik?.orders_old ?? 0;
-  /** Sprung in den Eingang der Logistik (aus der rechten Spalte). */
-  const [eingangWunsch, setEingangWunsch] = useState(0);
+  // Unterbereich der Logistik lebt hier: Die Reiter stehen seit DEC-095 in der
+  // **oberen Leiste** (neben „Werkzeug zurück" und „Neuer Auftrag"), nicht mehr im
+  // Bereich selbst – so spart sich der Bereich eine eigene Kopfzeile.
+  const [logistikBereich, setLogistikBereich] = useState<LogistikBereich>('auftraege');
+  /** Sprünge: Die Knöpfe oben öffnen die Fenster, die im Bereich liegen. */
+  const [neuAuftragWunsch, setNeuAuftragWunsch] = useState(0);
+  const [zurueckWunsch, setZurueckWunsch] = useState(0);
   const dataSheetToken = useRef(0);
   /**
    * Laufender Auftrag der Zeilenaktion „Datenblatt": eine späte Antwort einer
@@ -588,44 +623,57 @@ const MainApp: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Trennstrich: Logistik ist ein eigener Bereich, kein Reiter der
-                    Stammdaten (DEC-086). */}
-                <span aria-hidden="true" className="h-6 w-px shrink-0 bg-white/70" />
-
-                <Tooltip
-                  text={
-                    offeneAuftraege > 0
-                      ? `${offeneAuftraege} offene Aufträge${
-                          ueberfaellig > 0
-                            ? ` – davon ${ueberfaellig} seit über 7 Tagen`
-                            : ''
-                        }`
-                      : 'Werkzeuge zwischen den Werken transportieren'
-                  }
-                >
-                  <button
-                    onClick={() => switchTab('logistik')}
-                    className={`tab-logistik ${activeTab === 'logistik' ? 'is-active' : ''}`}
-                    aria-pressed={activeTab === 'logistik'}
-                  >
-                    <TruckIcon className="h-4 w-4" />
-                    Logistik
-                    {offeneAuftraege > 0 && (
-                      <span className="tab-zaehler">{offeneAuftraege}</span>
-                    )}
-                    {ueberfaellig > 0 && (
-                      <span
-                        className="tab-ueberfaellig"
-                        aria-label={`${ueberfaellig} ${
-                          ueberfaellig === 1 ? 'Auftrag läuft' : 'Aufträge laufen'
-                        } seit über 7 Tagen`}
+                {/* Logistik: Seit DEC-095 steht der Bereich nicht mehr als Reiter in
+                    der Leiste, sondern als Karte in der rechten Spalte. Ist er offen,
+                    erscheinen hier rechts seine **Unterreiter** und die beiden
+                    Aktionen – durch Trennstriche abgesetzt. Damit braucht der
+                    Bereich selbst keine Kopfzeile mehr (der Inhaber: „so sparen wir
+                    Platz"). */}
+                {activeTab === 'logistik' && (
+                  <>
+                    <span aria-hidden="true" className="h-6 w-px shrink-0 bg-white/70" />
+                    <div className="ui-tabs min-w-0 overflow-x-auto" role="group" aria-label="Logistik">
+                      {LOGISTIK_BEREICHE.map((eintrag) => (
+                        <button
+                          key={eintrag.key}
+                          type="button"
+                          className={logistikBereich === eintrag.key ? 'is-active' : undefined}
+                          aria-pressed={logistikBereich === eintrag.key}
+                          onClick={() => setLogistikBereich(eintrag.key)}
+                        >
+                          {eintrag.label}
+                          {eintrag.key === 'eingang' &&
+                            (statistik?.orders_incoming_open ?? 0) > 0 && (
+                              <span className="ml-1.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-[var(--werk,#0f766e)] px-1 text-[10px] font-bold text-white">
+                                {statistik?.orders_incoming_open}
+                              </span>
+                            )}
+                        </button>
+                      ))}
+                    </div>
+                    <span aria-hidden="true" className="h-6 w-px shrink-0 bg-white/70" />
+                    <Tooltip text="Werkzeuge aus anderen Werken an ihr Heimatwerk zurückschicken">
+                      <button
+                        type="button"
+                        onClick={() => setZurueckWunsch((alt) => alt + 1)}
+                        className="ui-btn ui-btn-secondary ui-btn-sm shrink-0"
                       >
-                        <AlertCircleIcon className="h-3 w-3" />
-                        {ueberfaellig}
-                      </span>
-                    )}
-                  </button>
-                </Tooltip>
+                        <ReturnIcon className="h-3.5 w-3.5" />
+                        Werkzeug zurück
+                      </button>
+                    </Tooltip>
+                    <Tooltip text="Neuen Transportauftrag anlegen">
+                      <button
+                        type="button"
+                        onClick={() => setNeuAuftragWunsch((alt) => alt + 1)}
+                        className="ui-btn ui-btn-werk ui-btn-sm shrink-0"
+                      >
+                        <AddIcon className="h-3.5 w-3.5" />
+                        Neuer Auftrag
+                      </button>
+                    </Tooltip>
+                  </>
+                )}
               </div>
 
               {/* + Anlegen öffnet das passende Formular je nach aktivem Tab.
@@ -717,15 +765,14 @@ const MainApp: React.FC = () => {
                 {activeTab === 'logistik' && (
                   <Logistics
                     refreshKey={logisticsRefreshKey}
-                    eingangWunsch={eingangWunsch}
+                    bereich={logistikBereich}
+                    onBereich={setLogistikBereich}
+                    neuAuftragWunsch={neuAuftragWunsch}
+                    zurueckWunsch={zurueckWunsch}
                     kennzahlen={statistik}
                     onAktion={() => setLogistikAktionen((alt) => alt + 1)}
                     notify={showToast}
                   />
-                )}
-
-                {activeTab === 'historie' && (
-                  <History refreshKey={logisticsRefreshKey} />
                 )}
                 {activeTab === 'create' && (
                   <Tools
@@ -758,11 +805,12 @@ const MainApp: React.FC = () => {
           <aside className="col-span-12 xl:col-span-2 space-y-4">
             <StatisticsSidebar
               zahlen={statistik}
+              aktiv={activeTab === 'logistik'}
               onWerkzeuge={() => switchTab('werkzeuge')}
               onLogistik={() => switchTab('logistik')}
               onEingang={() => {
                 switchTab('logistik');
-                setEingangWunsch((alt) => alt + 1);
+                setLogistikBereich('eingang');
               }}
             />
           </aside>
