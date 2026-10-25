@@ -646,24 +646,34 @@
     box-shadow: 0 2px 6px var(--werk-line, rgba(15, 118, 110, 0.3));
   }
 
-  .logistik-zahl {
-    font-size: 1.18rem;
+  /* Zeile 1: der Bereich beim Namen. */
+  .logistik-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    font-size: 0.8rem;
     font-weight: 700;
+    line-height: 1.2;
+    color: var(--werk-text, #115e59);
+  }
+  .logistik-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--werk-text, #115e59);
+    opacity: 0.85;
+  }
+
+  /* Zeile 2: die Zahl (und die Marke daneben). */
+  .logistik-zahl {
+    font-size: 1.05rem;
+    font-weight: 800;
     line-height: 1.1;
     color: #334155;
     font-variant-numeric: tabular-nums;
-  }
-
-  .logistik-label {
-    display: flex;
-    align-items: center;
-    gap: 0.15rem;
-    font-size: 0.72rem;
-    color: #64748b;
-  }
-  .logistik-label strong {
-    font-weight: 700;
-    color: var(--werk-text, #115e59);
   }
   .logistik-pfeil {
     color: var(--werk-text, #115e59);

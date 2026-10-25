@@ -3491,3 +3491,26 @@ Zeichen mit `linear-gradient` und weißer Schrift, Zahl = `orders_open`, Text �
 Amber-Marke = `orders_old`, `aria-pressed` nach dem Klick. `logistics.spec` misst weiterhin die
 Lage (Knopf über den Kennzahlen, ≤ 240 px). Browser 129 Tests grün.
 
+## Nachtrag (DEC-098) – „Logistik" steht oben, die Zahl darunter; Filter-Karten flacher
+
+**Auftrag des Inhabers:** „Logistik soll klar sichtbar sein, darunter kannst du Zahl und Marke
+hin tun. In der Logistik selbst haben wir noch drei Kacheln Entwürfe · unterwegs · über 7 Tage –
+bitte die Zahlen gegenüber dem Icon tun und Unterschrift drunter, so werden die Kacheln
+kleiner."
+
+1. **Logistik-Knopf, neue Leserichtung:** Zeile 1 = **„Logistik"** (fett, in der dunklen
+   Werkfarbe) mit „Öffnen ›" rechts; Zeile 2 = **Zahl** („8", `text-lg` auf 1,05 rem,
+   tabellarische Ziffern) mit „offene Aufträge" und der **Überfällig-Marke** daneben. Vorher
+   stand die Zahl oben und der Bereichsname darunter – der Name war die kleinste Angabe, obwohl
+   er sagt, wohin der Klick führt.
+2. **Filter-Karten in der Auftragsliste, flachere Form:** Zeile 1 = **Zeichen links, Zahl
+   rechts** (`justify-between`), Zeile 2 = **Unterschrift** („Entwürfe", „unterwegs", „über 7
+   Tage"). Die Karte hat damit zwei statt drei Zeilen und ist **≤ 64 px** hoch (vorher rund
+   100 px). Umgesetzt als eigene Mini-Form in `KpiKarte` (`mini`), die Kennzahlen der rechten
+   Spalte (`kompakt`) bleiben unverändert.
+
+**Geprüft** (`frontend/tests/logistik-kacheln.spec.ts`): Die Filter-Karte ist ≤ 64 px hoch,
+Zahl und Zeichen liegen auf derselben Zeile (Mitten-Abstand ≤ 3 px) und die Unterschrift steht
+darunter; der Logistik-Knopf trägt weiter Glasfläche, Verlauf-Zeichen, „Öffnen" und die
+Amber-Marke. Browser 129 Tests grün.
+

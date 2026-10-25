@@ -8,6 +8,8 @@
 
 **Nachtrag DEC-085:** Ein **Datenblatt ohne Werk** gilt für alle Werke (allgemeine Info) – `data_sheets.plant_id` ist nullable (Migration `f4c9a2d7b158`), das Formular bietet „Alle Werke (allgemein)", die Liste schreibt „Alle Werke". Serienartikel und Ersatzteile behalten die Werk-Pflicht.
 
+**Nachtrag DEC-098:** Der Logistik-Knopf zeigt **„Logistik" oben** (fett, mit „Öffnen ›") und **Zahl + Überfällig-Marke darunter**; die drei Filter-Karten der Auftragsliste haben jetzt **Zahl gegenüber dem Zeichen** und die **Unterschrift darunter** (Mini-Form in `KpiKarte`, ≤ 64 px hoch statt ~100). Geprüft in `logistik-kacheln.spec.ts`.
+
 **Nachtrag DEC-097:** Der Logistik-Knopf folgt der Demo `docs/demo-Logistik-Button.html` (Variante 7 „Glass"): Glasfläche mit Blur, Zeichen in einem **Verlauf** (`--werk-hell` → `--werk`), Zahl und „Logistik · **Öffnen** ›", farbiger Schatten und Hover-Lift – angepasst an Glas-System und Werkfarbe. Eigene Komponente `components/ui/LogistikKnopf.tsx` + Klasse `.logistik-knopf`; die Zwischenvariante `KpiKarte alsKnopf` (DEC-096) ist entfallen. Geprüft in `logistik-kacheln.spec.ts` (Glas, Verlauf, CTA, Marke) und `logistics.spec.ts` (Lage über den Kennzahlen).Browser 129 grün.
 
 **Nachtrag DEC-096:** Die Logistik-Karte **sieht aus wie ein Knopf** – Fläche in der Werkfarbe, weiße Schrift, Pfeil und CTA „öffnen" (Klasse `kpi-als-knopf`), Form einer Karte. In der rechten Spalte gilt damit: farbige Karte = Aktion, helle Karte = Kennzahl. Geprüft in `logistik-kacheln.spec.ts`.

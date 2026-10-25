@@ -152,6 +152,29 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
       await expect(karte).toHaveAttribute('aria-pressed', 'false')
     }
 
+    // Flacher als vorher (DEC-098): Zahl steht **neben** dem Zeichen, der Name
+    // darunter. Gemessen: Karte ≤ 64 px hoch, Zahl und Zeichen in einer Zeile.
+    const form = await entwuerfe.evaluate((el) => {
+      const zeichen = el.querySelector('span[aria-hidden="true"]') as HTMLElement | null
+      const zahl = el.querySelector('.tabular-nums') as HTMLElement | null
+      const text = [...el.querySelectorAll('span')].find(
+        (knoten) => (knoten.textContent ?? '').trim() === 'Entwürfe',
+      ) as HTMLElement | null
+      if (!zeichen || !zahl || !text) return null
+      const z = zeichen.getBoundingClientRect()
+      const n = zahl.getBoundingClientRect()
+      const s = text.getBoundingClientRect()
+      return {
+        hoehe: Math.round(el.getBoundingClientRect().height),
+        gleicheZeile: Math.abs(z.top + z.height / 2 - (n.top + n.height / 2)) <= 3,
+        nameUnterZahl: s.top >= n.bottom - 1,
+      }
+    })
+    expect(form, 'Karte ist messbar').not.toBeNull()
+    expect(form!.hoehe, 'Karte ist flach').toBeLessThanOrEqual(64)
+    expect(form!.gleicheZeile, 'Zahl steht neben dem Zeichen').toBe(true)
+    expect(form!.nameUnterZahl, 'Name steht unter der Zahl').toBe(true)
+
     // „Eingang offen" ist **keine** Karte dieses Bereichs mehr (sie sitzt rechts).
     await expect(filterKarte(page, /Eingang offen/)).toHaveCount(0)
 

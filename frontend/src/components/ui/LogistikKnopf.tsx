@@ -53,18 +53,24 @@ export default function LogistikKnopf({
         </span>
 
         <span className="min-w-0 flex-1 text-left">
-          <span className="flex items-baseline gap-1.5">
+          {/* Zeile 1: der Bereich beim Namen – „Logistik" soll klar dastehen. */}
+          <span className="logistik-kopf">
+            Logistik
+            <span className="logistik-cta">
+              Öffnen
+              <ChevronRightIcon className="logistik-pfeil h-3 w-3" />
+            </span>
+          </span>
+          {/* Zeile 2: die Zahl – und daneben die Überfällig-Marke. */}
+          <span className="mt-0.5 flex items-baseline gap-1.5">
             <span className="logistik-zahl">{zahl === null ? '—' : zahl}</span>
+            <span className="text-[11px] text-slate-600">offene Aufträge</span>
             {ueberfaellig > 0 && (
               <span className="logistik-marke" aria-hidden="true">
                 <AlertCircleIcon className="h-3 w-3" />
                 {ueberfaellig}
               </span>
             )}
-          </span>
-          <span className="logistik-label">
-            Logistik · <strong>Öffnen</strong>
-            <ChevronRightIcon className="logistik-pfeil h-3 w-3" />
           </span>
         </span>
       </button>
