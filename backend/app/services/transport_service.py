@@ -291,6 +291,12 @@ class TransportService:
                         else None
                     ),
                     lent_to=self._person(bewegung.user) if bewegung else None,
+                    # „Seit wann“ (DEC-093): Ausleihe -> Bewegung, Transport -> Versand.
+                    since=(
+                        bewegung.timestamp
+                        if bewegung is not None
+                        else (offen.sent_at if offen is not None else None)
+                    ),
                     transport_id=offen.id if offen else None,
                     transport_number=offen.order_number if offen else None,
                     target_plant=(

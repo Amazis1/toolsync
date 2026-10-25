@@ -3193,3 +3193,79 @@ wenn die Kennzahlen `orders_old > 0` melden, und trägt **deren Zahl** (sonst is
 Die Rechnung selbst deckt `backend/tests/test_stats.py` ab (`orders_old`, `orders_out_old`,
 inklusive „Versand zählt, sonst Anlage").
 
+---
+
+# DEC-093 – „Wo ist was": Suche, Filter und „seit wann draußen"
+
+**Status:** Verbindlich
+**Bezug:** DEC-077 (nur Abwesendes), DEC-089/090/092 (Karten, Suche, Überfälliges),
+`components/logistics/AwayTable.tsx`, `docs/21-werkzeug-logistik.md` §8
+**Auftrag des Projektinhabers:** „mach weiter" – letzter offener Punkt der Logistik-Liste
+(„Wo ist was": Suche/Filter, Person fehlt).
+
+## Ausgangslage
+
+1. **Keine Suche, kein Filter.** Die Tabelle zeigte alle ausgeliehenen und unterwegs
+   befindlichen Werkzeuge; nur der Umfang ließ sich umschalten (Alle · Unterwegs ·
+   Ausgeliehen). Wer ein bestimmtes Werkzeug suchte, scrollte.
+2. **Kein „seit wann".** In der Zeile stand „ausgeliehen" bzw. das Zielwerk – nicht, wie lange
+   das schon so ist. Damit war die eigentliche Frage dieser Seite („was liegt bei wem, und wie
+   lange schon?") nur halb beantwortet.
+3. **Die Anfrage selbst kannte den Zeitpunkt nicht.** `AwayTool` hatte kein Feld dafür; die
+   lend-Bewegung bzw. `sent_at` des Auftrags lagen aber bereits vor.
+
+## Regel
+
+1. **Backend: `AwayTool.since`** (neu). Bei Ausleihe der Zeitpunkt der `lend`-Bewegung, bei
+   Transport `sent_at` des offenen Auftrags; `NULL`, wenn nichts davon bekannt ist (dann wird
+   **kein** Zeitpunkt erfunden). Kein neues Datenmodell, keine Migration – nur ein Feld in der
+   Antwort.
+2. **Suche über die ganze Zeile** (im Browser, die Liste ist klein): Werkzeug-ID, Beschreibung,
+   Kategorie, Typ, Maß, Heimatwerk, Heimatplatz, aktuelles Werk, Zielwerk, **Ausleiher** und
+   **Auftragsnummer**. Treffer, die nichts finden, sagen es („Kein Werkzeug passt zu dieser
+   Suche").
+3. **Filter:** Umfang (wie bisher), **Heimatwerk** (erscheint nur, wenn mehr als eines
+   vorkommt) und **„länger als 7 Tage"** mit eigener Zahl in der Klammer. „Zurücksetzen"
+   erscheint, sobald etwas gesetzt ist, und nennt daneben „x von y".
+4. **Neue Spalte „Seit"** mit „gerade eben / seit 4 Std. / seit 3 Tagen" – ab 7 Tagen **amber
+   und fett** (dieselbe Regel und dieselbe Anzeige wie in der Auftragsliste, DEC-089/092).
+   Die Liste ist **am längsten draußen zuerst** sortiert: Die Frage dieser Ansicht ist nicht
+   „welches Werkzeug", sondern „was liegt am längsten".
+5. **Der Ausleiher steht im Klartext** (`lent_to`, fett), bei Transport weiterhin die
+   Auftragsnummer als Sprung in den Auftrag (DEC-077). Die Spalte heißt „Auftrag / Ausleiher".
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Suche | – | über Werkzeug, Art, Werk, Person, Auftrag |
+| Filter | nur Umfang | + Heimatwerk + „länger als 7 Tage" (mit Zahl) |
+| Zeitangabe | – | Spalte „Seit", ab 7 Tagen amber |
+| Sortierung | Werkzeug-ID | am längsten draußen zuerst |
+| API-Feld | – | `AwayTool.since` (Ausleihe: Bewegung, Transport: Versand) |
+
+## Begründung
+
+„Wo ist was" ist die Seite, auf der man nachschaut, **wenn etwas fehlt**. Sie muss deshalb
+zwei Fragen beantworten können: „wo ist *dieses* Werkzeug" (Suche) und „was liegt seit wem
+zu lange draußen" (Seit + Filter + Sortierung). Beides kostet keine neue Abfrage – die Daten
+waren da, nur nicht gezeigt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** serverseitiger Suchparameter für diese Liste: Sie ist auf die abwesenden Werkzeuge
+  begrenzt (Dutzende, nicht Tausende) und reagiert im Browser ohne Anfrage.
+- **Keine** Erinnerung/Benachrichtigung für lange Ausleihen – dafür gibt es die Amber-Marke am
+  Logistik-Knopf für Aufträge (DEC-092); Ausleihen sind personenbezogen und werden im
+  Ausleih-Fenster zurückgegeben.
+- **Kein** „Ausleihen verlängern" oder „Rückgabe anstoßen" aus dieser Tabelle: Die Rückgabe
+  läuft über das Zeilenmenü der Werkzeugliste (DEC-078).
+
+## Prüfung
+
+**Browser** (`frontend/tests/logistik-wo-ist-was.spec.ts`, 3 Tests): jede Zeile nennt „seit …";
+Suche findet die Werkzeug-ID, meldet „kein Treffer" bei Unsinn und „zurücksetzen" stellt die
+Liste wieder her; „länger als 7 Tage" filtert und keine verbleibende Zeile ist jünger.
+**Backend** (`tests/test_transport.py`, `test_wo_ist_was_nennt_seit_wann`): `since` ist beim
+Transport der Versandzeitpunkt und bleibt bei fehlender Ausleih-Bewegung `None`.
+

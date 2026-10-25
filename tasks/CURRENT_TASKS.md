@@ -8,6 +8,8 @@
 
 **Nachtrag DEC-085:** Ein **Datenblatt ohne Werk** gilt für alle Werke (allgemeine Info) – `data_sheets.plant_id` ist nullable (Migration `f4c9a2d7b158`), das Formular bietet „Alle Werke (allgemein)", die Liste schreibt „Alle Werke". Serienartikel und Ersatzteile behalten die Werk-Pflicht.
 
+**Nachtrag DEC-093:** „Wo ist was" hat **Suche** (Werkzeug-ID, Art, Werk, Person, Auftrag), **Filter** (Umfang, Heimatwerk, „länger als 7 Tage" mit Zahl) und die Spalte **„Seit"** (ab 7 Tagen amber); sortiert am längsten draußen zuerst. Dafür liefert `AwayTool.since` den Zeitpunkt (Ausleihe: Bewegung, Transport: Versand). Geprüft in `frontend/tests/logistik-wo-ist-was.spec.ts` (3) und `backend/tests/test_transport.py`. Damit ist die Logistik-Liste aus DEC-089/090/092 abgearbeitet.
+
 **Nachtrag DEC-092:** Offene Aufträge ab 7 Tagen sind ohne Suchen sichtbar: **Amber-Marke** mit Zahl am Logistik-Knopf (`tab-ueberfaellig`, neben dem Zähler; Tooltip nennt beides). Ein Toast beim Anmelden wurde gebaut und wieder **entfernt** – er lag über dem Inhalt und blockierte Klicks (DEC-092 Regel 2). Die Zahl kommt aus `orders_old` der Kennzahlen; im Produktivbestand aktuell 6 solche Aufträge. Geprüft in `frontend/tests/logistik-kacheln.spec.ts`.
 
 **Nachtrag DEC-091:** Das Fenster „Auftrag öffnen" zeigt den Verlauf als **Zeitstrahl** (`components/logistics/Zeitstrahl.tsx`): angelegt → verschickt → (teilweise) angekommen → angekommen, je Schritt mit Zeit, Person (Initialen, Vollname im Tooltip) und Werk; ausstehende Schritte bleiben leise sichtbar. Die drei alten Textzeilen im Kopfblock sind entfallen. Geprüft in `frontend/tests/logistik-nachweis.spec.ts` (2 Tests). **Offen:** für den Storno gibt es keinen Zeitstempel (kein eigenes Datum im Zeitstrahl).

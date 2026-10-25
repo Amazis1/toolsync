@@ -144,6 +144,10 @@ class AwayTool(BaseModel):
     home_plant: Optional[PlantRead] = None
     home_position_code: Optional[str] = None
     current_plant: Optional[PlantRead] = None
+    # „Seit wann" (DEC-093): Zeitpunkt der Ausleihe bzw. des Versands. Damit lässt
+    # sich beantworten, was zu lange draußen ist – vorher stand hier nur
+    # „ausgeliehen", aber nicht seit wann.
+    since: Optional[datetime] = None
     # Bei Ausleihe der Ausleiher, bei Transport der offene Auftrag
     lent_to: Optional[str] = None
     transport_id: Optional[int] = None

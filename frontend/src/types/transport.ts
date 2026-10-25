@@ -102,6 +102,11 @@ export interface AwayTool {  tool_id: number
   home_plant: Plant | null
   home_position_code: string | null
   current_plant: Plant | null
+  /**
+   * Seit wann draußen (DEC-093): Zeitpunkt der Ausleihe bzw. des Versands.
+   * Die Spalte „Seit" beantwortet damit, was zu lange weg ist.
+   */
+  since: string | null
   /** Bei Ausleihe: die Person. */
   lent_to: string | null
   /** Bei Transport: der offene Auftrag. */

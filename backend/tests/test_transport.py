@@ -817,6 +817,26 @@ class TestListen:
         assert liste["01020002"].home_position_code == "03-C-02"
         assert liste["01020003"].lent_to is None, "Ausleiher kommt aus der lend-Bewegung"
 
+    async def test_wo_ist_was_nennt_seit_wann(self, session):
+        """DEC-093: „seit wann draußen“ – Versand beim Transport, Bewegung bei der Ausleihe."""
+        ctx = await aufbau(session)
+        service = TransportService(session)
+        order = await service.create_order(
+            kopf("T-1", ctx["werk2"], ctx["stempel"]),
+            user_id=None,
+            plant_id=ctx["werk1"].id,
+        )
+        gesendet = await service.send_order(order.id, user_id=None, plant_id=ctx["werk1"].id)
+        ctx["abstreifer"].status = ToolStatus.LENT
+        await session.commit()
+
+        liste = {eintrag.tool_code: eintrag for eintrag in await service.away_tools()}
+        # Transport: der Versandzeitpunkt des Auftrags.
+        assert liste["01020002"].since == gesendet.sent_at
+        # Ausleihe ohne lend-Bewegung (in diesem Test von Hand gesetzt): kein
+        # Zeitpunkt statt eines erfundenen.
+        assert liste["01020003"].since is None
+
 
 class TestGelieheneWerkzeuge:
     """„Werkzeug zurück" (DEC-081): was hier liegt, aber anderen Werken gehört.
