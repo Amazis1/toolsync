@@ -62,9 +62,12 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
     await anmelden(page)
   })
 
-  test('die Logistik-Karte nennt offene Aufträge und markiert überfällige', async ({ page }) => {
-    // Seit DEC-095 ist der Logistik-Knopf eine **Karte der rechten Spalte**.
-    const karte = page.getByRole('complementary').getByRole('button', { name: /Logistik/ })
+  test('der Logistik-Knopf: Glas, Verlauf-Zeichen, Zahl und „Öffnen ›"', async ({ page }) => {
+    // DEC-097: Der Knopf folgt der Demo `docs/demo-Logistik-Button.html`
+    // (Glasfläche, Zeichen im Verlauf, Zahl + „Logistik · Öffnen ›").
+    const knopf = page
+      .getByRole('complementary')
+      .getByRole('button', { name: /Logistik öffnen/ })
 
     const kennzahlen = await page.evaluate(async () => {
       const antwort = await fetch('/api/stats/overview', {
@@ -76,48 +79,40 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
       return antwort.json()
     })
 
-    await expect(karte).toBeVisible()
-    // Die Zahl der Karte ist `orders_open` aus den Kennzahlen.
-    await expect(karte).toContainText(String(kennzahlen.orders_open))
-    // Überfällige (DEC-092): Amber-Marke mit `orders_old`, sonst keine.
-    if (kennzahlen.orders_old > 0) {
-      await expect(karte).toContainText(String(kennzahlen.orders_old))
-      // Zeichen: Truck, Warndreieck und der Pfeil des Knopfes.
-      await expect(karte.locator('svg')).toHaveCount(3)
-    } else {
-      // Ohne Überfällige bleiben Truck und Pfeil.
-      await expect(karte.locator('svg')).toHaveCount(2)
-    }
-    // Ein Klick öffnet den Bereich und markiert die Karte.
-    await karte.click()
-    await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
-    await expect(karte).toHaveAttribute('aria-pressed', 'true')
+    await expect(knopf).toBeVisible()
+    await expect(knopf).toHaveClass(/logistik-knopf/)
+    // Zahl = `orders_open`, Beschriftung mit CTA.
+    await expect(knopf.locator('.logistik-zahl')).toHaveText(String(kennzahlen.orders_open))
+    await expect(knopf).toContainText('Öffnen')
 
-    // Sie **sieht aus wie ein Knopf** (DEC-096): Fläche in der Werkfarbe, weiße
-    // Schrift, CTA „öffnen". Das unterscheidet sie von den Kennzahl-Karten, die
-    // nur etwas anzeigen. (Die Fläche wird als `oklab(...)` ausgegeben, sobald
-    // `color-mix` im Spiel ist – verglichen wird deshalb mit der Kennzahl-Karte
-    // daneben, nicht mit einem Hex-Wert.)
-    const farben = await page.evaluate(() => {
-      const karten = [...document.querySelectorAll('aside .app-stat-card')]
-      const logistik = karten.find((el) => (el.textContent ?? '').includes('Logistik'))
-      const kennzahl = karten.find((el) => (el.textContent ?? '').includes('Aktive Ausleihen'))
-      if (!logistik || !kennzahl) return null
+    // Glasfläche (halbtransparentes Weiß) und Verlauf im Zeichen.
+    const stil = await page.evaluate(() => {
+      const el = document.querySelector('.logistik-knopf') as HTMLElement | null
+      const zeichen = el?.querySelector('.logistik-zeichen') as HTMLElement | null
+      if (!el || !zeichen) return null
       return {
-        knopf: getComputedStyle(logistik).backgroundColor,
-        knopfSchrift: getComputedStyle(logistik).color,
-        kennzahl: getComputedStyle(kennzahl).backgroundColor,
+        flaeche: getComputedStyle(el).backgroundColor,
+        verlauf: getComputedStyle(zeichen).backgroundImage,
+        schrift: getComputedStyle(zeichen).color,
       }
     })
-    expect(farben, 'Karten sind messbar').not.toBeNull()
-    expect(farben!.knopf, 'Logistik-Karte hat eine eigene (farbige) Fläche').not.toBe(
-      farben!.kennzahl,
-    )
-    expect(farben!.knopfSchrift, 'weiße Schrift auf der Knopf-Fläche').toBe(
-      'rgb(255, 255, 255)',
-    )
-    await expect(karte).toHaveClass(/kpi-als-knopf/)
-    await expect(karte).toContainText(/öffnen/i)
+    expect(stil, 'Knopf und Zeichen sind messbar').not.toBeNull()
+    expect(stil!.flaeche, 'Glasfläche (Weiß mit Alpha)').toMatch(/^rgba?\(255, 255, 255/)
+    expect(stil!.verlauf, 'Zeichen trägt den Verlauf').toContain('linear-gradient')
+    expect(stil!.schrift, 'Zeichen in Weiß').toBe('rgb(255, 255, 255)')
+
+    // Überfällige (DEC-092): Amber-Marke mit `orders_old`, sonst keine.
+    const marke = knopf.locator('.logistik-marke')
+    if (kennzahlen.orders_old > 0) {
+      await expect(marke).toContainText(String(kennzahlen.orders_old))
+    } else {
+      await expect(marke).toHaveCount(0)
+    }
+
+    // Ein Klick öffnet den Bereich und markiert den Knopf.
+    await knopf.click()
+    await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
+    await expect(knopf).toHaveAttribute('aria-pressed', 'true')
 
     await page.screenshot({ path: `${SHOTS}/logistik-01-knopf.png` })
   })

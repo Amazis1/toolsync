@@ -581,13 +581,16 @@ test.describe('Werkzeug-Logistik', () => {
     //    und trägt Zeichen und Zahl.
     const karte = spalte.getByRole('button', { name: /Logistik/ })
     await expect(karte).toBeVisible()
-    await expect(karte).toHaveClass(/app-stat-card/)
+    await expect(karte).toHaveClass(/logistik-knopf/)
     await expect(karte.locator('svg').first()).toBeVisible()
 
     const lage = await page.evaluate(() => {
-      const karten = [...document.querySelectorAll('aside .app-stat-card')]
-      const logistik = karten.find((el) => (el.textContent ?? '').includes('Logistik'))
-      const ersteKennzahl = karten.find((el) => (el.textContent ?? '').includes('Aktive Ausleihen'))
+      // Der Logistik-Knopf ist seit DEC-097 ein eigener Glas-Knopf (`.logistik-knopf`),
+      // die Kennzahlen darunter bleiben `.app-stat-card`.
+      const logistik = document.querySelector('aside .logistik-knopf')
+      const ersteKennzahl = [...document.querySelectorAll('aside .app-stat-card')].find((el) =>
+        (el.textContent ?? '').includes('Aktive Ausleihen'),
+      )
       if (!logistik || !ersteKennzahl) return null
       return {
         oben: logistik.getBoundingClientRect().top,

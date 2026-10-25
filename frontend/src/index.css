@@ -579,16 +579,112 @@
     font-weight: 700;
   }
 
-  /* Logistik-Karte als **Knopf** (DEC-096): Fläche in der Werkfarbe, weiße Schrift.
-     Die Karte bleibt in der Form der Kennzahlen („app-stat-card"), damit das Raster
-     stimmt – der Unterschied ist die Farbe: Sie ist der Einstieg in einen Bereich,
-     keine Zahl zum Lesen. */
-  .kpi-als-knopf {
-    background: var(--werk, #0f766e) !important;
-    border-color: transparent !important;
+  /* =================================================== */
+  /* LOGISTIK-KNOPF DER RECHTEN SPALTE (DEC-097)         */
+  /* =================================================== */
+  /* Vorlage: `docs/demo-Logistik-Button.html` („Variante 7 Glass") – Glasfläche,
+     Zeichen in einem Verlauffeld, Zahl und „Logistik · Öffnen ›". Angepasst an
+     dieses Design: Verlauf und Schatten in der **Werkfarbe** (`--werk-hell` →
+     `--werk`), Ecken und Abstände wie die übrigen Bausteine. */
+  .logistik-knopf {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      0 4px 16px var(--werk-line, rgba(15, 118, 110, 0.3)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition:
+      background-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
   }
-  .kpi-als-knopf:hover {
-    background: color-mix(in srgb, var(--werk, #0f766e) 88%, white) !important;
+  .logistik-knopf:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 20px var(--werk-tinte-hover, rgba(15, 118, 110, 0.28)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .logistik-knopf:active {
+    transform: translateY(0);
+  }
+  .logistik-knopf:focus-visible {
+    outline: 2px solid var(--werk, #0f766e);
+    outline-offset: 2px;
+  }
+  .logistik-knopf.is-active {
+    border-color: var(--werk-line, rgba(15, 118, 110, 0.3));
+    box-shadow:
+      0 0 0 2px var(--werk-line, rgba(15, 118, 110, 0.3)),
+      0 6px 20px var(--werk-line, rgba(15, 118, 110, 0.3));
+  }
+
+  /* Zeichen im Verlauf der Werkfarbe. */
+  .logistik-zeichen {
+    display: flex;
+    height: 34px;
+    width: 34px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.6rem;
+    color: #fff;
+    background: linear-gradient(
+      135deg,
+      var(--werk-hell, #14b8a6),
+      var(--werk, #0d9488)
+    );
+    box-shadow: 0 2px 6px var(--werk-line, rgba(15, 118, 110, 0.3));
+  }
+
+  .logistik-zahl {
+    font-size: 1.18rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #334155;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .logistik-label {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    font-size: 0.72rem;
+    color: #64748b;
+  }
+  .logistik-label strong {
+    font-weight: 700;
+    color: var(--werk-text, #115e59);
+  }
+  .logistik-pfeil {
+    color: var(--werk-text, #115e59);
+    transition: transform 0.2s ease;
+  }
+  .logistik-knopf:hover .logistik-pfeil {
+    transform: translateX(2px);
+  }
+
+  /* Überfällig-Marke (DEC-092) – Amber, klein, neben der Zahl. */
+  .logistik-marke {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    background: rgba(245, 158, 11, 0.22);
+    padding: 0 0.25rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #92400e;
   }
 
   /* Kennzahl-Karte als **Filter**: `aria-pressed` markiert die aktive Karte mit

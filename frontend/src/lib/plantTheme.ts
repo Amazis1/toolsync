@@ -34,6 +34,17 @@ export function withAlpha(hex: string, alpha: number): string {
  * Der Faktor 0,78 macht daraus `#0b5c56` (rund 7:1 auf hellem Glas) und hält den
  * Farbton – der Knopf trägt weiter die Farbe des Werks, nur lesbar.
  */
+export function heller(hex: string, faktor = 1.35): string {
+  const wert = hex.replace('#', '')
+  const voll = wert.length === 3 ? wert.split('').map((z) => z + z).join('') : wert
+  const zahl = Number.parseInt(voll, 16)
+  const teil = (v: number) => Math.max(0, Math.min(255, Math.round(v * faktor + (faktor - 1) * 40)))
+  const r = teil((zahl >> 16) & 255)
+  const g = teil((zahl >> 8) & 255)
+  const b = teil(zahl & 255)
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
 export function dunkler(hex: string, faktor = 0.78): string {
   const wert = hex.replace('#', '')
   const voll = wert.length === 3 ? wert.split('').map((z) => z + z).join('') : wert
@@ -115,6 +126,8 @@ export function usePlantTheme(
     wurzel.style.setProperty('--werk-tinte', withAlpha(farbe, 0.18))
     wurzel.style.setProperty('--werk-tinte-hover', withAlpha(farbe, 0.28))
     wurzel.style.setProperty('--werk-text', dunkler(farbe))
+    // Für den Verlauf im Logistik-Knopf (DEC-097): heller Anfang, dunkles Ende.
+    wurzel.style.setProperty('--werk-hell', heller(farbe))
     wurzel.dataset.werk = String(aktiv ?? '')
   }, [farbe, aktiv])
 

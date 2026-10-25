@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logistik Button – Variante 7 (Glass)</title>
+  <style>
+    :root {
+      --teal-600: #0d9488;
+      --teal-500: #14b8a6;
+      --gray-500: #64748b;
+      --gray-700: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #e0f2fe, #ccfbf1);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    .btn-v7 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 14px;
+      padding: 12px 16px;
+      width: 100%;
+      max-width: 240px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 
+        0 4px 16px rgba(13, 148, 136, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .btn-v7:hover {
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 
+        0 6px 20px rgba(13, 148, 136, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .btn-v7:active {
+      transform: translateY(0);
+    }
+
+    .btn-v7 .icon-wrap {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #14b8a6, #0d9488);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 6px rgba(13, 148, 136, 0.3);
+      flex-shrink: 0;
+    }
+
+    .btn-v7 .icon-wrap svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .btn-v7 .content {
+      flex: 1;
+      text-align: left;
+    }
+
+    .btn-v7 .number {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--gray-700);
+      line-height: 1.1;
+    }
+
+    .btn-v7 .label {
+      font-size: 0.78rem;
+      color: var(--gray-500);
+    }
+
+    .btn-v7 .label strong {
+      color: var(--teal-600);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-v7">
+    <div class="icon-wrap">
+      <svg viewBox="0 0 24 24">
+        <path d="M16 3h-8a2 2 0 0 0-2 2v10h12V5a2 2 0 0 0-2-2z"/>
+        <path d="M6 15H4a1 1 0 0 1-1-1v-3.5a1.5 1.5 0 0 1 1.5-1.5H6"/>
+        <circle cx="7.5" cy="17.5" r="1.5"/>
+        <circle cx="16.5" cy="17.5" r="1.5"/>
+        <path d="M14 17.5h-4"/>
+      </svg>
+    </div>
+    <div class="content">
+      <div class="number">6</div>
+      <div class="label">Logistik · <strong>Öffnen ›</strong></div>
+    </div>
+  </button>
+
+</body>
+</html>

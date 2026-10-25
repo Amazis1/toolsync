@@ -36,6 +36,7 @@ import { useToasts } from './lib/useToasts';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat';
 import { useStatistik } from './lib/useStatistik';
 import KpiKarte from './components/ui/KpiKarte';
+import LogistikKnopf from './components/ui/LogistikKnopf';
 import type { StatsOverview } from './api/stats';
 
 type TabKey =
@@ -106,30 +107,17 @@ function StatisticsSidebar({
     // `space-y-4` wie die Blöcke im Inhaltsbereich (vorher 12 px gegen 16 px –
     // die Karten standen enger als die Blöcke daneben, DEC-083).
     <div className="space-y-3">
-      {/* Der Logistik-Knopf ist seit DEC-095 eine **Karte der rechten Spalte** –
-          schmal und über den Kennzahlen. Damit verschwindet er aus der Reiter-
-          leiste (dort stand er seit DEC-086 als eigene Pille) und der Bereich ist
-          trotzdem von jedem Bildschirm aus einen Klick entfernt. */}
-      <KpiKarte
-        mini
-        alsKnopf
-        cta="öffnen"
-        farbe="teal"
+      {/* Der Logistik-Knopf (DEC-097): Glasfläche mit Verlauf-Zeichen, Zahl und
+          „Logistik · Öffnen ›“. Er steht **über** den Kennzahlen: erst der Weg in
+          den Bereich, dann die Zahlen. Vorlage war `docs/demo-Logistik-Button.html`,
+          angepasst an Glas-System und Werkfarbe. */}
+      <LogistikKnopf
         zahl={zahlen?.orders_open ?? null}
-        name="Logistik"
-        icon={<TruckIcon className="h-4 w-4" />}
+        ueberfaellig={zahlen?.orders_old ?? 0}
         aktiv={aktiv}
-        titel="Werkzeuge zwischen den Werken – Aufträge, Eingang, Historie"
         onClick={onLogistik}
-        marke={
-          zahlen && zahlen.orders_old > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 ring-1 ring-amber-600/30">
-              <AlertCircleIcon className="h-3 w-3" />
-              {zahlen.orders_old}
-            </span>
-          ) : null
-        }
       />
+
       <KpiKarte
         kompakt
         farbe="sky"

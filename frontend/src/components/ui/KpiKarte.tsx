@@ -10,7 +10,6 @@
 // sind `tabular-nums`, damit sie beim Nachführen nicht springen.
 
 import type { ReactNode } from 'react'
-import { ChevronRightIcon } from '../icons'
 import Tooltip from './Tooltip'
 
 type Farbe = 'teal' | 'emerald' | 'amber' | 'sky'
@@ -59,15 +58,6 @@ interface KpiKarteProps {
   mini?: boolean
   /** Filter aktiv (nur sinnvoll mit `onClick`). */
   aktiv?: boolean
-  /**
-   * Karte **sieht aus wie ein Knopf** (DEC-096): Fläche in der Werkfarbe, weiße
-   * Schrift, Pfeil rechts und ein CTA-Satz („öffnen"). Für die Logistik-Karte in
-   * der rechten Spalte: Sie ist keine Kennzahl zum Lesen, sondern der Einstieg in
-   * einen Bereich – das soll man sehen, ohne zu überfahren.
-   */
-  alsKnopf?: boolean
-  /** Zusatz rechts unten in der Knopf-Form („öffnen"). */
-  cta?: string
   /** Steht auf dem Knopf, wenn kein `onClick` gesetzt ist. */
   titel?: string
 }
@@ -83,8 +73,6 @@ export default function KpiKarte({
   kompakt = false,
   mini = false,
   aktiv = false,
-  alsKnopf = false,
-  cta = 'öffnen',
   titel,
 }: KpiKarteProps) {
   const ton = FARBEN[farbe]
@@ -103,32 +91,25 @@ export default function KpiKarte({
           aria-hidden="true"
           className={`flex items-center justify-center ${
             kompakt ? 'h-10 w-10 rounded-lg' : mini ? 'h-7 w-7 rounded-md' : 'h-9 w-9 rounded-lg'
-          } ${alsKnopf ? 'bg-white/20 text-white ring-1 ring-white/30' : ton.zeichen}`}
+          } ${ton.zeichen}`}
         >
           {icon}
         </span>
         {marke}
       </span>
       <span
-        className={`relative block font-extrabold tracking-tight tabular-nums ${
-          alsKnopf ? 'text-white' : 'text-slate-800'
-        } ${mini ? 'mt-1.5 text-lg leading-tight' : kompakt ? 'mt-3 text-2xl' : 'mt-3 text-xl'}`}
+        className={`relative block font-extrabold tracking-tight text-slate-800 tabular-nums ${
+          mini ? 'mt-1.5 text-lg leading-tight' : kompakt ? 'mt-3 text-2xl' : 'mt-3 text-xl'
+        }`}
       >
         {zahl === null ? '—' : zahl}
       </span>
       <span
-        className={`relative flex items-center gap-1 font-medium ${
-          alsKnopf ? 'text-white/90' : 'text-slate-600'
-        } ${mini ? 'mt-0 text-[11px]' : 'mt-0.5 text-xs'}`}
+        className={`relative block font-medium text-slate-600 ${
+          mini ? 'mt-0 text-[11px]' : 'mt-0.5 text-xs'
+        }`}
       >
         {name}
-        {alsKnopf && (
-          <>
-            <span className="opacity-70">·</span>
-            <span className="font-semibold uppercase tracking-wide">{cta}</span>
-            <ChevronRightIcon className="h-3 w-3 shrink-0 opacity-90 transition-transform group-hover:translate-x-0.5" />
-          </>
-        )}
       </span>
       {fuss && !mini && (
         <span className="relative mt-3 block border-t border-white/50 pt-2">{fuss}</span>
@@ -136,16 +117,11 @@ export default function KpiKarte({
     </>
   )
 
-  // Knopf-Form: Fläche in der Werkfarbe (wie `.ui-btn-werk`), weiße Schrift.
-  // Die Karte behält `app-stat-card` als Grundform, überschreibt aber Fläche und
-  // Rahmen – so bleibt das Raster gleich und der Unterschied ist die Farbe.
-  const knopfKlassen = `kpi-als-knopf text-white shadow-lg`;
-
   const klassen = `app-stat-card group relative block w-full overflow-hidden text-left ${
     mini ? 'rounded-xl px-2.5 py-2' : kompakt ? 'rounded-2xl p-4' : 'rounded-xl p-3'
-  } ${alsKnopf ? knopfKlassen : ton.rand} shadow-lg transition-all duration-300 ${
+  } ${ton.rand} shadow-lg transition-all duration-300 ${
     onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl' : ''
-  } ${aktiv && !alsKnopf ? 'is-aktiv' : ''}`
+  } ${aktiv ? 'is-aktiv' : ''}`
 
   // Kein `title`: erklärende Hinweise laufen über `<Tooltip>` (DEC-088), damit
   // sie auch in Tabellen und an Rändern vollständig erscheinen.

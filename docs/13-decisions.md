@@ -3459,3 +3459,35 @@ Geprüft in `frontend/tests/logistik-kacheln.spec.ts`: Die Fläche unterscheidet
 Kennzahl-Karte daneben, die Schrift ist weiß, die Klasse `kpi-als-knopf` ist gesetzt und der
 Text enthält „öffnen". Alle Browser-Tests grün (129).
 
+## Nachtrag (DEC-097) – der Logistik-Knopf folgt der Demo (Glas + Verlauf)
+
+**Auftrag des Inhabers:** „schau bitte mal hier `docs/demo-Logistik-Button.html` – so in der
+Richtung soll es aussehen. Passe es an mein Design an, mit Glas und Gradient."
+
+**Vorlage (Variante 7 „Glass" aus der Demo):** Glasfläche mit `backdrop-filter: blur(12px)`,
+1-px-Weiß-Rand, 14-px-Radius, weicher farbiger Schatten plus Innen-Highlight; links ein
+**Zeichen in einem Verlauf-Feld**, rechts **Zahl** über **„Logistik · Öffnen ›"**;
+beim Überfahren heller, mit `translateY(-1px)`.
+
+**So ist es umgesetzt** (`components/ui/LogistikKnopf.tsx`, `.logistik-knopf` in `index.css`):
+
+| Demo | hier |
+|---|---|
+| festes Teal `#14b8a6` → `#0d9488` im Verlauf | **`--werk-hell` → `--werk`** – der Verlauf trägt die Farbe des Arbeitswerks |
+| Schatten in Teal | `0 4px 16px var(--werk-line)` (Hover: `--werk-tinte-hover`) |
+| `rgba(255,255,255,.75)` + `blur(12px)` | unverändert – dieselbe Glasfläche wie die Karten daneben |
+| Radius 14 px, Padding 12/16 | `0.85rem` und `0.6rem/0.75rem`: die Maße der übrigen Bausteine |
+| Pfeil › nach dem CTA | `ChevronRightIcon`, wandert beim Überfahren 2 px mit |
+| „Logistik · **Öffnen ›**" | „Logistik · **Öffnen**“ in `--werk-text` |
+| — | **Überfällig-Marke** als Amber-Plakette neben der Zahl (DEC-092) |
+
+Regeln, die bleiben: Der Knopf steht **über** den Kennzahl-Karten (erst der Weg in den Bereich,
+dann die Zahlen), die Spalte hält weiter vier Kennzahlen (DEC-083/095), und er ist der einzige
+Baustein mit Verlauf. Die Knopf-Variante von `KpiKarte` (DEC-096, `alsKnopf`) ist entfallen –
+sie war eine Zwischenstufe; die Glas-Demo hat sie ersetzt.
+
+**Geprüft** (`frontend/tests/logistik-kacheln.spec.ts`): Glasfläche (`rgba(255,255,255,…)`),
+Zeichen mit `linear-gradient` und weißer Schrift, Zahl = `orders_open`, Text „Öffnen",
+Amber-Marke = `orders_old`, `aria-pressed` nach dem Klick. `logistics.spec` misst weiterhin die
+Lage (Knopf über den Kennzahlen, ≤ 240 px). Browser 129 Tests grün.
+
