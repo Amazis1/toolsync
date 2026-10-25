@@ -408,7 +408,7 @@ attribute `filled`" – und der Favoritenstern war nie gefüllt. `filled` wird j
 | **TASK-030** | Arbeitswerk des Benutzers (DEC-070): Umschalter, `X-Plant-Id`, `default_plant_id`, Nachweisfelder | – | **fertig** |
 | **TASK-025a** | Rückgabe an Personen + Benutzerzuordnung aus dem Token (DEC-073) | TASK-030 | **fertig** |
 | **TASK-025b** | Werkzeug-Logistik (DEC-072): Modell, Services, API, Oberfläche, Tests | TASK-030, TASK-025a | **fertig**, Abnahme offen (`tasks/25b-werkzeug-logistik.md`) |
-| **TASK-029** | Reiter „Historie" echt: Personen-Ausleihen und Werks-Transporte | TASK-025a/b | offen |
+| **TASK-029** | Reiter „Historie" echt: Personen-Ausleihen und Werks-Transporte | TASK-025a/b | **erledigt (DEC-094)** |
 
 Reihenfolge und Begründung: **DEC-073**. Jeder Schritt wird einzeln abgenommen; die
 Oberfläche wird erst nach der Abnahme der Demo angefasst.

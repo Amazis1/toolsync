@@ -1,7 +1,9 @@
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
-from typing import Optional, List
+from typing import List, Optional, Tuple
 from ..models.movement import ToolMovement
 from ..models.tool import Tool
 from ..models.user import User
@@ -33,6 +35,74 @@ class MovementService:
             skip=skip,
             limit=limit,
         )
+
+    async def history(
+        self,
+        *,
+        arten: Optional[List[MovementType]] = None,
+        q: Optional[str] = None,
+        von: Optional[datetime] = None,
+        bis: Optional[datetime] = None,
+        plant_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> Tuple[List[ToolMovement], int]:
+        """Verlauf mit Filtern und Gesamtzahl (DEC-094).
+
+        Gefiltert wird über **alle** Angaben einer Zeile: Vorgang, Werkzeug-ID,
+        Beschreibung, Person, Ort (von/nach) und Notiz. Die Gesamtzahl kommt aus
+        einer eigenen `COUNT`-Abfrage mit denselben Bedingungen – sonst könnte die
+        Seite nicht sagen, wie viel es insgesamt ist.
+        """
+        bedingungen = []
+        if arten:
+            bedingungen.append(ToolMovement.movement_type.in_(arten))
+        if plant_id is not None:
+            # Arbeitswerk, in dem gehandelt wurde (DEC-070). Altdaten ohne
+            # `plant_id` bleiben bei „alle Werke" sichtbar.
+            bedingungen.append(ToolMovement.plant_id == plant_id)
+        if von is not None:
+            bedingungen.append(ToolMovement.timestamp >= von)
+        if bis is not None:
+            bedingungen.append(ToolMovement.timestamp < bis)
+        if q:
+            muster = f"%{q.strip()}%"
+            bedingungen.append(
+                or_(
+                    Tool.tool_id.ilike(muster),
+                    Tool.description.ilike(muster),
+                    ToolMovement.note.ilike(muster),
+                    ToolMovement.from_location.ilike(muster),
+                    ToolMovement.to_location.ilike(muster),
+                    ToolMovement.user.has(
+                        or_(
+                            User.first_name.ilike(muster),
+                            User.last_name.ilike(muster),
+                            (User.first_name + " " + User.last_name).ilike(muster),
+                        )
+                    ),
+                )
+            )
+
+        query = (
+            select(ToolMovement)
+            .join(ToolMovement.tool)
+            .where(*bedingungen)
+            .options(selectinload(ToolMovement.tool), selectinload(ToolMovement.user))
+            .order_by(ToolMovement.timestamp.desc(), ToolMovement.id.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        zeilen = list((await self.db.execute(query)).scalars().all())
+        gesamt = (
+            await self.db.execute(
+                select(func.count())
+                .select_from(ToolMovement)
+                .join(ToolMovement.tool)
+                .where(*bedingungen)
+            )
+        ).scalar_one()
+        return zeilen, int(gesamt)
 
     async def create_movement(
         self, data: ToolMovementCreate, plant_id: Optional[int] = None

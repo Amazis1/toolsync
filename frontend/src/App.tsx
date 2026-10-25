@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import Tools from './pages/Tools';
 import Logistics from './pages/Logistics';
+import History from './pages/History';
 import PlantSwitch from './components/PlantSwitch';
 import { usePlantTheme } from './lib/plantTheme';
 import SerialArticleList from './components/serial-articles/SerialArticleList';
@@ -63,19 +64,6 @@ const TABS: { key: TabKey; label: string }[] = [
 // Tab-Leiste und "+ Anlegen" kommen aus dem Guide-System (.ui-tabs / .ui-btn).
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-}
-
-// Platzhalter für Bereiche, die noch nicht gebaut sind. Der Text benennt das
-// Vorhaben, statt nur „folgt später" zu sagen (DEC-066 Punkt 3).
-function Placeholder({ title, note }: { title: string; note?: string }) {
-  return (
-    <div className="app-content-block rounded-2xl p-5 shadow-xs">
-      <h2 className="text-base font-bold text-slate-900">{title}</h2>
-      <p className="mt-1 text-xs text-slate-600">
-        {note ?? 'Dieser Bereich folgt in einem späteren Schritt.'}
-      </p>
-    </div>
-  );
 }
 
 // Rechte Spalte: Kennzahlen des Arbeitswerks (DEC-089).
@@ -737,15 +725,7 @@ const MainApp: React.FC = () => {
                 )}
 
                 {activeTab === 'historie' && (
-                  <Placeholder
-                    title="Historie"
-                    note={
-                      'Hier erscheinen später alle Werkzeugbewegungen (Ausleihe, Rückgabe, ' +
-                      'Verschieben, Statuswechsel) mit Filter und Auswertung. Der Verlauf wird ' +
-                      'heute im Admin-Panel unter „Lagerplätze“ geführt; der eigene Tab kommt ' +
-                      'mit dem Bewegungspaket (TASK-025).'
-                    }
-                  />
+                  <History refreshKey={logisticsRefreshKey} />
                 )}
                 {activeTab === 'create' && (
                   <Tools

@@ -31,6 +31,15 @@ export type MovementType =
  */
 export type MovementStatus = 'open' | 'completed' | 'cancelled'
 
+/** Deutsche Beschriftung der Vorgangsarten (DEC-094). */
+export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
+  lend: 'Ausleihe',
+  return: 'Rückgabe',
+  transfer: 'Weitergabe',
+  relocate: 'Umgebucht',
+  status_change: 'Statuswechsel',
+}
+
 /**
  * Vollständige Bewegung, wie sie vom Backend geliefert wird.
  */
@@ -51,6 +60,12 @@ export interface ToolMovement {
   /** Arbeitswerk, in dem gehandelt wurde (DEC-070); null bei Altdaten. */
   plant_id?: number | null
   plant?: { id: number; name: string; color?: string | null } | null
+}
+
+/** Eine Seite Verlauf (`GET /api/movements/history`, DEC-094). */
+export interface MovementPage {
+  items: ToolMovement[]
+  total: number
 }
 
 /**

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from ..models.enums import MovementType, MovementStatus
 from .master_data import PlantRead
 
@@ -69,3 +69,14 @@ class ActiveLoan(BaseModel):
     user_id: Optional[int] = None
     user_display_name: Optional[str] = None
     note: Optional[str] = None
+
+
+class MovementPage(BaseModel):
+    """Eine Seite Verlauf (DEC-094).
+
+    „Historie" braucht Seiten und eine Gesamtzahl – die alte Liste lieferte nur
+    Zeilen ohne `total`, damit war weder „1–50 von 320" noch „weiter" möglich.
+    """
+
+    items: List[ToolMovementRead]
+    total: int

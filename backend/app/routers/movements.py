@@ -7,16 +7,19 @@ Ausführenden aus dem Token und das Arbeitswerk aus dem Header `X-Plant-Id`.
 `GET /active` liefert die laufenden Ausleihen für die Rückgabe-Liste.
 """
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, List
+from datetime import date, datetime, time, timedelta
+from typing import List, Optional
 
 from app.dependencies.permissions import require_active
 from app.dependencies.plant import get_active_plant
+from app.models.enums import MovementType
 from app.models.master_data import Plant
 from app.models.user import User
 from app.schemas.movement import (
     ActiveLoan,
+    MovementPage,
     ToolMovementCreate,
     ToolMovementRead,
     ToolReturnRequest,
@@ -48,6 +51,56 @@ async def get_movements(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/history", response_model=MovementPage)
+async def get_history(
+    movement_type: Optional[str] = Query(
+        default=None,
+        description="Kommagetrennt: lend, return, transfer, relocate, status_change",
+    ),
+    q: Optional[str] = Query(
+        default=None,
+        description="Suche über Werkzeug-ID, Beschreibung, Person, Ort (von/nach) und Notiz",
+    ),
+    von: Optional[date] = Query(default=None, description="Ab diesem Tag (einschließlich)"),
+    bis: Optional[date] = Query(default=None, description="Bis zu diesem Tag (einschließlich)"),
+    plant_id: Optional[int] = Query(
+        default=None,
+        description="Nur Bewegungen im Arbeitswerk (DEC-070); ohne Angabe: alle Werke",
+    ),
+    skip: int = 0,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_active),
+):
+    """Verlauf mit Filtern, Suche und Seiten (DEC-094).
+
+    Grundlage des Reiters „Historie": eine Zeile je Bewegung – was, wann, von wem
+    und in welchem Arbeitswerk. Die Gesamtzahl steht in der Antwort, damit die
+    Oberfläche „1–50 von 320" sagen kann.
+    """
+    arten: List[MovementType] = []
+    if movement_type:
+        for wert in movement_type.split(","):
+            wert = wert.strip()
+            if not wert:
+                continue
+            try:
+                arten.append(MovementType(wert))
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Unbekannter Vorgang: {wert}")
+
+    zeilen, gesamt = await MovementService(db).history(
+        arten=arten or None,
+        q=q,
+        von=datetime.combine(von, time.min) if von else None,
+        bis=datetime.combine(bis + timedelta(days=1), time.min) if bis else None,
+        plant_id=plant_id,
+        skip=skip,
+        limit=limit,
+    )
+    return MovementPage(items=list(zeilen), total=gesamt)
 
 
 @router.post("/", response_model=ToolMovementRead, status_code=201)

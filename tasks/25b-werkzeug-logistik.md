@@ -315,5 +315,6 @@ Geprüft in `tests/tooltips.spec.ts`.
 - **Matrix im Admin-Panel**: dritter Kartenzustand „ausgeliehen nach W2" fehlt noch.
 - **Zeilenaktion „In Logistik öffnen"** in der Werkzeugliste fehlt (der Sprung in den
   offenen Auftrag).
-- **Historie** (TASK-029) zeigt Transporte und Ausleihen noch nicht in einer Ansicht –
-  die Bewegungen tragen aber bereits `transport_id` und `plant_id`.
+- ~~**Historie** (TASK-029) zeigt Transporte und Ausleihen noch nicht in einer Ansicht~~ –
+  **erledigt (DEC-094):** eigener Reiter mit Suche, Vorgangs-/Zeitraumfilter, Werk-Umschalter
+  und Seiten; die Bewegungen tragen `transport_id` und `plant_id`.

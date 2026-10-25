@@ -3269,3 +3269,84 @@ Liste wieder her; „länger als 7 Tage" filtert und keine verbleibende Zeile is
 **Backend** (`tests/test_transport.py`, `test_wo_ist_was_nennt_seit_wann`): `since` ist beim
 Transport der Versandzeitpunkt und bleibt bei fehlender Ausleih-Bewegung `None`.
 
+---
+
+# DEC-094 – Reiter „Historie": der Verlauf aller Bewegungen
+
+**Status:** Verbindlich
+**Bezug:** TASK-029, DEC-066 (Reiter), DEC-070 (Arbeitswerk), DEC-078 (Rückgabe an Personen),
+`docs/21-werkzeug-logistik.md` §8, `pages/History.tsx`
+**Auftrag des Projektinhabers:** „ok mach es" – auf den Vorschlag „Historie-Reiter (TASK-029)
+als letzte ‚folgt in einem späteren Schritt'-Stelle".
+
+## Ausgangslage
+
+Der Reiter „Historie" war seit dem ersten Entwurf ein **Platzhalter**: „Hier erscheinen später
+alle Werkzeugbewegungen … Der eigene Tab kommt mit dem Bewegungspaket." Die Bewegungen wurden
+längst geschrieben – Ausleihe, Rückgabe, Umbuchung, Statuswechsel, jede mit Werkzeug, Person,
+Arbeitswerk (DEC-070) und Zeitpunkt – nur sehen konnte man sie nirgends. Der Endpunkt
+`GET /api/movements/` lieferte eine nackte Liste ohne Gesamtzahl und ohne Suche, deshalb war
+daran auch keine Seite zu bauen.
+
+## Regel
+
+1. **Neuer Endpunkt `GET /api/movements/history`** (Seiten + Gesamtzahl), Filter:
+   - `movement_type` (kommagetrennt: lend, return, transfer, relocate, status_change),
+   - `q` – Suche über **Werkzeug-ID, Beschreibung, Person (Vor-/Nachname), Ort (von/nach)
+     und Notiz**; ein unbekannter Vorgang ist 422, kein stilles Ignorieren,
+   - `von`/`bis` (Tage, einschließlich; `bis` schließt den ganzen Tag ein),
+   - `plant_id` – Arbeitswerk, in dem gehandelt wurde; ohne Angabe **alle Werke**
+     (Altdaten ohne `plant_id` bleiben dort sichtbar),
+   - `skip`/`limit`.
+   Antwort `MovementPage {items, total}` – `total` aus einer eigenen `COUNT`-Abfrage mit
+   denselben Bedingungen, damit „1–25 von 320" stimmt.
+2. **Der Bereich zeigt eine Liste, keine Auswertung.** Spalten: **Zeit · Werkzeug (ID +
+   Beschreibung) · Vorgang · von → nach · Person · Arbeitswerk · Notiz**. Zeilenfarbe =
+   Heimatwerk des Werkzeugs (DEC-076), Vorgang als farbige Marke.
+3. **Filter im Kopf:** Suche (300 ms), Zeitraum (Alle · 7 · 30 · 90 Tage), Kontrollkästchen
+   **„alle Werke"** (Vorgabe: nur das Arbeitswerk – Bewegungen anderer Werke sind im Alltag
+   Rauschen), Vorgangs-Marken als **Mehrfachauswahl** mit Trefferzahl, „zurücksetzen".
+   Der Kopf nennt „1–25 von 320" und „(gefiltert)", wenn etwas gesetzt ist.
+4. **Seiten** über die vorhandene `ToolPagination` (25/50/100), Leerzustände getrennt nach
+   „nichts da" und „nichts passt zur Auswahl".
+5. **Der Verlauf wird nicht bearbeitet.** Kein Löschen, kein Ändern – er ist der Nachweis
+   (DEC-072). Die Zahlen (was ist draußen, was liegt zu lange) bleiben in der Logistik und in
+   der rechten Spalte (DEC-089/092); dieser Reiter beantwortet „was ist passiert".
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Reiter „Historie" | Platzhaltertext | echte Liste mit Filtern |
+| Endpunkt | Liste ohne `total`, ohne Suche/Zeitraum | `GET /api/movements/history` mit `total`, Suche, Zeitraum, Vorgang, Werk |
+| Spalten | – | Zeit · Werkzeug · Vorgang · von → nach · Person · Arbeitswerk · Notiz |
+| Suche | – | Werkzeug-ID, Beschreibung, Person, Ort, Notiz |
+| Seiten | – | 25/50/100 mit „x–y von N" |
+
+## Begründung
+
+Ein Verlauf, den man nicht lesen kann, ist kein Nachweis, sondern eine Tabelle in der
+Datenbank. Die Fragen sind konkret: „wer hat das Werkzeug zuletzt angefasst", „was ist in der
+letzten Woche passiert", „was hat Frau Maier gemacht" – alle drei brauchen Suche und Zeitraum,
+nicht ein Diagramm. Der Platzhalter war außerdem die letzte Sackgasse im Hauptmenü
+(Audit A-27).
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Auswertung/Diagramme in diesem Schritt (Durchlaufzeiten, Häufigkeiten) – eigene
+  Entscheidung, eigenes Paket.
+- **Kein** Löschen oder Korrigieren von Bewegungen.
+- **Kein** Export (CSV/PDF).
+- **Keine** Live-Aktualisierung: Die Liste lädt beim Öffnen und nach einer Aktion
+  (`logisticsRefreshKey`), nicht im Sekundentakt.
+
+## Prüfung
+
+**Backend** (`backend/tests/test_movements_history.py`, 4 Tests): Gesamtzahl und Reihenfolge
+(neueste zuerst), Suche über Werkzeug-ID/Beschreibung/Person/Notiz/Zielort (und 0 bei Unsinn),
+Filter nach Vorgang, Arbeitswerk und Zeitraum (inklusive „Altdaten ohne Arbeitswerk"), Seiten
+ohne Überschneidung.
+**Browser** (`frontend/tests/historie.spec.ts`, 3 Tests): Spalten und eine echte Zeile; Suche
+findet die Werkzeug-ID und meldet „Keine Bewegung passt zu dieser Auswahl"; Vorgangs-Marke
+filtert (und hebt sich auf), Zeitraum-Filter setzt „(gefiltert)".
+

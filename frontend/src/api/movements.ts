@@ -1,6 +1,12 @@
 // API-Funktionen für Werkzeugbewegungen
 import { http } from './client'
-import type { ActiveLoan, ToolMovement, ToolMovementInput } from '../types/movement'
+import type {
+  ActiveLoan,
+  MovementPage,
+  MovementType,
+  ToolMovement,
+  ToolMovementInput,
+} from '../types/movement'
 import type { Tool } from './types'
 
 /**
@@ -23,6 +29,28 @@ export async function getMovements(params?: {
 
   const query = urlParams.toString()
   return http.get<ToolMovement[]>(`/movements/${query ? `?${query}` : ''}`)
+}
+
+/** Verlauf mit Filtern, Suche und Seiten (`GET /movements/history`, DEC-094). */
+export async function getMovementHistory(params?: {
+  types?: MovementType[]
+  q?: string
+  von?: string
+  bis?: string
+  plant_id?: number
+  skip?: number
+  limit?: number
+}): Promise<MovementPage> {
+  const such = new URLSearchParams()
+  if (params?.types?.length) such.set('movement_type', params.types.join(','))
+  if (params?.q?.trim()) such.set('q', params.q.trim())
+  if (params?.von) such.set('von', params.von)
+  if (params?.bis) such.set('bis', params.bis)
+  if (params?.plant_id !== undefined) such.set('plant_id', String(params.plant_id))
+  if (params?.skip !== undefined) such.set('skip', String(params.skip))
+  if (params?.limit !== undefined) such.set('limit', String(params.limit))
+  const query = such.toString()
+  return http.get<MovementPage>(`/movements/history${query ? `?${query}` : ''}`)
 }
 
 /**
