@@ -68,11 +68,6 @@
   .app-content-block,
   .glass-card,
   .glass-preview-card,
-  .stat-card {
-    isolation: isolate;
-    contain: layout style paint;
-    transform: translateZ(0);
-  }
 
   /* ==================== */
   /* APP LAYOUT (UI-Styleguide Standard) */
@@ -106,13 +101,6 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   }
 
-  .stat-card {
-    background: rgba(255, 255, 255, 0.50);
-    border: 1px solid rgba(255, 255, 255, 0.60);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
   .glass-preview-card {
     background: rgba(255, 255, 255, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.5);
@@ -136,36 +124,6 @@
       background 0.3s ease,
       box-shadow 0.3s ease,
       border-color 0.3s ease;
-  }
-
-  .glass-card-hover:hover {
-    background: linear-gradient(
-      145deg,
-      #ffffff 0%,
-      rgba(255, 255, 255, 0.40) 100%
-    );
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
-  }
-
-  .glass-panel {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    @apply bg-white/30 backdrop-blur-xl shadow-xl rounded-xl;
-  }
-
-  .glass-item {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.40) 0%,
-      rgba(255, 255, 255, 0.45) 100%
-    );
-    @apply p-3 rounded-lg duration-300 hover:scale-[1.02];
-    transition:
-      background 0.3s ease,
-      box-shadow 0.3s ease,
-      transform 0.3s ease;
-  }
-  .glass-item:hover {
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
   }
 
   .tool-form-card {
@@ -296,34 +254,6 @@
     border-color: #0f766e;
     outline: none;
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
-  }
-
-  .input-success {
-    background-color: rgba(34, 197, 94, 0.15) !important;
-    border-color: #22c55e !important;
-  }
-  .input-error {
-    background-color: rgba(239, 68, 68, 0.12) !important;
-    border-color: #ef4444 !important;
-  }
-
-  .form-tooltip {
-    position: absolute;
-    top: -2.2rem;
-    left: 0;
-    background-color: #ef4444;
-    color: #ffffff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    z-index: 50;
-  }
-  .form-tooltip.visible {
-    opacity: 1;
-    pointer-events: auto;
   }
 
   /* ==================== */
@@ -754,11 +684,6 @@
     border-color: rgba(59, 130, 246, 0.2);
     color: #1e3a8a;
   }
-  .ui-alert-success {
-    background: rgba(16, 185, 129, 0.08);
-    border-color: rgba(16, 185, 129, 0.2);
-    color: #065f46;
-  }
   .ui-alert-warning {
     background: rgba(245, 158, 11, 0.1);
     border-color: rgba(245, 158, 11, 0.25);
@@ -787,15 +712,6 @@
      eine Tastatur oder einen Zustand ankündigen – nicht als Beisatz zu einem
      Text. Das Esc-Abzeichen im Anlege-Formular war in der Basisgröße neben dem
      „Zurück"-Knopf kaum zu sehen. */
-  .ui-badge-lg {
-    gap: 0.45rem;
-    padding: 0.3rem 0.85rem;
-    font-size: 0.78rem;
-  }
-  .ui-badge-lg > svg {
-    width: 1.05rem;
-    height: 1.05rem;
-  }
   .ui-badge-success {
     background: rgba(15, 118, 110, 0.12);
     color: #115e59;
@@ -825,35 +741,6 @@
   /* ==================== */
   /* UI TOGGLE (.ui-switch) */
   /* ==================== */
-  .ui-switch {
-    position: relative;
-    width: 42px;
-    height: 24px;
-    border-radius: 999px;
-    background: #cbd5e1;
-    transition: background 0.18s ease;
-    cursor: pointer;
-    border: 0;
-    flex: 0 0 auto;
-  }
-  .ui-switch::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 999px;
-    background: white;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
-    transition: transform 0.18s ease;
-  }
-  .ui-switch.is-on {
-    background: #0f766e;
-  }
-  .ui-switch.is-on::after {
-    transform: translateX(18px);
-  }
 
   /* ==================== */
   /* UI SEGMENTS          */
@@ -1200,19 +1087,6 @@
   /* ==================== */
   /* UI BREADCRUMBS       */
   /* ==================== */
-  .ui-breadcrumbs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    align-items: center;
-    font-size: 0.72rem;
-    color: #475569;
-  }
-  .ui-breadcrumbs a {
-    color: #115e59;
-    font-weight: 700;
-    text-decoration: none;
-  }
 
   /* ==================== */
   /* UI AVATAR            */
@@ -1396,31 +1270,6 @@
   /* ==================== */
   /* SIDEBAR             */
   /* ==================== */
-  .sidebar {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.38) 0%,
-      rgba(220, 220, 220, 0.3) 100%
-    );
-    border-right: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    @apply w-40 z-40 flex flex-col items-stretch px-2.5 py-4 gap-3 fixed h-full backdrop-blur-xl shadow-xl overflow-y-auto;
-  }
-
-  .sidebar-nav-item {
-    @apply relative flex items-center gap-3 w-full px-3 py-2.5 rounded-xl
-           text-[var(--text-muted)] transition-all duration-300
-           hover:bg-white/10 hover:text-[var(--text-strong)] hover:translate-x-1 whitespace-nowrap;
-  }
-
-  .sidebar-nav-item[data-active="true"] {
-    @apply bg-white/15 text-[var(--accent-blue)] shadow-lg rounded-xl;
-    border-left: 3px solid var(--accent-blue);
-  }
-  .sidebar-nav-item[data-active="true"] .icon {
-    @apply scale-110;
-    animation: icon-pulse 0.6s ease-in-out;
-  }
 
   /* ==================== */
   /* LOGO (unverändert)   */
@@ -1512,31 +1361,6 @@
   /* ==================== */
   /* SEARCH              */
   /* ==================== */
-  .search-container {
-    @apply flex items-center gap-3 p-2 rounded-lg
-           bg-white/10 backdrop-blur-lg transition-all
-           focus-within:bg-white/20 focus-within:shadow-lg;
-  }
-  .search-input {
-    @apply bg-transparent placeholder-[var(--text-muted)]
-           text-[var(--text)] focus:outline-none w-full
-           border-none pr-8;
-    background-image: linear-gradient(
-      var(--accent-blue),
-      var(--accent-blue)
-    );
-    background-size: 0% 2px;
-    background-repeat: no-repeat;
-    background-position: bottom right;
-    transition: background-size 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .search-input:focus {
-    background-size: 100% 2px;
-  }
-  .search-container:focus-within .icon-search {
-    @apply scale-125 text-[var(--accent-blue)];
-    filter: drop-shadow(0 0 4px rgba(90, 157, 235, 0.3));
-  }
 
   /* ==================== */
   /* TOOLTIPS (DEC-088)   */
@@ -1613,19 +1437,6 @@
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
-  .login-card {
-    @apply w-full max-w-md p-8 rounded-2xl;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.40) 0%,
-      rgba(220, 220, 220, 0.3) 100%
-    );
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    animation: fade-in-up 0.5s ease-out;
-  }
   /* Admin-Passwortfeld (Login): Höhe wächst per Transition, statt zu springen.
      Der Abstand zum Feld darüber wandert mit – sonst bliebe im
      Mitarbeiter-Modus eine leere Lücke zwischen Nummer und Anmelden stehen. */
@@ -1664,25 +1475,6 @@
     }
   }
 
-  .btn-login {
-    @apply w-full px-4 py-2.5 rounded-xl font-semibold text-white;
-    background: #0f766e;
-    box-shadow: 0 8px 20px rgba(15, 118, 110, 0.18);
-    transition: all 0.18s ease;
-  }
-  .btn-login:hover {
-    background: #115e59;
-    transform: translateY(-1px);
-  }
-  .btn-login:active {
-    transform: scale(0.97);
-  }
-  .btn-login:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    transform: none !important;
-  }
-
   /* ==================== */
   /* HEADER              */
   /* ==================== */
@@ -1707,31 +1499,14 @@
     .app-content-block,
     .glass-card,
     .glass-preview-card,
-    .stat-card,
     .modal-panel {
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
       background: rgba(255, 255, 255, 0.92) !important;
     }
   }
-
-  .no-backdrop .app-sidebar,
-  .no-backdrop .app-content-block,
-  .no-backdrop .glass-card,
-  .no-backdrop .glass-preview-card,
-  .no-backdrop .stat-card,
-  .no-backdrop .modal-panel {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    background: rgba(255, 255, 255, 0.9) !important;
-  }
+  /* Ende von @layer components */
 }
 
 @layer utilities {
-  .text-gradient {
-    background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
 }

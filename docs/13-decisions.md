@@ -3514,3 +3514,64 @@ Zahl und Zeichen liegen auf derselben Zeile (Mitten-Abstand ≤ 3 px) und die Un
 darunter; der Logistik-Knopf trägt weiter Glasfläche, Verlauf-Zeichen, „Öffnen" und die
 Amber-Marke. Browser 129 Tests grün.
 
+---
+
+# DEC-099 – Aufräum-Paket aus dem Audit: tote Datei, tote CSS-Klassen
+
+**Status:** Verbindlich
+**Bezug:** `docs/19-frontend-ui-audit.md` **A-39** und **A-40**, DEC-088/089/095–098
+**Auftrag des Projektinhabers:** „ok, das passt jetzt" – nach der Layout-Abnahme wurde das
+angekündigte Aufräum-Paket umgesetzt.
+
+## Ausgangslage
+
+1. **A-39 – tote Datei:** `frontend/src/components/ToolFormModal.tsx` (259 Zeilen) wurde
+   **nirgends importiert**. Sie war eine zweite, abweichende Fassung des Anlege-Formulars mit
+   17 rohen Palettenfarben und eigenen Glas-Inputs.
+2. **A-40 – tote CSS-Klassen:** `index.css` enthielt Klassen ohne jede Verwendung im
+   Haupt-Frontend. Nach DEC-089–098 waren es noch **19** (die Audit-Liste nannte 15; die
+   Layout-Umbauten haben u. a. `.tab-logistik`, `.tab-zaehler`, `.tab-ueberfaellig` und
+   `.kpi-als-knopf` hinterlassen – die sind bereits mit ihren Umbauten entfallen).
+
+## Regel
+
+1. **Die Datei ist gelöscht.** `ToolFormModal.tsx` und damit ihre 17 Palettenfarben und
+   Sonder-Inputs sind weg (`ToolForm.tsx` ist das eine Formular).
+2. **19 Klassen samt Regeln entfernt**, überwiegend aus der ersten Entwurfsfassung:
+   `.btn-login`, `.login-card`, `.form-tooltip`, `.glass-card-hover`, `.glass-item`,
+   `.glass-panel`, `.stat-card`, `.input-error`, `.input-success`, `.no-backdrop`,
+   `.search-container`, `.search-input`, `.sidebar`, `.sidebar-nav-item`, `.text-gradient`,
+   `.ui-alert-success`, `.ui-badge-lg`, `.ui-breadcrumbs`, `.ui-switch`.
+   Insgesamt **33 Regelblöcke**; der Abschnitt „SEARCH" ist leer und bleibt als Hinweis stehen.
+3. **Was bleibt, bleibt bewusst:** Klassen, die **dynamisch** zusammengesetzt werden, sind von
+   einer Textsuche nicht zu finden und wurden geprüft und behalten:
+   `.ui-status-<zustand>` (`ui-status-${status}`), `.ui-toast-<variante>`
+   (`ui-toast-${variant}`), `.ui-menu-left`, `.is-active`, `.is-on`.
+4. **Die Klasse `.stat-card` verschwindet auch aus dem Reduced-Transparency-Fallback** –
+   dort stand sie in einer Selektorliste, ohne dass es die Klasse noch gab.
+5. **Kein Verhaltenswechsel:** Es fällt nur Code weg, der nie lief. Die Prüfung ist die
+   vollständige Browser-Suite (129 Tests), die alle Flächen, Fenster und Tabellen anfasst.
+
+## Zahlen
+
+| Punkt | vorher | nachher |
+|---|---|---|
+| `ToolFormModal.tsx` | 259 Zeilen, 0 Importe | **gelöscht** |
+| CSS-Regelblöcke in `index.css` | 1543 Zeilen | **1512 Zeilen** (−33 Regeln) |
+| Klassen ohne Verwendung | 19 | **0** – außer den 9 dynamischen (dokumentiert) |
+| Browser-Tests | 129 grün | 129 grün |
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** neuen Klassen „auf Vorrat": Wer `.ui-switch` oder `.ui-breadcrumbs` braucht, legt
+  sie mit dem Bildschirm an, der sie benutzt.
+- **Keine** Änderung an `.ui-skeleton` (bleibt vorerst definiert, ist aber weiterhin unbenutzt –
+  offener Punkt aus A-28) und keine an den Admin-CSS-Dateien (zweites System).
+- **Keine** Umstellung auf `@apply`-freie Regeln oder andere Stil-Refactorings.
+
+## Prüfung
+
+`node -e`-Klammerprobe: `{`/`}` in `index.css` sind ausgeglichen (221/221); Vite liefert das
+Stylesheet, alle 129 Browser-Tests grün. Der Prüfgriff „Klassen ohne Verwendung" ist als Skript
+gelaufen (103 → 84 Klassen, 19 entfernt, 9 dynamische behalten) und im Commit dokumentiert.
+
