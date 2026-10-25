@@ -7,6 +7,7 @@ import {
 } from '../../api/serialArticles'
 import { getPlants } from '../../api/tools'
 import ConfirmDialog from '../ConfirmDialog'
+import Tooltip from '../ui/Tooltip'
 import RowActionMenu from '../tools/RowActionMenu'
 import ToolPagination from '../tools/ToolPagination'
 import {
@@ -412,24 +413,25 @@ export default function SerialArticleList({
                     className={`px-3 py-2.5 font-medium ${column.className ?? ''}`}
                   >
                     {column.key ? (
-                      <button
-                        type="button"
-                        onClick={() => handleSort(column.key as SerialArticleSortKey)}
-                        className="inline-flex items-center gap-1 font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
-                        title="Sortierung wechseln (auf → ab → Standard)"
-                      >
-                        {column.label}
-                        {/* SVG-Icons statt Textglyphen (▲▼↕) – wie in der Werkzeugliste */}
-                        {isSorted ? (
-                          order === 'asc' ? (
-                            <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                      <Tooltip text="Sortierung wechseln (auf → ab → Standard)" className="contents">
+                        <button
+                          type="button"
+                          onClick={() => handleSort(column.key as SerialArticleSortKey)}
+                          className="inline-flex items-center gap-1 font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
+                        >
+                          {column.label}
+                          {/* SVG-Icons statt Textglyphen (▲▼↕) – wie in der Werkzeugliste */}
+                          {isSorted ? (
+                            order === 'asc' ? (
+                              <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                            ) : (
+                              <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                            )
                           ) : (
-                            <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
-                          )
-                        ) : (
-                          <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
-                        )}
-                      </button>
+                            <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                          )}
+                        </button>
+                      </Tooltip>
                     ) : (
                       column.label
                     )}

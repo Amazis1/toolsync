@@ -270,6 +270,44 @@ Matrixplätzen** (der Platz ist die Wahrheit, DEC-071). Ein gemeinsamer Vorrat h
 alles nach Werk 1 gelegt, weil dort inzwischen die Schublade „01-C" mit 200 Plätzen
 steht; deshalb verteilt das Skript abwechselnd auf beide Werke.
 
+## 11. Fenster, Kopfzeilen, Zeichen (DEC-087)
+
+Rückmeldung des Inhabers: „Alles Modal-Fenster sollen mit ‚ESC' geschlossen werden können und
+ein Hinweis soll dort auch sein wie im Anlegeformular. Kopfzeilen etc. sollen beim Aufmachen
+nicht aufplatzen, sondern eine Art Animation haben. SVGs werden offline Lucide-SVG benutzt!"
+Nachtrag: „Esc + Hinweis in jedem Fenster nimmt zu viel Platz weg … einfach neben dem Kreuz
+den ‚Esc'-Hinweis."
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Esc | rief in allen neun Fenstern `useEscapeKey`, war aber nirgends erklärt | unverändert in der Wirkung, jetzt **gezeigt** |
+| Hinweis im Fenster | nur in der Logistik (Fließtext in der Aufgabe) | Kürzel `<kbd>Esc</kbd>` (`components/ui/EscHinweis.tsx`) **links neben dem ✕** in **allen** neun Fenstern – in derselben Reihe, also keine zusätzliche Höhe (der zunächst eingebaute Hinweisblock `.ui-alert` ist wieder entfallen) |
+| ✕ im Bestätigungsdialog | keins (nur „Abbrechen") | ✕ oben rechts mit `aria-label="Schließen"`; es bricht ab wie „Abbrechen" |
+| Tooltip am ✕ | `title="Schließen (Esc)"` (nur „Werkzeug zurück") | entfallen – das Kürzel daneben sagt dasselbe |
+| Öffnen | harter Schnitt | `.modal-overlay` blendet ein (160 ms), `.modal-panel` kommt 10 px von unten und wächst auf 100 % (220 ms) |
+| Aufklappen eines Auftrags | Inhalt stand sofort da | `.auftrag-koerper` blendet ein und zieht 6 px nach (200 ms) |
+| Reiterwechsel in der Logistik | harter Schnitt | `.bereich-in`, 8 px von unten (240 ms) |
+| Zeichen | vier handgezeichnete `path`-Daten | **alle** Zeichen Wrapper um `lucide-react` (`ToolIcon` → `Wrench`, `WarehouseIcon` → `Warehouse`, `ArchiveIcon` → `Archive`, `SerialIcon` entfällt → `ClipboardListIcon`) |
+| Lage der Fenster | `LendModal`/`ReturnModal` standen im Inhaltsblock (Glasfläche = Bezugsrahmen für `fixed`) | beide über `createPortal` an `<body>` – gemessen lag das Ausleih-Fenster vorher 131 px zu tief (y = 408 statt 139) |
+
+Geprüft im Browser (`tests/modals.spec.ts`, 4 Tests): das Kürzel steht im **selben
+Elternelement** wie das ✕, **links** davon und auf **derselben Zeile** (Mitten-Abstand ≤ 2 px);
+im Fenster gibt es **keinen** Hinweisblock; das Fenster liegt **vollständig im Bild**;
+`animation-name` ist `panel-in` bzw. `overlay-in`; Esc schließt (beim Löschen-Dialog bleibt der
+Datensatz danach nachweislich bestehen).
+
+Alle Übergänge gelten nur bei `prefers-reduced-motion: no-preference`; beim Schließen gibt es
+keine Animation. `node scripts/verify-icons.mjs`: `38/38 Lucide-Zeichen`, `35 Namen`, `0
+Eigenbauten`. Das Anlegeformular zeigt dasselbe Kürzel statt des alten `ui-badge`
+(„⌨ Esc") – eine Taste, eine Darstellung.
+
+**Nachtrag (DEC-088): Tooltips statt `title=`.** Das Kürzel im Kopf trägt seinen Satz jetzt
+als `<Tooltip>` (Portal an `<body>`, Hover **und** Fokus). Dieselbe Komponente ersetzt alle
+21 Hinweise, die vorher als natives `title=` hingen – auch hier im Bereich: die Knöpfe
+„Werkzeug zurück"/„Neuer Auftrag", die Filter und Auswahlhilfen, „Alle auswählen", die
+Heimatwerk-Reiter, der Heimatplatz-Code und die Spalte „Angekommen mit Auftrag …".
+Geprüft in `tests/tooltips.spec.ts`.
+
 ## 6. Offen
 
 - **Rechte Spalte der Main Site** (`StatisticsSidebar`) steht weiter auf „—"

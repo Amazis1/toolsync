@@ -16,13 +16,26 @@ import type { ViewerRequest } from './types/viewer';
 import { dataSheetViewer, serialArticleViewer } from './lib/viewerSources';
 import { getDataSheets } from './api/dataSheets';
 import { getDisplayName } from './lib/api';
-import { LoginIcon, AddIcon, AdminIcon, TruckIcon } from './components/icons';
+import {
+  LoginIcon,
+  AddIcon,
+  AdminIcon,
+  TruckIcon,
+  ToolIcon,
+  CheckIcon,
+  ClipboardListIcon,
+  AlertCircleIcon,
+} from './components/icons';
 import AdminLayout from './pages/admin/AdminLayout';
 import SessionTimer from './components/SessionTimer';
+import Tooltip from './components/ui/Tooltip';
 import SessionWarning from './components/SessionWarning';
 import ToastStack from './components/ToastStack';
 import { useToasts } from './lib/useToasts';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat';
+import { useStatistik } from './lib/useStatistik';
+import KpiKarte from './components/ui/KpiKarte';
+import type { StatsOverview } from './api/stats';
 
 type TabKey =
   | 'werkzeuge'
@@ -65,28 +78,89 @@ function Placeholder({ title, note }: { title: string; note?: string }) {
   );
 }
 
-// Rechte Spalte: Statistik-Sidebar (.app-stat-card) nach test.html
-function StatisticsSidebar() {
+// Rechte Spalte: Kennzahlen des Arbeitswerks (DEC-089).
+//
+// Bis hierher standen die vier Karten auf „—": sie waren die letzte offene Frage
+// aus `docs/21` (offene Frage 7, „rechte Spalte füllen"). Jetzt zeigen sie Zahlen
+// aus `GET /api/stats/overview` und sind **Sprungziele**: Wer „3 Eingang offen"
+// liest, will dorthin – ein Klick öffnet den passenden Bereich.
+//
+// Gestalt: KPI-Karten aus dem Styleguide (`components/ui/KpiKarte.tsx`, kompakte
+// Spaltenform: `text-2xl`, Zeichen `h-10 w-10`, höchstens vier Karten).
+function StatisticsSidebar({
+  zahlen,
+  onWerkzeuge,
+  onLogistik,
+  onEingang,
+}: {
+  zahlen: StatsOverview | null;
+  onWerkzeuge: () => void;
+  onLogistik: () => void;
+  onEingang: () => void;
+}) {
+  const verfuegbar = zahlen?.tools_available ?? null;
+  const gesamt = zahlen?.tools_total ?? 0;
+  const anteil = gesamt > 0 && verfuegbar !== null ? Math.round((verfuegbar / gesamt) * 100) : 0;
+
   return (
     // `space-y-4` wie die Blöcke im Inhaltsbereich (vorher 12 px gegen 16 px –
     // die Karten standen enger als die Blöcke daneben, DEC-083).
     <div className="space-y-4">
-      <div className="app-stat-card rounded-2xl p-4">
-        <p className="text-xs font-medium text-slate-600">Aktive Ausleihen</p>
-        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
-      </div>
-      <div className="app-stat-card rounded-2xl p-4">
-        <p className="text-xs font-medium text-slate-600">Verfügbare Werkzeuge</p>
-        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
-      </div>
-      <div className="app-stat-card rounded-2xl p-4">
-        <p className="text-xs font-medium text-slate-600">Lagerbestand</p>
-        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
-      </div>
-      <div className="app-stat-card rounded-2xl p-4">
-        <p className="text-xs font-medium text-slate-600">Serienartikel</p>
-        <p className="mt-1 text-xl font-bold text-slate-900">—</p>
-      </div>
+      <KpiKarte
+        kompakt
+        farbe="sky"
+        zahl={zahlen?.tools_lent ?? null}
+        name="Aktive Ausleihen"
+        icon={<ToolIcon className="h-5 w-5" />}
+        titel="Werkzeuge, die gerade bei einer Person sind – Klick öffnet die Werkzeugliste"
+        onClick={onWerkzeuge}
+      />
+      <KpiKarte
+        kompakt
+        farbe="emerald"
+        zahl={verfuegbar}
+        name="Verfügbare Werkzeuge"
+        icon={<CheckIcon className="h-5 w-5" />}
+        titel="Klick öffnet die Werkzeugliste"
+        onClick={onWerkzeuge}
+        fuss={
+          <span className="block">
+            <span className="flex items-center justify-between text-[11px]">
+              <span className="font-medium text-slate-600">von {gesamt || '—'} insgesamt</span>
+              <span className="font-semibold text-slate-700">{anteil} %</span>
+            </span>
+            <span className="ui-progress mt-1">
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-400" style={{ width: `${anteil}%` }} />
+            </span>
+          </span>
+        }
+      />
+      <KpiKarte
+        kompakt
+        farbe="teal"
+        zahl={zahlen?.orders_open ?? null}
+        name="Offene Aufträge"
+        icon={<TruckIcon className="h-5 w-5" />}
+        titel="Entwürfe und Aufträge, die unterwegs sind – Klick öffnet die Logistik"
+        onClick={onLogistik}
+        marke={
+          zahlen && zahlen.orders_old > 0 ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-500/25">
+              <AlertCircleIcon className="h-3 w-3" />
+              {zahlen.orders_old} alt
+            </span>
+          ) : null
+        }
+      />
+      <KpiKarte
+        kompakt
+        farbe="amber"
+        zahl={zahlen?.orders_incoming_open ?? null}
+        name="Eingang offen"
+        icon={<ClipboardListIcon className="h-5 w-5" />}
+        titel="Aufträge, die hier noch bestätigt werden müssen – Klick öffnet den Eingang"
+        onClick={onEingang}
+      />
     </div>
   );
 }
@@ -146,6 +220,15 @@ const MainApp: React.FC = () => {
   // Werkzeug-Logistik (DEC-072): Auftragsliste, Eingang und „Wo ist was" hängen
   // am Arbeitswerk – ein Wechsel lädt sie neu.
   const [logisticsRefreshKey, setLogisticsRefreshKey] = useState(0);
+  // Zähler am Logistik-Knopf (DEC-089): offene Aufträge des Arbeitswerks. Der
+  // Knopf steht hier in der Leiste, die Liste im Bereich – der Zähler wird
+  // deshalb außerhalb geladen und bei jeder Änderung im Bereich nachgeführt.
+  const statistik = useStatistik(user?.id ?? null, user?.plant_id ?? null, logisticsRefreshKey);
+  // Der Zähler am Logistik-Knopf ist `orders_open` aus derselben Antwort – eine
+  // Quelle für Knopf und rechte Spalte (DEC-089).
+  const offeneAuftraege = statistik?.orders_open ?? 0;
+  /** Sprung in den Eingang der Logistik (aus der rechten Spalte). */
+  const [eingangWunsch, setEingangWunsch] = useState(0);
   const dataSheetToken = useRef(0);
   /**
    * Laufender Auftrag der Zeilenaktion „Datenblatt": eine späte Antwort einer
@@ -511,15 +594,25 @@ const MainApp: React.FC = () => {
                     Stammdaten (DEC-086). */}
                 <span aria-hidden="true" className="h-6 w-px shrink-0 bg-white/70" />
 
-                <button
-                  onClick={() => switchTab('logistik')}
-                  className={`tab-logistik ${activeTab === 'logistik' ? 'is-active' : ''}`}
-                  aria-pressed={activeTab === 'logistik'}
-                  title="Werkzeuge zwischen den Werken transportieren"
+                <Tooltip
+                  text={
+                    offeneAuftraege > 0
+                      ? `${offeneAuftraege} offene Aufträge – Werkzeuge zwischen den Werken transportieren`
+                      : 'Werkzeuge zwischen den Werken transportieren'
+                  }
                 >
-                  <TruckIcon className="h-4 w-4" />
-                  Logistik
-                </button>
+                  <button
+                    onClick={() => switchTab('logistik')}
+                    className={`tab-logistik ${activeTab === 'logistik' ? 'is-active' : ''}`}
+                    aria-pressed={activeTab === 'logistik'}
+                  >
+                    <TruckIcon className="h-4 w-4" />
+                    Logistik
+                    {offeneAuftraege > 0 && (
+                      <span className="tab-zaehler">{offeneAuftraege}</span>
+                    )}
+                  </button>
+                </Tooltip>
               </div>
 
               {/* + Anlegen öffnet das passende Formular je nach aktivem Tab.
@@ -609,7 +702,11 @@ const MainApp: React.FC = () => {
                 )}
 
                 {activeTab === 'logistik' && (
-                  <Logistics refreshKey={logisticsRefreshKey} notify={showToast} />
+                  <Logistics
+                    refreshKey={logisticsRefreshKey}
+                    eingangWunsch={eingangWunsch}
+                    notify={showToast}
+                  />
                 )}
 
                 {activeTab === 'historie' && (
@@ -652,7 +749,15 @@ const MainApp: React.FC = () => {
               Zahl – dafür sind drei Spalten zu viel (DEC-083). `space-y-4` wie
               im Inhaltsbereich: gleicher Abstand zwischen allen Blöcken. */}
           <aside className="col-span-12 xl:col-span-2 space-y-4">
-            <StatisticsSidebar />
+            <StatisticsSidebar
+              zahlen={statistik}
+              onWerkzeuge={() => switchTab('werkzeuge')}
+              onLogistik={() => switchTab('logistik')}
+              onEingang={() => {
+                switchTab('logistik');
+                setEingangWunsch((alt) => alt + 1);
+              }}
+            />
           </aside>
         </div>
       </main>

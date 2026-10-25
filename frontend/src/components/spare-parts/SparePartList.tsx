@@ -11,6 +11,7 @@ import type { SparePart, SparePartPage, SparePartSortKey } from '../../types/spa
 import { pageCount } from '../../lib/toolQuery'
 import ConfirmDialog from '../ConfirmDialog'
 import RowActionMenu from '../tools/RowActionMenu'
+import Tooltip from '../ui/Tooltip'
 import ToolPagination from '../tools/ToolPagination'
 import {
   ResetIcon,
@@ -417,23 +418,24 @@ export default function SparePartList({
                     className={`px-3 py-2.5 font-medium ${column.className ?? ''}`}
                   >
                     {column.key ? (
-                      <button
-                        type="button"
-                        onClick={() => handleSort(column.key as SparePartSortKey)}
-                        className="inline-flex items-center gap-1 font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
-                        title="Sortierung wechseln (auf → ab → Standard)"
-                      >
-                        {column.label}
-                        {isSorted ? (
-                          order === 'asc' ? (
-                            <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                      <Tooltip text="Sortierung wechseln (auf → ab → Standard)" className="contents">
+                        <button
+                          type="button"
+                          onClick={() => handleSort(column.key as SparePartSortKey)}
+                          className="inline-flex items-center gap-1 font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
+                        >
+                          {column.label}
+                          {isSorted ? (
+                            order === 'asc' ? (
+                              <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                            ) : (
+                              <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+                            )
                           ) : (
-                            <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
-                          )
-                        ) : (
-                          <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
-                        )}
-                      </button>
+                            <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                          )}
+                        </button>
+                      </Tooltip>
                     ) : (
                       column.label
                     )}
@@ -513,29 +515,30 @@ export default function SparePartList({
                     Datenblattliste. Er steht dort, wo der Blick beginnt, und die
                     Tönung der Zeile gehört sichtbar zu dieser Spalte. */}
                 <td className="w-7 px-1 py-2">
-                  <button
-                    type="button"
-                    aria-label={
-                      part.is_favorite
-                        ? `Favorit für ${part.article_number} entfernen`
-                        : `Favorit für ${part.article_number} hinzufügen`
-                    }
-                    aria-pressed={part.is_favorite}
-                    title={part.is_favorite ? 'Favorit entfernen' : 'Zu den Favoriten'}
-                    disabled={busyFavoriteId === part.id}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void toggleFavorite(part)
-                    }}
-                    className="rounded-lg p-1 hover:bg-white/70 disabled:opacity-50"
-                  >
-                    <StarIcon
-                      filled={part.is_favorite}
-                      className={`mx-auto h-4 w-4 ${
-                        part.is_favorite ? 'text-amber-600' : 'text-slate-400'
-                      }`}
-                    />
-                  </button>
+                  <Tooltip text={part.is_favorite ? 'Favorit entfernen' : 'Zu den Favoriten'}>
+                    <button
+                      type="button"
+                      aria-label={
+                        part.is_favorite
+                          ? `Favorit für ${part.article_number} entfernen`
+                          : `Favorit für ${part.article_number} hinzufügen`
+                      }
+                      aria-pressed={part.is_favorite}
+                      disabled={busyFavoriteId === part.id}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void toggleFavorite(part)
+                      }}
+                      className="rounded-lg p-1 hover:bg-white/70 disabled:opacity-50"
+                    >
+                      <StarIcon
+                        filled={part.is_favorite}
+                        className={`mx-auto h-4 w-4 ${
+                          part.is_favorite ? 'text-amber-600' : 'text-slate-400'
+                        }`}
+                      />
+                    </button>
+                  </Tooltip>
                 </td>
                 {/* Artikelnummer = Identität: heller Kasten in Mono, Teal-Kante –
                     dieselbe Markierung wie Werkzeug-ID und Serienartikel-Nummer. */}
@@ -590,12 +593,11 @@ export default function SparePartList({
                       </code>
                     ) : null}
                     {part.storage_place ? (
-                      <span
-                        className="inline-flex max-w-[11rem] rounded-lg border border-slate-300/70 bg-white/85 px-2 py-0.5 text-xs font-bold text-slate-700"
-                        title={part.storage_place}
-                      >
-                        <span className="truncate">{part.storage_place}</span>
-                      </span>
+                      <Tooltip text={part.storage_place} className="contents">
+                        <span className="inline-flex max-w-[11rem] rounded-lg border border-slate-300/70 bg-white/85 px-2 py-0.5 text-xs font-bold text-slate-700">
+                          <span className="truncate">{part.storage_place}</span>
+                        </span>
+                      </Tooltip>
                     ) : null}
                     {!part.position_code && !part.storage_place && (
                       <span className="text-slate-600">—</span>

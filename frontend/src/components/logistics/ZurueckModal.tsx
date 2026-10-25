@@ -10,9 +10,10 @@
 // nach Heimatwerk filterbar, und jede Gruppe hat ihren eigenen Knopf.
 //
 // Aufbau wie die übrigen Fenster der Logistik (`.modal-overlay`/`.modal-panel`,
-// Kopf mit ✕, Fußleiste mit Trennlinie, Escape über `useEscapeKey`). Tooltips
-// (`title=`) stehen nur an Knöpfen und Werten – an Eingabefeldern sind sie laut
-// Styleguide (§ Formulare) nicht erlaubt.
+// Kopf mit ✕ und `Esc`-Kürzel, Fußleiste mit Trennlinie, Escape über
+// `useEscapeKey`). Hinweise stehen als `<Tooltip>` an Knöpfen und Werten
+// (DEC-088) – an Eingabefeldern sind sie laut Styleguide (§ Formulare) nicht
+// erlaubt.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createOrder, getBorrowedTools, sendOrder } from '../../api/transport'
@@ -27,6 +28,8 @@ import {
   useWerkFarben,
   werkZeile,
 } from './logistikTeile'
+import EscHinweis from '../ui/EscHinweis'
+import Tooltip from '../ui/Tooltip'
 
 interface ZurueckModalProps {
   onClose: () => void
@@ -186,15 +189,17 @@ export default function ZurueckModal({ onClose, onSent }: ZurueckModalProps) {
               gemeldet, das Heimatwerk bestätigt den Empfang.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            title="Schließen (Esc)"
-            className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <EscHinweis />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Schließen"
+              className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
         </div>
 
         {/* Suche und Filter – dieselbe Zeile wie im Fenster „Neuer Auftrag". */}
@@ -210,49 +215,52 @@ export default function ZurueckModal({ onClose, onSent }: ZurueckModalProps) {
 
           {heimatwerke.length > 1 && (
             <div className="ui-tabs" role="group" aria-label="Nach Heimatwerk filtern">
-              <button
-                type="button"
-                className={werkFilter === null ? 'is-active' : undefined}
-                aria-pressed={werkFilter === null}
-                onClick={() => setWerkFilter(null)}
-                title="Werkzeuge aller Heimatwerke zeigen"
-              >
-                Alle ({werkzeuge.length})
-              </button>
-              {heimatwerke.map((werk) => (
+              <Tooltip text="Werkzeuge aller Heimatwerke zeigen">
                 <button
-                  key={werk.id}
                   type="button"
-                  className={werkFilter === werk.id ? 'is-active' : undefined}
-                  aria-pressed={werkFilter === werk.id}
-                  onClick={() => setWerkFilter(werk.id)}
-                  title={`Nur Werkzeuge aus ${werk.name} zeigen`}
+                  className={werkFilter === null ? 'is-active' : undefined}
+                  aria-pressed={werkFilter === null}
+                  onClick={() => setWerkFilter(null)}
                 >
-                  {werk.name}
+                  Alle ({werkzeuge.length})
                 </button>
+              </Tooltip>
+              {heimatwerke.map((werk) => (
+                <Tooltip key={werk.id} text={`Nur Werkzeuge aus ${werk.name} zeigen`}>
+                  <button
+                    type="button"
+                    className={werkFilter === werk.id ? 'is-active' : undefined}
+                    aria-pressed={werkFilter === werk.id}
+                    onClick={() => setWerkFilter(werk.id)}
+                  >
+                    {werk.name}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           )}
 
           <div className="ml-auto flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={alleAuswaehlen}
-              disabled={sichtbar.length === 0}
-              className="ui-btn ui-btn-ghost ui-btn-sm"
-              title="Alle sichtbaren Werkzeuge anhaken"
-            >
-              Alle auswählen
-            </button>
-            <button
-              type="button"
-              onClick={auswahlAufheben}
-              disabled={gewaehlt.length === 0}
-              className="ui-btn ui-btn-ghost ui-btn-sm"
-              title="Keine Werkzeuge angehakt lassen"
-            >
-              Auswahl aufheben
-            </button>
+            <Tooltip text="Alle sichtbaren Werkzeuge anhaken">
+              <button
+                type="button"
+                onClick={alleAuswaehlen}
+                disabled={sichtbar.length === 0}
+                className="ui-btn ui-btn-ghost ui-btn-sm"
+              >
+                Alle auswählen
+              </button>
+            </Tooltip>
+            <Tooltip text="Keine Werkzeuge angehakt lassen">
+              <button
+                type="button"
+                onClick={auswahlAufheben}
+                disabled={gewaehlt.length === 0}
+                className="ui-btn ui-btn-ghost ui-btn-sm"
+              >
+                Auswahl aufheben
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -325,23 +333,22 @@ export default function ZurueckModal({ onClose, onSent }: ZurueckModalProps) {
                     <WerkName plant={eintrag.home_plant} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <code
-                      className="font-mono text-xs text-slate-700"
-                      title="Heimatplatz – bleibt reserviert, bis das Werkzeug zurück ist"
-                    >
-                      {eintrag.home_position_code || 'Ablage'}
-                    </code>
+                    <Tooltip text="Heimatplatz – bleibt reserviert, bis das Werkzeug zurück ist" className="contents">
+                      <code className="font-mono text-xs text-slate-700">
+                        {eintrag.home_position_code || 'Ablage'}
+                      </code>
+                    </Tooltip>
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-slate-700">
-                    <span
-                      title={
+                    <Tooltip
+                      text={
                         eintrag.arrived_with
                           ? `Angekommen mit Auftrag ${eintrag.arrived_with}`
                           : 'Ankunft nicht verzeichnet'
                       }
                     >
-                      {formatZeitpunkt(eintrag.arrived_at)}
-                    </span>
+                      <span>{formatZeitpunkt(eintrag.arrived_at)}</span>
+                    </Tooltip>
                     {eintrag.arrived_with ? (
                       <span className="text-slate-600"> · {eintrag.arrived_with}</span>
                     ) : null}
@@ -371,22 +378,25 @@ export default function ZurueckModal({ onClose, onSent }: ZurueckModalProps) {
             {[...gruppen.entries()].map(([heimatWerkId, liste], index) => {
               const anzahl = liste.filter((eintrag) => gewaehlt.includes(eintrag.tool_id)).length
               return (
-                <button
+                <Tooltip
                   key={heimatWerkId}
-                  type="button"
-                  onClick={() => void zurueckschicken(heimatWerkId, index)}
-                  disabled={busyWerk !== null || anzahl === 0}
-                  className="ui-btn ui-btn-werk"
-                  title={
+                  text={
                     anzahl === 0
                       ? 'Kein Werkzeug dieses Heimatwerks angehakt'
                       : 'Legt einen Rück-Auftrag an und meldet ihn sofort als unterwegs'
                   }
                 >
-                  {busyWerk === heimatWerkId
-                    ? 'Wird zurückgeschickt …'
-                    : `An ${liste[0]?.home_plant?.name ?? 'Heimatwerk'} zurück schicken (${anzahl})`}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => void zurueckschicken(heimatWerkId, index)}
+                    disabled={busyWerk !== null || anzahl === 0}
+                    className="ui-btn ui-btn-werk"
+                  >
+                    {busyWerk === heimatWerkId
+                      ? 'Wird zurückgeschickt …'
+                      : `An ${liste[0]?.home_plant?.name ?? 'Heimatwerk'} zurück schicken (${anzahl})`}
+                  </button>
+                </Tooltip>
               )
             })}
           </div>

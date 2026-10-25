@@ -10,7 +10,9 @@ import type { TransportOrder, TransportItem } from '../../types/transport'
 import { OFFENE_AUFTRAEGE } from '../../types/transport'
 import { werkzeuge as werkzeugAnzahl } from '../../lib/format'
 import { ChevronDownIcon } from '../icons'
+import Tooltip from '../ui/Tooltip'
 import {
+  AlterMarke,
   Leerzustand,
   RueckwegMarke,
   StatusMarke,
@@ -156,6 +158,10 @@ function OrderRow({
               ? `verschickt ${formatTag(order.sent_at)}`
               : `angelegt ${formatTag(order.created_at)}`}
           </span>
+          {/* Wie lange der Auftrag schon läuft (DEC-089) – in Amber, wenn er zu
+              lange offen ist. Die Zahl der Werkzeuge allein sagt nicht, ob etwas
+              liegen bleibt. */}
+          <AlterMarke seit={order.sent_at ?? order.created_at} offen={istOffen} />
           {/* Sichtbarer Hinweis, dass die Zeile aufgeht – ein nacktes Dreieck am
               Rand reichte für neue Benutzer nicht (DEC-084). „Zuklappen" statt
               „Schließen", damit es nicht mit dem Schließen der Fenster verwechselt
@@ -172,7 +178,9 @@ function OrderRow({
       {offen && (
         // Körper auf eigener, etwas tieferer Fläche mit Trennlinie zum Kopf –
         // so ist die Grenze zwischen „Kopf des Auftrags" und „Inhalt" eindeutig.
-        <div className="space-y-3 border-t border-white/70 bg-white/30 px-3 py-3">
+        // `auftrag-koerper`: Er blendet beim Aufklappen ein, statt zu „platzen"
+        // (DEC-087, nur bei `prefers-reduced-motion: no-preference`).
+        <div className="auftrag-koerper space-y-3 border-t border-white/70 bg-white/30 px-3 py-3">
           {order.info && (
             // Hinweis in der Farbe des Arbeitswerks – dieselbe Sprache wie die
             // Info-Zeile im Eingang. Vorher war es eine vierte weiße Schicht, die
@@ -237,28 +245,38 @@ function OrderRow({
             )}
             {darfVerschicken && (
               <>
-                <button
-                  type="button"
-                  onClick={() => onCancel(order)}
-                  disabled={beschaeftigt}
-                  className="ui-btn ui-btn-danger-soft ui-btn-sm"
-                  title={order.item_count === 0 ? 'Ein Auftrag ohne Werkzeuge lässt sich stornieren.' : undefined}
+                <Tooltip
+                  text={
+                    order.item_count === 0
+                      ? 'Ein Auftrag ohne Werkzeuge lässt sich stornieren.'
+                      : undefined
+                  }
                 >
-                  Stornieren
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSend(order)}
-                  disabled={beschaeftigt || order.item_count === 0}
-                  className="ui-btn ui-btn-primary ui-btn-sm"
-                  title={
+                  <button
+                    type="button"
+                    onClick={() => onCancel(order)}
+                    disabled={beschaeftigt}
+                    className="ui-btn ui-btn-danger-soft ui-btn-sm"
+                  >
+                    Stornieren
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  text={
                     order.item_count === 0
                       ? 'Ein Auftrag ohne Werkzeuge kann nicht verschickt werden.'
                       : undefined
                   }
                 >
-                  Als unterwegs melden
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onSend(order)}
+                    disabled={beschaeftigt || order.item_count === 0}
+                    className="ui-btn ui-btn-primary ui-btn-sm"
+                  >
+                    Als unterwegs melden
+                  </button>
+                </Tooltip>
               </>
             )}
             <button

@@ -18,6 +18,8 @@ import {
   useWerkFarben,
   werkZeile,
 } from './logistikTeile'
+import EscHinweis from '../ui/EscHinweis'
+import Tooltip from '../ui/Tooltip'
 
 interface NewOrderModalProps {
   aktivPlant: Plant | null
@@ -183,14 +185,17 @@ export default function NewOrderModal({
               was hier liegt und verfügbar ist.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <EscHinweis />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Schließen"
+              className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -378,15 +383,16 @@ export default function NewOrderModal({
           <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
             Abbrechen
           </button>
-          <button
-            type="button"
-            onClick={() => void speichern(false, true)}
-            disabled={speichert}
-            className="ui-btn ui-btn-secondary"
-            title="Entwurf speichern und gleich den nächsten anlegen"
-          >
-            Speichern und nächster
-          </button>
+          <Tooltip text="Entwurf speichern und gleich den nächsten anlegen">
+            <button
+              type="button"
+              onClick={() => void speichern(false, true)}
+              disabled={speichert}
+              className="ui-btn ui-btn-secondary"
+            >
+              Speichern und nächster
+            </button>
+          </Tooltip>
           <button
             type="button"
             onClick={() => void speichern(false, false)}

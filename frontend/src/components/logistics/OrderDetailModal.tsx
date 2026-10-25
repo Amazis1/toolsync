@@ -19,6 +19,7 @@ import {
   useWerkFarben,
   werkZeile,
 } from './logistikTeile'
+import EscHinweis from '../ui/EscHinweis'
 
 interface OrderDetailModalProps {
   orderId: number
@@ -76,14 +77,17 @@ export default function OrderDetailModal({
           <h2 id="detail-titel" className="text-lg font-semibold text-slate-900">
             Auftrag {order?.order_number ?? '…'}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Schließen"
-            className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <EscHinweis />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Schließen"
+              className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
         </div>
 
         {fehler && (

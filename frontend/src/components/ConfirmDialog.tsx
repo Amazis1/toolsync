@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useEscapeKey } from '../lib/useEscapeKey'
+import EscHinweis from './ui/EscHinweis'
 
 interface ConfirmDialogProps {
   /** Frage, die das betroffene Objekt benennt – z. B. `Werkzeug „TS-1004" löschen?` */
@@ -62,9 +63,24 @@ export default function ConfirmDialog({
       aria-describedby={description ? descriptionId : undefined}
     >
       <div className="modal-panel max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto p-6">
-        <h2 id={titleId} className="text-lg font-semibold text-slate-900">
-          {title}
-        </h2>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+            {title}
+          </h2>
+          <div className="flex shrink-0 items-center gap-2">
+            <EscHinweis />
+            <button
+              type="button"
+              onClick={onCancel}
+              aria-label="Schließen"
+              disabled={busy}
+              className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
+        </div>
+
         {description && (
           <p id={descriptionId} className="mt-2 text-sm text-slate-600">
             {description}

@@ -27,6 +27,24 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+/**
+ * Dieselbe Farbe **dunkler** – für Text auf einer getönten Fläche (DEC-089).
+ *
+ * `#0f766e` als Text hat 4,3:1; auf einer 18-%-Tinte bleibt davon zu wenig übrig.
+ * Der Faktor 0,78 macht daraus `#0b5c56` (rund 7:1 auf hellem Glas) und hält den
+ * Farbton – der Knopf trägt weiter die Farbe des Werks, nur lesbar.
+ */
+export function dunkler(hex: string, faktor = 0.78): string {
+  const wert = hex.replace('#', '')
+  const voll = wert.length === 3 ? wert.split('').map((z) => z + z).join('') : wert
+  const zahl = Number.parseInt(voll, 16)
+  const teil = (v: number) => Math.max(0, Math.min(255, Math.round(v * faktor)))
+  const r = teil((zahl >> 16) & 255)
+  const g = teil((zahl >> 8) & 255)
+  const b = teil(zahl & 255)
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
 /* Werkliste einmal je Sitzung laden – sie ändert sich nur im Admin-Panel.
    Ein kleiner Zwischenspeicher genügt: die Komponenten fragen im Renderzyklus. */
 let werkListe: Plant[] = []
@@ -93,6 +111,10 @@ export function usePlantTheme(
     wurzel.style.setProperty('--werk', farbe)
     wurzel.style.setProperty('--werk-soft', withAlpha(farbe, 0.1))
     wurzel.style.setProperty('--werk-line', withAlpha(farbe, 0.3))
+    // Für den Logistik-Knopf (DEC-089): ruhende Fläche, Hover und Textfarbe.
+    wurzel.style.setProperty('--werk-tinte', withAlpha(farbe, 0.18))
+    wurzel.style.setProperty('--werk-tinte-hover', withAlpha(farbe, 0.28))
+    wurzel.style.setProperty('--werk-text', dunkler(farbe))
     wurzel.dataset.werk = String(aktiv ?? '')
   }, [farbe, aktiv])
 

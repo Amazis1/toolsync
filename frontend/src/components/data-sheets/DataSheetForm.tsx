@@ -13,6 +13,7 @@ import type { Machine, Plant } from '../../api/types'
 import type { DataSheet, DataSheetFile, DataSheetInput } from '../../types/data-sheet'
 import { CheckIcon, CircleXIcon, TrashIcon, UploadIcon } from '../icons'
 import { FieldLabel, FieldMessage } from '../Field'
+import Tooltip from '../ui/Tooltip'
 
 interface DataSheetFormProps {
   /** null = anlegen, sonst bearbeiten. */
@@ -324,24 +325,27 @@ export default function DataSheetForm({
           {eintrag.name} · {(eintrag.size / 1024).toFixed(0)} KB
         </span>
       </span>
-      <button
-        type="button"
-        onClick={() => void entferneDatei(eintrag.name)}
-        disabled={loescheDatei === eintrag.name}
-        aria-label={`${eintrag.kind === 'image' ? 'Bild' : 'Datenblatt'} ${eintrag.name} löschen`}
-        title={
+      <Tooltip
+        text={
           loescheDatei === eintrag.name
             ? 'Wird gelöscht …'
             : `${eintrag.kind === 'image' ? 'Bild' : 'Datenblatt'} löschen`
         }
-        className="ui-btn ui-btn-danger-soft ui-btn-sm shrink-0"
       >
+        <button
+          type="button"
+          onClick={() => void entferneDatei(eintrag.name)}
+          disabled={loescheDatei === eintrag.name}
+          aria-label={`${eintrag.kind === 'image' ? 'Bild' : 'Datenblatt'} ${eintrag.name} löschen`}
+          className="ui-btn ui-btn-danger-soft ui-btn-sm shrink-0"
+        >
         {loescheDatei === eintrag.name ? (
           <span className="ui-spinner h-3.5 w-3.5" />
         ) : (
           <TrashIcon className="h-3.5 w-3.5" />
         )}
-      </button>
+        </button>
+      </Tooltip>
     </li>
   )
 

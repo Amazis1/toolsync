@@ -31,6 +31,7 @@
 // ============================================================================
 
 import {
+  Archive,
   ArrowDownNarrowWide,
   ArrowUpDown,
   ArrowUpWideNarrow,
@@ -63,6 +64,8 @@ import {
   Undo2,
   Upload,
   User,
+  Warehouse,
+  Wrench,
   X,
   ZoomIn,
   ZoomOut,
@@ -277,102 +280,30 @@ export function ResetIcon(props: IconProps) {
  * Geprueft werden sie von `scripts/verify-icons.mjs`.
  */
 
-/** Eigenschaften eines Eigenbaus – `className` genuegt, der Rest ist fest. */
-type EigenbauProps = { className?: string }
+/**
+ * Ab hier: Zeichen, die früher **von Hand** gezeichnet waren (Lucide-Pfade
+ * nachgezeichnet). Jetzt echte Wrapper um `lucide-react` – die Bibliothek liegt
+ * offline im Projekt (`node_modules`), damit sind Strichstärke, Rundungen und
+ * Pflichtattribute garantiert identisch zu allen anderen Zeichen (DEC-087).
+ */
 
-/** Eigenbau: Werkzeug (gekreuzter Schraubenschluessel) – Reiter „Werkzeug". */
-export function ToolIcon({ className }: EigenbauProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
-  )
+/** Lucide `Wrench` – Reiter „Werkzeug". */
+export function ToolIcon(props: IconProps) {
+  return fromLucideBody(Wrench, props)
 }
 
-/** Eigenbau: Klemmbrett mit Zeilen – Serienartikel in Listen und Menues. */
-export function SerialIcon({ className }: EigenbauProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M9 3.75h6a.75.75 0 0 1 .75.75v.75a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75V4.5A.75.75 0 0 1 9 3.75Z" />
-      <path d="M8.25 5.25H6.75A1.5 1.5 0 0 0 5.25 6.75v12a1.5 1.5 0 0 0 1.5 1.5h10.5a1.5 1.5 0 0 0 1.5-1.5v-12a1.5 1.5 0 0 0-1.5-1.5h-1.5" />
-      <path d="M9 11.25h6M9 15h4.5" />
-    </svg>
-  )
+// `SerialIcon` ist entfallen: es zeigte dasselbe Zeichen wie
+// `ClipboardListIcon` (Lucide `ClipboardList`). Ein Zeichen hat genau eine
+// Bedeutung – die Aufrufer nutzen jetzt `ClipboardListIcon` (DEC-087).
+
+/** Lucide `Warehouse` – Lagerplätze und Einlagerung. */
+export function WarehouseIcon(props: IconProps) {
+  return fromLucideBody(Warehouse, props)
 }
 
-/** Eigenbau: Lagerhaus – Lagerplaetze und Einlagerung. */
-export function WarehouseIcon({ className }: EigenbauProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M3 21v-13l9-4 9 4v13" />
-      <path d="M13 21v-7h-2v7" />
-      <path d="M7 21v-5h4" />
-      <path d="M17 21v-5h-4" />
-    </svg>
-  )
-}
-
-/** Eigenbau: Archivkiste – abgelegte und ausgemusterte Datensaetze. */
-export function ArchiveIcon({ className }: EigenbauProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="3" y="4" width="18" height="4" rx="1" />
-      <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
-      <path d="M10 12h4" />
-    </svg>
-  )
+/** Lucide `Archive` – abgelegte und ausgemusterte Datensätze. */
+export function ArchiveIcon(props: IconProps) {
+  return fromLucideBody(Archive, props)
 }
 
 /* ============================================================

@@ -288,6 +288,7 @@ deutlich sein, welche Werkzeuge sich jetzt wo befinden".
 | POST | `/api/transport/orders/{id}/return` | Rück-Auftrag erzeugen | `require_active` |
 | GET | `/api/transport/candidates` | Werkzeuge für die Auswahl (Suchbegriff, Werk, Verfügbarkeit) | `require_active` |
 | GET | `/api/transport/tools` | Liste „Wo ist was" | `require_active` |
+| GET | `/api/stats/overview` | Kennzahlen des Arbeitswerks für die rechte Spalte (DEC-089): Werkzeuge nach Zustand, Stammdaten-Zahlen, offene/unterwegs/alte Aufträge | `require_active` |
 
 Alle Antworten nennen das aufgelöste **Arbeitswerk** (`active_plant_id`) und den Hinweis,
 in welcher Richtung der Auftrag für dieses Arbeitswerk liegt (`direction`). `X-Plant-Id`
@@ -319,11 +320,12 @@ ausgefüllt oder erklärt werden muss, liegt in einem Fenster. Sichtbar bleiben 
 Listen, die man vergleicht („Wo ist was" und die Positionen eines **aufgeklappten** Auftrags);
 dort bleibt die Tabelle, aber kompakt (12 px, einzeilig, ohne Doppelzeilen).
 
-**Keine rechte Statistikspalte auf der Logistik-Seite:** Die Karten der Main Site (Aktive
-Ausleihen, Verfügbare Werkzeuge, Lagerbestand, Serienartikel) wiederholten, was die Reiter
-ohnehin zeigen. Auf der Logistik-Seite entfällt die Spalte; die Zahlen stehen in den
-Reiter-Überschriften und im Eingang-Zähler. Die Karten selbst bleiben unverändert im
-Dashboard – sie in einem eigenen Schritt zu füllen ist offene Frage 7.
+**Keine rechte Statistikspalte auf der Logistik-Seite:** Die Karten der Main Site
+wiederholten, was die Reiter ohnehin zeigen. Auf der Logistik-Seite entfällt die Spalte; die
+Zahlen stehen in den Reiter-Überschriften und im Eingang-Zähler.
+**Erledigt (DEC-089):** Die rechte Spalte ist gefüllt – vier Kennzahl-Karten (Aktive
+Ausleihen · Verfügbare Werkzeuge · Offene Aufträge · Eingang offen) aus
+`GET /api/stats/overview`, jede ein Sprungziel. Offene Frage 7 ist damit beantwortet.
 
 **Farbregel (DEC-076):** Die Werkfarbe (Werk 1 Teal `#0f766e`, Werk 2 Indigo `#4338ca`,
 Werk 3 Ocker `#a16207`) wirkt an **vier** Stellen: Knopf „+ Neuer Auftrag", aktiver Reiter,

@@ -25,6 +25,7 @@ import {
   XIcon,
 } from '../icons'
 import { FieldLabel, FieldMessage, FormSection } from '../Field'
+import Tooltip from '../ui/Tooltip'
 import { TOOL_CATEGORY_LABELS, TOOL_STATUS_LABELS } from '../../api/types'
 import type {
   Coating,
@@ -653,9 +654,16 @@ export default function ToolForm({
                   />
                   <label htmlFor="tool-is-storage" className="text-xs font-medium text-slate-900 cursor-pointer">Lager/Ersatz</label>
                 </div>
-                <label htmlFor="tool-storage-count" className="text-xs font-medium text-slate-700">
-                  Anzahl
-                </label>
+                {/* Tooltip am **Label**, nicht am Feld (Guide §1.9): ein Feld
+                    trägt seine Beschriftung, der Tooltip erklärt sie (DEC-088). */}
+                <Tooltip
+                  text="Anzahl der Exemplare, die in einem Zug angelegt werden"
+                  className="contents"
+                >
+                  <label htmlFor="tool-storage-count" className="text-xs font-medium text-slate-700">
+                    Anzahl
+                  </label>
+                </Tooltip>
                 <input
                   id="tool-storage-count"
                   type="number"
@@ -663,7 +671,6 @@ export default function ToolForm({
                   value={storageCount}
                   onChange={(e) => setStorageCount(Number(e.target.value))}
                   disabled={!isStorage}
-                  title="Anzahl der Exemplare, die in einem Zug angelegt werden"
                   className="input-bordered w-20 text-base sm:text-sm py-1"
                 />
 
@@ -680,12 +687,15 @@ export default function ToolForm({
                   <div className="flex items-center border-l border-slate-300 pl-3">
                     {coatings.length > 0 ? (
                       <div className="ui-field shrink-0">
-                        <FieldLabel htmlFor="tool-coating">Beschichtung</FieldLabel>
+                        {/* Tooltip am Label, nicht am Feld (Guide §1.9, DEC-088):
+                            der volle Name steht im Feld, der Tooltip erklärt ihn. */}
+                        <Tooltip text={coatingFullName} className="contents">
+                          <FieldLabel htmlFor="tool-coating">Beschichtung</FieldLabel>
+                        </Tooltip>
                         <select
                           id="tool-coating"
                           value={coatingId}
                           onChange={(e) => setCoatingId(e.target.value)}
-                          title={coatingFullName}
                         >
                           {coatings.map((coat) => (
                             <option key={coat.id} value={coat.id}>

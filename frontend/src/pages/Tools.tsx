@@ -5,7 +5,8 @@ import ToolQuickFilters from '../components/tools/ToolQuickFilters'
 import ConfirmDialog from '../components/ConfirmDialog'
 import LendModal from '../components/movements/LendModal'
 import ReturnModal from '../components/movements/ReturnModal'
-import { KeyboardIcon, PencilIcon, XIcon } from '../components/icons'
+import { PencilIcon, XIcon } from '../components/icons'
+import EscHinweis from '../components/ui/EscHinweis'
 import type { ToastVariant } from '../lib/useToasts'
 import {
   createTool,
@@ -551,18 +552,11 @@ export default function Tools({
             </h2>
 
             <div className="flex shrink-0 items-center gap-2">
-              {/* Hinweis auf die Tastatur: sichtbar, aber leise. Es ist keine
-                  Aktion, deshalb kein Knopf, sondern ein Abzeichen. `ui-badge-lg`
-                  gibt ihm die Größe, die neben „Zurück" auffällt; die
-                  Icon-Größe kommt aus der Klasse (index.css) und nicht aus einer
-                  Tailwind-Klasse – sonst überschriebe `h-3.5 w-3.5` sie. */}
-              <span
-                className="ui-badge ui-badge-lg ui-badge-neutral hidden sm:inline-flex"
-                title="Mit der Esc-Taste schließen"
-              >
-                <KeyboardIcon />
-                Esc
-              </span>
+              {/* Dasselbe Kürzel wie in den Fenstern (DEC-087): `<kbd>Esc</kbd>`
+                  links neben dem Knopf, Tooltip als Erklärung. Kein Abzeichen
+                  mehr – zwei Darstellungen für dieselbe Taste sahen wie zwei
+                  verschiedene Tasten aus. */}
+              <EscHinweis />
               <button
                 type="button"
                 onClick={closeForm}

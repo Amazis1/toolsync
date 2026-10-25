@@ -16,6 +16,7 @@ from .routers import (
     master_data,
     roles,
     transport,
+    stats,
 )
 
 
@@ -76,6 +77,7 @@ app.include_router(master_data.router, prefix="/api", tags=["Master Data"])
 app.include_router(roles.router, prefix="/api/roles", tags=["Roles"])
 # Werkzeug-Logistik zwischen Werken (DEC-072): Aufträge, Senden, Empfangen, Rückweg.
 app.include_router(transport.router, prefix="/api/transport", tags=["Transport"])
+app.include_router(stats.router, prefix="/api/stats", tags=["Stats"])
 
 
 @app.get("/health")

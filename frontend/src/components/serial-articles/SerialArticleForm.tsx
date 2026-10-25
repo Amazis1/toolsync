@@ -9,7 +9,7 @@ import {
 } from '../../api/serialArticles'
 import { getPlants } from '../../api/tools'
 import { getCustomers, getMachines } from '../../api/masterData'
-import { SerialIcon, CheckIcon, CircleXIcon, UploadIcon } from '../icons'
+import { ClipboardListIcon, CheckIcon, CircleXIcon, UploadIcon } from '../icons'
 import { FieldLabel, FieldMessage } from '../Field'
 import type { Customer, Machine, Plant } from '../../api/types'
 import type { SerialArticle, SerialArticleInput } from '../../types/serial-article'
@@ -553,7 +553,7 @@ export default function SerialArticleForm({
                   key={eintrag.name}
                   className="flex items-center gap-2 rounded-lg border border-white/80 bg-white/40 px-2 py-1.5 text-sm"
                 >
-                  <SerialIcon className="h-4 w-4 shrink-0 text-rose-700" />
+                  <ClipboardListIcon className="h-4 w-4 shrink-0 text-rose-700" />
                   <span className="min-w-0 flex-1 truncate text-slate-900">
                     {eintrag.name}
                     <span className="ml-2 text-xs text-slate-600">
@@ -617,7 +617,7 @@ export default function SerialArticleForm({
                   key={`${plan.name}-${index}`}
                   className="flex items-center gap-2 rounded-lg border border-white/80 bg-white/60 px-2 py-1.5 text-sm"
                 >
-                  <SerialIcon className="h-4 w-4 shrink-0 text-rose-700" />
+                  <ClipboardListIcon className="h-4 w-4 shrink-0 text-rose-700" />
                   <span className="min-w-0 flex-1 truncate text-slate-900">
                     {plan.name}
                     <span className="ml-2 text-xs text-slate-600">

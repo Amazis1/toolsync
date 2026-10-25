@@ -100,15 +100,19 @@ export default function AdminLayout({ onBack }: AdminLayoutProps) {
             wie man zurückkommt, steht damit ganz oben statt im Fuß. */}
         {user && (
           <div className="px-3 py-3 border-b" style={{ borderColor: 'var(--admin-sidebar-border)' }}>
-            <div className="admin-user-card cursor-default" title={`${user.first_name} ${user.last_name}`}>
-              <span className="admin-avatar">{getInitials(user.first_name, user.last_name)}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-semibold text-white truncate">{getDisplayName(user)}</span>
-                <span className="block text-[10px] truncate" style={{ color: 'var(--admin-sidebar-dim)' }}>
-                  {user.is_admin ? 'Administrator' : 'Benutzer'}
+            {/* Im Admin-Panel gilt `Tip` (eigene dunkle Sprechblase, DEC-088):
+                derselbe Auslöser, dasselbe Portal – nur die Admin-Haut. */}
+            <Tip label={`${user.first_name} ${user.last_name}`}>
+              <div className="admin-user-card cursor-default">
+                <span className="admin-avatar">{getInitials(user.first_name, user.last_name)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-semibold text-white truncate">{getDisplayName(user)}</span>
+                  <span className="block text-[10px] truncate" style={{ color: 'var(--admin-sidebar-dim)' }}>
+                    {user.is_admin ? 'Administrator' : 'Benutzer'}
+                  </span>
                 </span>
-              </span>
-            </div>
+              </div>
+            </Tip>
             {/* Restzeit der Sitzung – wie im Haupt-Frontend */}
             <div className="mt-2">
               <SessionTimer expiresAt={expiresAt} onExpire={expireSession} />

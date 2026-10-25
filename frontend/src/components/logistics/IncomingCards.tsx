@@ -8,6 +8,7 @@
 import type { TransportOrder } from '../../types/transport'
 import { werkzeuge as werkzeugAnzahl } from '../../lib/format'
 import {
+  AlterMarke,
   Leerzustand,
   StatusMarke,
   WerkName,
@@ -73,6 +74,13 @@ export default function IncomingCards({ orders, onReceive, onDetail }: IncomingC
                 </strong>
                 {da.length > 0 ? ` · ${da.length} schon angekommen` : ''}
                 {order.sent_at ? ` · verschickt ${formatZeitpunkt(order.sent_at)}` : ''}
+                {/* Wie lange es unterwegs ist (DEC-089) – Amber, wenn zu lange. */}
+                {order.sent_at ? (
+                  <>
+                    {' · '}
+                    <AlterMarke seit={order.sent_at} offen />
+                  </>
+                ) : null}
                 {order.info ? ` · Info: ${order.info}` : ''}
               </div>
 

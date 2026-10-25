@@ -772,7 +772,10 @@ test.describe('Serienartikel', () => {
   }) => {
     await openAsAdmin(page)
 
-    await page.getByRole('button', { name: 'Werkzeuge' }).click()
+    await page
+      .getByRole('navigation', { name: 'Bereiche wechseln' })
+      .getByRole('button', { name: 'Werkzeuge', exact: true })
+      .click()
     await page.getByRole('button', { name: 'Anlegen' }).click()
     // Das Werkzeugformular ist bewusst keine Dialog-Box, sondern eine Karte.
     const karte = page.locator('.tool-form-card')

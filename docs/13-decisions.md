@@ -2580,6 +2580,12 @@ untereinander stehen, und zwar in den anderen Tabs auch."
    mit eigenem Zeichen (`TruckIcon`, Lucide `Truck`). Im Ruhezustand eine helle Pille mit
    Rand, im **aktiven** Zustand Fläche in der **Werkfarbe** mit weißer Schrift;
    `aria-pressed` nennt den Zustand.
+   **Nachtrag (Schrift):** Der Knopf trägt **dieselbe Schriftstärke wie die Reiter
+   (`font-weight: 700`, `font-size: 0.72rem`)**. Zwischenzeitlich stand dort 800 – der
+   Inhaber: „weil wenn ich font-weight: 800 ausschalte, gefällt mir es sehr." Die
+   Unterscheidung leisten Form (eigene Pille), Zeichen und Trennstrich; die schwerere
+   Schrift machte den Knopf nur lauter als die ganze Leiste. Ein Browser-Test hält beide
+   Werte fest (`tests/logistics.spec.ts`, „Logistik steht als eigener Knopf …").
 2. **Feste Spalten in den Auftragsköpfen** (`.kopf-auftrag`, ab 900 px Breite):
    **Nr (7,5 rem) · Zustand (6,75 rem) · Rückweg (6,5 rem) · Werke (flexibel) · rechts
    Anzahl/Datum/Details**. Der „Rückweg"-Platz bleibt auch leer erhalten, damit die
@@ -2606,3 +2612,371 @@ Ordnung hat – bei den Karten (DEC-084) fällt das besonders auf.
   Knopf sitzt nur außerhalb der Reiter-Gruppe.
 - **Keine** Änderung an den übrigen Reitern und ihrer Reihenfolge (DEC-066).
 - **Keine** Werkfarben-Kante am Knopf (DEC-076) – die Farbe steht als Fläche.
+
+---
+
+# DEC-087 – Fenster: Esc überall, Esc-Kürzel neben dem ✕, Öffnen mit Übergang, Zeichen nur von Lucide
+
+**Status:** Verbindlich
+**Bezug:** DEC-082 (Kosmetik), DEC-084 (Karte je Auftrag), `docs/15-ui-styleguide.md` §1.7,
+`docs/21-werkzeug-logistik.md` § 8, `tasks/25b-werkzeug-logistik.md`
+**Auftrag des Projektinhabers:** „Zu den Modal-Fenstern, Kopfzeile und SVG: Alle Modal-Fenster
+sollen mit ‚ESC' geschlossen werden können und ein Hinweis soll dort auch sein wie im
+Anlegeformular. Kopfzeilen etc. sollen beim Aufmachen nicht aufplatzen, sondern eine Art
+Animation haben. SVGs werden offline Lucide-SVG benutzt!"
+**Nachtrag des Inhabers** (nach dem ersten Einbau): „Esc + Hinweis in jedem Fenster nimmt zu
+viel Platz weg … einfach neben dem Kreuz den ‚Esc'-Hinweis." Der Hinweisblock unter der
+Kopfzeile ist damit **entfallen**; an seiner Stelle steht das Kürzel neben dem ✕.
+
+## Ausgangslage
+
+1. **Esc war nicht überall gleich.** Neun Fenster gibt es (`Logistik`: Neuer Auftrag, Auftrag
+   öffnen, Empfang, Rück-Auftrag, Werkzeug zurück · `Bewegungen`: Ausleihen, Zurückgeben ·
+   `Bestätigung`: `ConfirmDialog` · `Datenblatt/Serienartikel`: Datei-Fenster). Alle riefen
+   `useEscapeKey` – aber nur die Logistik-Fenster hatten zusätzlich einen sichtbaren
+   **Schließen-Hinweis**; `ConfirmDialog` hatte **kein ✕** (nur „Abbrechen"), und niemand
+   sagte dem Benutzer, dass Esc überhaupt schließt. Wer die Taste nicht kennt, sucht.
+2. **Fenster „platzten" auf.** Das Fenster stand im nächsten Bild fertig da: kein Übergang,
+   keine Bewegung, kein Hinweis darauf, dass hier gerade etwas aufgegangen ist. Dasselbe
+   beim Aufklappen eines Auftrags (DEC-084) und beim Wechsel der Logistik-Reiter – der neue
+   Block erschien hart.
+3. **Zeichen waren teils selbst gezeichnet.** Vier Symbole (Werkzeug, Lager, Archiv,
+   Serienartikel) bestanden aus handgeschriebenen `path`-Daten. Sie waren nicht auf derselben
+   Strichstärke wie die übrigen Zeichen und wurden bei Änderungen des Rasters mitgezogen.
+
+## Regel
+
+1. **Esc schließt jedes Fenster** – ohne Ausnahme und ohne Dialog davor. Gesperrt ist Esc nur,
+   solange ein Vorgang läuft (`busy`/`speichert`/`saving`): dann würde ein Abbruch einen
+   halbfertigen Schreibvorgang hinterlassen.
+2. **Jedes Fenster zeigt die Taste, nicht einen Satz darüber.** In der Kopfzeile steht
+   **links vom ✕** das Kürzel `components/ui/EscHinweis.tsx` – ein `<kbd>` mit dem Wort
+   **Esc** (`rounded border border-blue-900/20 bg-white/70 px-1 font-mono text-[11px]
+   font-bold`), Tooltip „Mit der Esc-Taste schließen". Es kostet **keine** Zeile: das
+   Kürzel sitzt in derselben Reihe wie das ✕, die Kopfzeile bleibt so hoch wie vorher.
+   Ein Hinweisblock unter der Kopfzeile ist **nicht** zulässig (Nachtrag des Inhabers).
+3. **Jedes Fenster hat einen sichtbaren Ausgang.** Oben rechts das ✕ mit
+   `aria-label="Schließen"` (`ConfirmDialog` hat es jetzt auch, es bricht ab wie
+   „Abbrechen"); das Datei-Fenster behält seinen Knopf „Schließen" in der Kopfzeile und
+   trägt das Kürzel links davon. Der Tooltip „Schließen (Esc)" am ✕ ist entfallen – er
+   sagte jetzt dasselbe wie das Kürzel daneben.
+4. **Öffnen ist ein Übergang, kein Sprung.** Nur bei `prefers-reduced-motion: no-preference`
+   (`index.css`, Abschnitt „Animationen beim Öffnen"):
+   - `.modal-overlay` blendet ein (160 ms),
+   - `.modal-panel` kommt von unten und wächst minimal auf 100 % (220 ms,
+     `cubic-bezier(0.16, 1, 0.3, 1)`) – `translateZ(0)` bleibt in beiden Schlüsselbildern,
+     sonst springt der Schatten nach dem Übergang,
+   - `.auftrag-koerper` (Körper eines aufgeklappten Auftrags) blendet ein und zieht 6 px nach
+     unten (200 ms),
+   - `.bereich-in` (Reiter „Aufträge/Eingang/Wo ist was") kommt 8 px von unten (240 ms).
+   Wer Bewegung reduziert eingestellt hat, bekommt weiterhin harte Schnitte.
+5. **Alle Symbole kommen aus Lucide, offline.** Kein `path` von Hand. Die vier Eigenbauten
+   sind ersetzt: Werkzeug → `Wrench`, Lager → `Warehouse`, Archiv → `Archive`,
+   Serienartikel → `ClipboardList` (in `components/icons.tsx` als `fromLucideBody`-Wrapper,
+   damit die Namen der App erhalten bleiben). `scripts/verify-icons.mjs` prüft das und muss
+   „0 Eigenbauten" melden.
+6. **Jedes Fenster liegt an `<body>`** (`createPortal`), nicht im Inhaltsblock. Grund:
+   `.app-content-block` hat `backdrop-filter` und wird dadurch zum Bezugsrahmen für
+   `position: fixed`; ohne Portal deckt die Abdunklung nur den Block ab, und bei gescrollter
+   Seite steht das Fenster entsprechend tiefer. Beim Einbau gemessen: das Ausleih-Fenster lag
+   131 px zu tief und ragte unten aus dem Bild (jetzt `y = 139 px` bei 720 px Höhe).
+   `ConfirmDialog` und das Datei-Fenster machten es schon so; `LendModal` und `ReturnModal`
+   sind nachgezogen.
+
+## Prüfung im Browser (`tests/modals.spec.ts`)
+
+Vier Tests messen an den erreichbaren Fenstern (Neuer Auftrag, Werkzeug zurück, Ausleihen,
+Löschen-Bestätigung, Datei-Fenster) genau das, was hier festgelegt ist:
+
+1. Das Kürzel `<kbd>` mit dem Text **Esc** steht im **selben Elternelement** wie das ✕,
+   **links** davon und auf **derselben Zeile** (Mitten-Abstand ≤ 2 px).
+2. Im Fenster gibt es **keinen** Hinweisblock mehr (`.ui-alert-info` → 0).
+3. Das Fenster liegt **vollständig im Bild** (auch bei gescrollter Seite).
+4. `animation-name` ist `panel-in` (Fläche) bzw. `overlay-in` (Abdunklung).
+5. Esc schließt; beim Löschen-Dialog bleibt der Datensatz danach nachweislich bestehen.
+
+## Begründung
+
+Ein Fenster ist eine Unterbrechung: Es nimmt den ganzen Blick und muss sich sofort wieder
+wegnehmen lassen. Esc ist die Taste, die dafür gelernt wird – aber nur, wenn sie überall
+dasselbe tut und einmal dasteht. Sie steht deshalb **als Taste** neben dem ✕: ein Zeichen
+sagt mehr als ein Satz und kostet keine Höhe; im Anlegeformular steht sie genauso (`.ui-badge`
+„Esc"). Der Übergang ist kein Schmuck: Er zeigt, dass die Fläche **über** der Seite liegt; ein
+hart eingesetztes Fenster liest sich wie ein Seitenwechsel, und der Blick sucht die Stelle, an
+der er war. Lucide-Zeichen sind eine Familie – Strichstärke, Rundungen und Raster stimmen
+überein, was bei handgezeichneten Pfaden nur zufällig gelingt.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** Schließen per Esc während eines laufenden Vorgangs.
+- **Kein** Hinweisblock in Fenstern (`.ui-alert` mit einem Satz „Mit Esc schließen"): Er
+  kostete eine Zeile über dem Inhalt – das Kürzel neben dem ✕ sagt dasselbe (Nachtrag des
+  Inhabers).
+- **Keine** Rückfrage beim Schließen („Änderungen verwerfen?"): Die Fenster schreiben erst
+  beim Absenden; ein ✕ ist ein Abbruch und braucht keine Bestätigung.
+- **Kein** Ausblenden mit Animation (Schließen bleibt ein Schnitt) – der Abbruch soll sofort
+  wirken, und ein wartendes Fenster würde die Seite blockieren.
+- **Keine** Bewegung ohne `prefers-reduced-motion: no-preference`.
+- **Keine** eigenen `path`-Daten mehr in `components/icons.tsx` (Guide §1.7).
+---
+
+# DEC-088 – Tooltips: eine Sprechblase statt `title="…"`
+
+**Status:** Verbindlich
+**Bezug:** DEC-082 (Kosmetik), DEC-087 (Fenster/Esc-Kürzel), `docs/15-ui-styleguide.md` §1.6/§1.9,
+`tasks/CURRENT_TASKS.md`
+**Auftrag des Projektinhabers:** „Für `title=""` gibt es extra ein Tooltip-CSS! Ich habe gemerkt,
+dass es nicht überall benutzt wird!"
+**Gewählte Umsetzung (Rückfrage beantwortet):** vorhandenes CSS, aber **per Portal über allem**;
+der Tooltip am Eingabefeld „Anzahl" wandert an die **Feldbeschriftung**.
+
+## Ausgangslage
+
+1. **Das Tooltip-CSS war tot.** In `index.css` stand seit dem ersten Entwurf ein Tooltip
+   (`[class^="tooltip-"]`, `.tooltip-top`, `.tooltip-right`) – **keine** Stelle in der
+   Anwendung hat es benutzt (`grep` über `src/**`: nur die Definition). Es war außerdem
+   `absolute` im Textfluss, an einen `.group`-Vorfahren gebunden (`whitespace-nowrap`,
+   Pfeil ohne Position) – in Tabellen und Fenstern wäre es abgeschnitten worden.
+2. **Stattdessen hingen 21 native `title`-Attribute** an Knöpfen und Werten (Logistik-Knöpfe,
+   Rückgabe-Fenster, Datei-Fenster, Werkzeugliste, Sortierköpfe von drei Listen,
+   Sitzungs-Timer, Werkfarbe-Umschalter, Beschichtung …). Der Browser-Tooltip erscheint
+   erst nach etwa einer Sekunde, sieht überall anders aus, ist **per Tastatur nicht
+   erreichbar** und nicht gestaltbar.
+3. **Zwei Systeme, zwei Wahrheiten:** Das AdminPanel hatte dafür längst ein eigenes,
+   richtiges Tooltip (`pages/admin/IconTipButton.tsx`, `Tip`: Portal an `<body>`,
+   gemessene Position, `role="tooltip"`). Im Hauptfenster fehlte genau das.
+
+## Regel
+
+1. **Eine Komponente: `frontend/src/components/ui/Tooltip.tsx`.**
+   `<Tooltip text="…">…</Tooltip>` um den Auslöser (Knopf, Wert, Zeichen).
+   - Sie rendert die Blase **per `createPortal` an `<body>`** und **misst** die Lage am
+     Auslöser (`getBoundingClientRect`, `position: fixed`). Damit wird sie in der Tabelle
+     (`overflow-x-auto`), im Fenster (`overflow-hidden`) und an jeder Fußzeile **nicht
+     abgeschnitten** – das war der Grund, das alte `absolute`-CSS nicht zu verwenden.
+   - Sie erscheint bei **Hover und bei Tastatur-Fokus**; der Wirt trägt dabei
+     `aria-describedby`, damit Screenreader den Hinweis mitlesen.
+   - Beim Scrollen und bei Größenänderung wird die Blase **nachgeführt** (wie im
+     AdminPanel), nicht einfach ausgeblendet.
+   - `text={undefined}` bedeutet: **kein** Tooltip. Bedingte Hinweise („nur wenn der
+     Auftrag leer ist") bleiben damit beim Aufrufer, ohne leere Hüllen im Layout.
+2. **Kein `title=` mehr für Hinweise** im Hauptfenster – weder an Knöpfen noch an Werten.
+   `title` bleibt nur, wo es **kein** Tooltip ist:
+   - als **Prop** für Fenstertitel (`ConfirmDialog title=`, `FormSection title=`,
+     `TableEditor title=`, `Placeholder title=`),
+   - als **`iframe`-Beschriftung** (`title={`PDF ${name}`}` – Pflicht für Screenreader),
+   - im **AdminPanel** an der Matrix: dort steht ein **mehrzeiliger** Text (Code, Belegung,
+     Hinweis in drei Zeilen) im `title`; die Blase des AdminPanels ist einzeilig
+     (`whitespace: nowrap`) und kann das nicht zeigen (Guide-Regel „abgeschnittener Text
+     behält `title`").
+3. **Der Wirt heißt `.tip-wirt`** (`position: relative`, `display: inline-flex`).
+   **Nicht** `tooltip-wirt`: die Regel `[class^="tooltip-"]` greift auf jedes Element zu,
+   dessen Klasse mit `tooltip-` **beginnt**. Mit diesem Namen wurde der Wirt selbst zur
+   Blase (`fixed`, dunkel, `pointer-events: none`) – seine Knöpfe waren dadurch **nicht mehr
+   klickbar** (im Test aufgefallen: der Reiter „Logistik" ließ sich nicht mehr anklicken).
+4. **`className="contents"` an Stellen, an denen eine Hülle das Layout verschiebt**:
+   Spaltenköpfe und Werte in Tabellenzellen, Feldbeschriftungen in einer Rasterzeile.
+   Der Wirt ist dann `display: contents` (keine eigene Box); gemessen wird sein erstes Kind.
+   Gemessen ohne diese Regel: die Werkzeugtabelle wurde bei 1440 px **24 px breiter** als ihr
+   Bereich (937 statt 913 px) – die Spalte „Aktionen" lief aus dem Bild.
+5. **Das vorhandene CSS bleibt die Gestalt** (dunkle Blase `bg-gray-800`, Radius, Schatten,
+   Pfeil), aber es ist aufgeräumt: `position: fixed` (Lage als Inline-Stil), Pfeil je Seite
+   mittig, `max-width: 18rem` mit **Umbruch** statt `whitespace-nowrap` (lange Sätze wie
+   „Heimatplatz – bleibt reserviert, bis das Werkzeug zurück ist" laufen sonst aus dem Bild),
+   Text 12 px, kleine Einblendung – nur bei `prefers-reduced-motion: no-preference`.
+   Die Auslösung hängt **nicht** mehr an `.group` (sonst zeigte eine gehoverte Zeile alle
+   Blasen ihrer Knöpfe gleichzeitig).
+6. **Das AdminPanel behält `Tip`** (eigene dunkle Blase des zweiten Systems) – dieselbe
+   Technik (Portal, gemessen, `role="tooltip"`), andere Haut. Ein Umbau dort war nicht
+   Gegenstand des Auftrags; die beiden Systeme bleiben getrennt (Guide §1.7, „System B").
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Stellen mit `title=` als Hinweis (Hauptfenster) | 21 | **0** |
+| Tooltip-CSS benutzt | nirgends | alle Hinweise |
+| Auslöser für Tastaturnutzer | keiner | `Fokus` zeigt die Blase |
+| Abgeschnitten in Tabelle/Fenster | ja (`absolute`) | nein (Portal) |
+| Werkzeugtabelle bei 1440 px | 913 px | 913 px (mit `contents`-Wirt) |
+| Blasen gleichzeitig offen | – | höchstens **eine** |
+
+## Begründung
+
+Ein Hinweis, der eine Sekunde auf sich warten lässt, in jedem Browser anders aussieht und
+nur mit Maus erscheint, ist keine Beschriftung, sondern ein Zufall. Die Anwendung erklärt an
+diesen Stellen **Folgen** („bleibt reserviert", „nicht verschickbar"), und die müssen sofort
+und überall gleich erscheinen – auch dort, wo der Inhalt scrollt. Das CSS dafür war längst da;
+es fehlte der Anschluss.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** `title=` als Hinweis in der Oberfläche (Ausnahmen siehe Regel 2).
+- **Keine** Blase im Textfluss (`absolute`): Sie wird in Scrollcontainern abgeschnitten.
+- **Keine** Blase an einem **Eingabefeld**: Der Tooltip hängt an der Beschriftung (Regel des
+  Guides, §§1.9 Punkt 12) – im Werkzeugformular umgesetzt für „Anzahl" und „Beschichtung".
+- **Kein** zweiter Tooltip-Mechanismus im Hauptfenster (kein `ui-badge` mit Erklärtext,
+  kein `data-tip`-Attribut): eine Komponente.
+- **Keine** Blase, die den Fokus „festhält": Wer den Auslöser verlässt, verliert die Blase –
+  sonst bliebe sie nach einem Klick für immer stehen (im Test gemessen: zwei Blasen offen).
+
+## Prüfung im Browser (`frontend/tests/tooltips.spec.ts`)
+
+Vier Tests:
+
+1. **Liste:** Blase liegt **über** dem Auslöser, vollständig im Bild – auch im
+   `overflow-x-auto` der Datenblätter-Liste (Portal).
+2. **Tastatur:** Fokus zeigt die Blase; der Wirt trägt `aria-describedby`.
+3. **Fenster:** die Blase kommt aus dem `overflow-hidden`-Panel heraus (Fußleiste des
+   Fensters „Neuer Auftrag").
+4. **Kein `title=` mehr**: nach dem Durchlauf aller Bereiche ist
+   `document.querySelectorAll('[title]')` leer (ohne `iframe`). Genau **eine** Blase ist
+   offen – ein liegengebliebener Tooltip fällt auf.
+
+---
+
+# DEC-089 – Logistik sofort erkennbar: farbiger Knopf mit Zähler, Kennzahl-Kacheln, deutlichere Zustände
+
+**Status:** Verbindlich
+**Bezug:** DEC-076 (Werkfarbe), DEC-082 (Kosmetik), DEC-084 (Karte je Auftrag),
+DEC-086 (eigener Knopf), DEC-088 (Tooltips), `docs/21-werkzeug-logistik.md` § 8
+**Auftrag des Projektinhabers:** „Logistik-Button: schau, wie man es noch anders machen kann – es
+muss sofort erkennbar sein. In der Logistik fehlen mir Filter, suchen, wer angelegt hat, wer
+verschickt hat, wer angenommen hat. Evtl. mehr deutlich farbig anzeigen, vielleicht Gradients.
+Gib mir Vorschläge, was sinn macht."
+**Umgesetzt (Auswahl des Inhabers):** Knopf-Variante **V1** (immer in der Werkfarbe gefüllt +
+Zähler) und **Paket 1** (Kennzahl-Kacheln, deutlichere Zustände mit Alter).
+
+## Ausgangslage
+
+1. **Der Knopf war „anders", aber nicht auffällig.** Nach dem Schrift-Nachtrag zu DEC-086 trug er
+   dieselbe Schriftstärke wie die Reiter (700) und war im Ruhezustand eine **helle weiße Pille**
+   mit hellem Rand – die Werkfarbe erschien erst im aktiven Zustand. In der Leiste sah er damit
+   aus wie ein Reiter mit Zeichen.
+2. **Die Logistik hatte keine Filter und keine Suche.** `Logistics.tsx` lud fix 200 Aufträge
+   (`getOrders({ direction: 'both', limit: 200 })`) und filterte nur im Speicher nach Richtung.
+   Es gab keine Suche, keine Zustands-/Zeit-/Werk-/Personenfilter und keine Sortierung – und
+   damit auch keinen Weg, „was liegt zu lange?" zu beantworten.
+3. **Der Zustand war die leiseste Angabe der Zeile.** `StatusMarke` war eine 15-%-Tinte
+   (`bg-sky-500/15`): Bei mehreren Aufträgen untereinander war der Unterschied zwischen
+   „unterwegs", „teilweise da" und „angekommen" nur beim Lesen zu erkennen.
+4. **Wer gehandelt hat, war versteckt.** Die Daten liegen längst vor
+   (`created_by_name`, `sent_by_name`, je Position `received_by_name` + `received_plant`) –
+   sichtbar waren sie nur im Fenster „Auftrag öffnen" und als graue Fußzeile.
+
+## Regel
+
+1. **Der Logistik-Knopf ist immer farbig.** Ruhend: Fläche `--werk-tinte` (18 % Tinte),
+   Rand `--werk-line` (30 %), Schrift `--werk-text` (dieselbe Farbe um Faktor 0,78 dunkler –
+   als Text auf getönter Fläche lesbar, DEC-076/§1.8). Aktiv: volle Werkfarbe, weiße Schrift.
+   Die drei Variablen setzt `lib/plantTheme.ts` zusammen mit `--werk`.
+2. **Der Knopf trägt die Zahl der offenen Aufträge** (`draft`, `sent`, `partly_received`, beide
+   Richtungen) als Zähler `<span class="tab-zaehler">`. Sie wird über
+   `lib/useOffeneAuftraege.ts` geladen (`limit: 0`, also die `COUNT`-Abfrage des Servers –
+   richtig auch dann, wenn mehr offen sind als die Liste zeigt), bei jeder Änderung im Bereich
+   (`logisticsRefreshKey`) und alle 60 s nachgeführt. Bei 0 entfällt der Zähler.
+3. **Vier Kennzahl-Kacheln** über der Logistik (`.kpi-kachel`, „Entwürfe · unterwegs ·
+   Eingang offen · älter als 7 Tage"), jede ein Knopf mit `aria-pressed`:
+   - „Eingang offen" wechselt den Unterbereich,
+   - die übrigen setzen einen **Schnellfilter** auf die Auftragsliste (ein zweiter Klick hebt
+     ihn auf).
+   Der gesetzte Filter steht **als Chip über der Liste** („Filter: nur unterwegs" + „7 von 12")
+   und lässt sich dort mit einem Klick aufheben. Ein Filter, den man nicht sieht, wäre eine
+   zweite Wahrheit über die Liste (DEC-082).
+4. **Zustand als gefüllte Marke mit Verlauf und Zeichen** (`.ui-status`, `.ui-status-<zustand>`):
+   Verlauf `linear-gradient(180deg, …30, …12)`, 1 px Kante in derselben Farbe, dunkle Schrift und
+   ein Zeichen je Zustand (`FileText` = Entwurf, `Truck` = unterwegs, `ClipboardList` = teilweise,
+   `Check` = angekommen, `CircleX` = storniert). Der Verlauf sitzt **nur auf der Marke** –
+   Karten bleiben ungetönt, Kanten bleiben weiß (DEC-076).
+5. **Jede Zeile nennt ihr Alter.** `AlterMarke` schreibt „gerade eben", „seit 20 Min.",
+   „seit 4 Std.", „seit 3 Tagen" (Bezug: Versand, sonst Anlage). Ab **3 Tagen** und solange der
+   Auftrag offen ist, wird sie **amber und fett** mit Zeichen. Im Eingang steht dieselbe Angabe
+   in der Kopfzeile der Karte.
+6. **Kein `title` dafür.** Der Hinweis am Filter-Chip läuft über `<Tooltip>` (DEC-088).
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Knopf ruhend | `rgba(255,255,255,.5)`, weißer Rand | `--werk-tinte` (18 %) + `--werk-line` |
+| Offene Aufträge am Knopf | nicht sichtbar | Zähler, live (60 s / nach jeder Aktion) |
+| Kennzahlen im Bereich | eine Textzeile | 4 Kacheln, jede ein Filter |
+| Filter in der Liste | keiner | Schnellfilter + sichtbarer Chip |
+| Zustandsmarke | 15-%-Tinte, Text | Verlauf + Kante + Zeichen |
+| „liegt zu lange" | nicht erkennbar | „seit N Tagen", ab 3 Tagen amber |
+| `title=` im Bereich | 14 (neu eingebaut) | 0 (über Tooltip) |
+
+## Begründung
+
+Ein Bereich, den man nicht findet, und eine Liste, die man nicht filtern kann, kosten jeden Tag
+Zeit – beides ist keine Kosmetik. Die **Fläche in der Werkfarbe** ist das stärkste Signal, das
+diese Leiste hergibt: Sie gehört zu keinem Reiter, und sie ist jeden Tag dieselbe. Der Zähler
+macht daraus eine Anzeige statt eines Wegweisers („3 offene Aufträge" statt nur „Logistik").
+Kennzahlen sind schneller als Suchen: Wer sieht, dass 4 Aufträge älter als 7 Tage sind, klickt
+darauf – und hat die Liste, die er meinte. Der Verlauf auf der Zustandsmarke ist bewusst der
+einzige Gradient: Farbe trägt hier Bedeutung (Zustand), nicht Dekoration.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** getönten Auftragskarten und **keine** farbigen Kanten (DEC-076) – der Verlauf bleibt
+  auf der Marke, die Karte bleibt weiß.
+- **Kein** Gradient am Logistik-Knopf (Variante V3 wurde verworfen): Der Knopf trägt die Fläche
+  der Werkfarbe, der Verlauf hätte ihn zum auffälligsten Fleck der Oberfläche gemacht.
+- **Keine** Voltextsuche in diesem Schritt: Die API sucht in `q` nur Auftrags-Nr. und Reference;
+  Suche über Werkzeug-ID, Person und Info sowie Zeitraum-Filter sind das **nächste Paket**
+  (Paket 2, siehe `tasks/CURRENT_TASKS.md`).
+- **Keine** Personenkette in der Zeile und **kein** Zeitstrahl im Nachweis-Fenster in diesem
+  Schritt (Paket 3) – die Daten dafür liegen bereit.
+- **Kein** serverseitiges Filtern für den Schnellfilter: Die Liste ist bereits geladen (max. 200);
+  der Filter arbeitet im Speicher und ist damit sofort.
+
+## Prüfung im Browser (`frontend/tests/logistik-kacheln.spec.ts`)
+
+Drei Tests:
+
+1. **Knopf:** Die Fläche ist nicht mehr Weiß, `--werk-tinte` ist gesetzt, und der Zähler nennt
+   genau `total` aus `/api/transport/orders?status=draft,sent,partly_received&limit=0`.
+2. **Kacheln:** Alle vier sind sichtbar und tragen eine Zahl; „Eingang offen" wechselt den
+   Unterbereich; „unterwegs" setzt `aria-pressed`, zeigt den Chip und lässt in der Liste keinen
+   Entwurf übrig; der Chip hebt den Filter wieder auf.
+3. **Marken und Alter:** `.ui-status` hat einen `linear-gradient` und ein SVG-Zeichen; jede
+   Auftragszeile trägt `.ui-alter` („seit …" oder „gerade eben").
+
+## Nachtrag – und die Korrektur nach dem ersten Einbau
+
+**Befund des Inhabers:** „Wenn man auf Kachel ‚unterwegs' und ‚Eingang offen' klickt, sind beide aktiv – ist
+das so richtig?" **Nein.** Die Karten hatten zwei verschiedene Bedeutungen unter derselben Optik:
+`unterwegs` setzte einen **Filter**, `Eingang offen` wechselte den **Unterbereich** – beide zeichneten
+sich aber als „gedrückt". Zwei gedrückte Karten lesen sich wie zwei gesetzte Filter.
+
+**Was daraus geworden ist (Vorschlag des Inhabers, übernommen):**
+
+1. **„Eingang offen" ist aus dem Bereich verschwunden** – die Zahl gilt für den ganzen Bereich, nicht für
+   die Auftragsliste, und der Reiter „Eingang" steht zwei Zentimeter weiter links. Die Karte sitzt jetzt
+   in der **rechten Spalte**.
+2. **Die rechte Spalte ist gefüllt** (offene Frage 7 aus `docs/21`): vier Kennzahl-Karten –
+   **Aktive Ausleihen · Verfügbare Werkzeuge · Offene Aufträge · Eingang offen** –, jede ein
+   **Sprungziel** (Werkzeugliste bzw. Logistik/Eingang). Die Zahlen kommen aus **einer** Anfrage
+   `GET /api/stats/overview` (neu; `routers/stats.py`, `services/stats_service.py`): `COUNT`-Abfragen je
+   Kennzahl, begrenzt auf das Arbeitswerk aus `X-Plant-Id`. „Verfügbar" schließt Werkzeuge **ohne Status**
+   ein (DEC-080), Datenblätter **ohne Werk** zählen in jedem Werk (DEC-085), und „läuft zu lange" wird in
+   Python gerechnet (SQLite legt `created_at` ohne Zeitzone und `sent_at` mit Offset ab – ein
+   String-Vergleich beider Formate wäre falsch).
+3. **Die Gestalt ist die der Styleguide-KPI-Karten** (`components/ui/KpiKarte.tsx`, „KPI- & Statistik-Karten"
+   aus `UI-Styleguide.html`): Zeichen in einer Kachel (`h-10 w-10 rounded-lg` in der Spalte), große Zahl
+   (`text-2xl font-extrabold`, `tabular-nums`), Name, dekorativer Glow (`pointer-events-none`), optionale
+   Fußzeile mit `.ui-progress`. **Eine** Komponente für beide Stellen – Spalte (kompakt, nicht klickbar
+   gedacht, aber als Sprung ein Knopf) und Bereich (kompakt, `aria-pressed` = Filter aktiv).
+4. **Höchstens eine Karte ist gedrückt.** Im Bereich stehen nur noch **drei** Filter-Karten
+   (Entwürfe · unterwegs · älter als 7 Tage) in einer Gruppe „Schnellfilter"; der gesetzte Filter steht
+   weiter als Chip über der Liste („nur unterwegs · 7 von 12") und hebt sich dort auf.
+5. **Der Zähler am Logistik-Knopf und die Karte „Offene Aufträge" sind dieselbe Zahl** (`orders_open` aus
+   derselben Antwort) – eine Quelle statt zwei Abfragen; `lib/useOffeneAuftraege.ts` ist entfallen,
+   `lib/useStatistik.ts` liefert alles (Nachführung bei jeder Aktion im Bereich und alle 60 s).
+
+**Was das gekostet hat:** Zwei Karten, die „aktiv" aussehen, waren ein echter Fehler – der Browser-Test
+hält jetzt fest, dass in der Gruppe „Schnellfilter" **genau eine** Karte gedrückt ist und dass „Eingang
+offen" keine Karte des Bereichs mehr ist. Nebenbei mussten zwei ältere Tests ihre Reiter-Abfrage auf die
+Navigation eingrenzen: die Kennzahl-Karten sind Knöpfe, und „Verfügbare Werkzeuge" enthält das Wort
+„Werkzeuge" – ohne Eingrenzung war der Treffer mehrdeutig.
+

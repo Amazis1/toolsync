@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { returnTool } from '../../api/movements'
 import { TOOL_CATEGORY_LABELS } from '../../api/types'
 import { useEscapeKey } from '../../lib/useEscapeKey'
 import { toolLabel } from '../../lib/toolLabel'
 import type { Tool } from '../../api/types'
+import EscHinweis from '../ui/EscHinweis'
 
 interface ReturnModalProps {
   tool: Tool
@@ -51,7 +53,9 @@ export default function ReturnModal({ tool, onClose, onSuccess }: ReturnModalPro
 
   const platz = tool.position_code || 'Ablage'
 
-  return (
+  // Portal an <body> – wie in ConfirmDialog und LendModal: `.app-content-block`
+  // hat `backdrop-filter` und wäre sonst der Bezugsrahmen für `position: fixed`.
+  return createPortal(
     <div
       className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -63,13 +67,16 @@ export default function ReturnModal({ tool, onClose, onSuccess }: ReturnModalPro
           <h2 id="return-title" className="text-lg font-semibold text-slate-900">
             Werkzeug zurückgeben
           </h2>
-          <button
-            onClick={onClose}
-            aria-label="Schließen"
-            className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <EscHinweis />
+            <button
+              onClick={onClose}
+              aria-label="Schließen"
+              className="rounded-lg px-2 py-1 text-slate-600 hover:bg-white/60 hover:text-slate-700"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </div>
         </div>
 
         <div className="mb-4 rounded-xl border border-white/70 bg-white/40 px-4 py-3 text-sm">
@@ -132,6 +139,7 @@ export default function ReturnModal({ tool, onClose, onSuccess }: ReturnModalPro
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

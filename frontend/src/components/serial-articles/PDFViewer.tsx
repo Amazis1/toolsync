@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEscapeKey } from '../../lib/useEscapeKey';
 import ConfirmDialog from '../ConfirmDialog';
+import EscHinweis from '../ui/EscHinweis';
+import Tooltip from '../ui/Tooltip';
 import {
   ResetIcon,
   RotateLeftIcon,
   RotateRightIcon,
-  SerialIcon,
+  ClipboardListIcon,
   ZoomInIcon,
   ZoomOutIcon,
 } from '../icons';
@@ -166,63 +168,68 @@ const BildBuehne: React.FC<{
       {/* Werkzeugleiste: Zoom und Drehung */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/60 px-3 py-2">
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => stufeSchritt(-1)}
-            disabled={zoom <= ZOOM_STEPS[0]}
-            className="ui-btn ui-btn-secondary ui-btn-sm"
-            aria-label="Verkleinern"
-            title="Verkleinern"
-          >
-            <ZoomOutIcon className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="Verkleinern">
+            <button
+              type="button"
+              onClick={() => stufeSchritt(-1)}
+              disabled={zoom <= ZOOM_STEPS[0]}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-label="Verkleinern"
+            >
+              <ZoomOutIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
           <span
             className="min-w-[3.5rem] text-center text-xs font-semibold text-slate-700"
             aria-live="polite"
           >
             {Math.round(zoom * 100)} %
           </span>
-          <button
-            type="button"
-            onClick={() => stufeSchritt(1)}
-            disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}
-            className="ui-btn ui-btn-secondary ui-btn-sm"
-            aria-label="Vergrößern"
-            title="Vergrößern"
-          >
-            <ZoomInIcon className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="Vergrößern">
+            <button
+              type="button"
+              onClick={() => stufeSchritt(1)}
+              disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-label="Vergrößern"
+            >
+              <ZoomInIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setDrehung((wert) => wert - 90)}
-            className="ui-btn ui-btn-secondary ui-btn-sm"
-            aria-label="Nach links drehen"
-            title="Nach links drehen"
-          >
-            <RotateLeftIcon className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDrehung((wert) => wert + 90)}
-            className="ui-btn ui-btn-secondary ui-btn-sm"
-            aria-label="Nach rechts drehen"
-            title="Nach rechts drehen"
-          >
-            <RotateRightIcon className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={zuruecksetzen}
-            disabled={zoom === 1 && drehung % 360 === 0}
-            className="ui-btn ui-btn-secondary ui-btn-sm"
-            aria-label="Ansicht zurücksetzen"
-            title="Ansicht zurücksetzen"
-          >
-            <ResetIcon className="h-3.5 w-3.5" />
-          </button>
+          <Tooltip text="Nach links drehen">
+            <button
+              type="button"
+              onClick={() => setDrehung((wert) => wert - 90)}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-label="Nach links drehen"
+            >
+              <RotateLeftIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip text="Nach rechts drehen">
+            <button
+              type="button"
+              onClick={() => setDrehung((wert) => wert + 90)}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-label="Nach rechts drehen"
+            >
+              <RotateRightIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip text="Ansicht zurücksetzen">
+            <button
+              type="button"
+              onClick={zuruecksetzen}
+              disabled={zoom === 1 && drehung % 360 === 0}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-label="Ansicht zurücksetzen"
+            >
+              <ResetIcon className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -512,6 +519,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                 {auswahl.kind === 'plan' ? `${planLabel} entfernen` : 'Bild entfernen'}
               </button>
             )}
+            <EscHinweis />
             <button onClick={onClose} className="ui-btn ui-btn-secondary">
               Schließen
             </button>
@@ -540,7 +548,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({
                 className={eintragKlasse(auswahl?.name === plan.name)}
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-rose-600/10">
-                  <SerialIcon className="h-5 w-5 text-rose-700" />
+                  <ClipboardListIcon className="h-5 w-5 text-rose-700" />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate">{planLabel}</span>

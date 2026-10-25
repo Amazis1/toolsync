@@ -446,9 +446,13 @@ test.describe('Werkzeug-Logistik', () => {
     await dialog.getByRole('button', { name: 'Alle auswählen' }).click()
     await expect(zurueckKnopf).toBeEnabled()
 
-    // Tooltips (title) stehen an Knopf und Werten – nicht an Eingabefeldern.
-    await expect(zurueckKnopf).toHaveAttribute('title', /unterwegs/)
-    await expect(dialog.getByLabel('Schließen')).toHaveAttribute('title', 'Schließen (Esc)')
+    // Hinweise stehen als Tooltip an Knopf und Werten (DEC-088) – als echte
+    // Sprechblase, nicht als `title`; an Eingabefeldern gibt es sie nicht.
+    // Das ✕ trägt keinen eigenen Hinweis mehr: links davon steht `<kbd>Esc</kbd>`.
+    await zurueckKnopf.hover()
+    await expect(page.getByRole('tooltip')).toContainText('unterwegs')
+    await expect(dialog.getByLabel('Schließen')).toHaveCount(1)
+    await expect(dialog.locator('kbd')).toHaveText('Esc')
 
     // Escape schließt – auch wenn der Fokus im Suchfeld steht.
     await suche.focus()
@@ -591,6 +595,21 @@ test.describe('Werkzeug-Logistik', () => {
     expect(lage, 'Trennstrich und Abstand sind messbar').not.toBeNull()
     expect(lage!.abstand, 'Logistik steht mit Abstand neben den Reitern').toBeGreaterThan(8)
     expect(lage!.strichHoehe).toBeGreaterThan(10)
+
+    // Die Schrift ist so schwer wie die der übrigen Reiter. Vorher stand hier
+    // 800 gegen 700 – der Knopf wirkte „fetter" als die ganze Leiste
+    // („wenn ich font-weight: 800 ausschalte, gefällt mir es sehr").
+    const schrift = await page.evaluate(() => {
+      const nav = document.querySelector("nav[aria-label='Bereiche wechseln']")
+      const reiter = nav?.querySelector('.ui-tabs button') as HTMLElement | null
+      const pille = nav?.querySelector('.tab-logistik') as HTMLElement | null
+      if (!reiter || !pille) return null
+      const a = getComputedStyle(reiter)
+      const b = getComputedStyle(pille)
+      return { gewicht: [a.fontWeight, b.fontWeight], groesse: [a.fontSize, b.fontSize] }
+    })
+    expect(schrift?.gewicht).toEqual(['700', '700'])
+    expect(schrift?.groesse).toEqual(['11.52px', '11.52px'])
 
     // Im aktiven Zustand trägt er die Fläche der Werkfarbe. `expect.poll`:
     // Der Farbwechsel ist animiert (0,18 s) – ein einzelner Messwert läge sonst

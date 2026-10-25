@@ -85,11 +85,21 @@ test('Mitarbeiter-Login mit gültiger Personalnummer zeigt die Oberfläche', asy
   // Der Name steht in der Sidebar und (auf schmalen Bildschirmen) in der
   // Kopfzeile – deshalb gezielt im Benutzerblock der Sidebar prüfen.
   await expect(page.locator('.app-sidebar').getByText('Test Mitarbeiter')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Werkzeuge' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Serienartikel' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Datenblätter' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Ersatzteile' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Historie' })).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Werkzeuge' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Serienartikel' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Datenblätter' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Ersatzteile' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Bereiche wechseln' }).getByRole('button', { name: 'Historie' }),
+  ).toBeVisible()
 })
 
 // ----------------------------------------------------------------

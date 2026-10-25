@@ -446,10 +446,9 @@ test.describe('Ersatzteile', () => {
     await expect(karte.getByText('Bitte ein Werk auswählen.')).toBeVisible()
   })
 
-  test('Bearbeiten ändert die Menge', async ({ page }) => {
+  test('Bearbeiten ändert die Menge', async ({ page, request }) => {
     await openAsAdmin(page)
     await suche(page, `${PREFIX}4711`)
-
     await oeffneZeilenmenue(page, `${PREFIX}4711`)
     await page.getByRole('menuitem', { name: 'Bearbeiten' }).click()
     const karte = page.locator('.tool-form-card')
@@ -463,7 +462,28 @@ test.describe('Ersatzteile', () => {
       timeout: 10_000,
     })
     await suche(page, `${PREFIX}4711`)
-    await expect(page.locator('tbody tr').filter({ hasText: '42' })).toHaveCount(1)
+    // Die Zeile über ihre **Artikelnummer** adressieren und darin die Menge prüfen.
+    // Vorher stand hier `filter({ hasText: '42' })` mit `toHaveCount(1)` – sobald
+    // eine andere Zeile zufällig „42" enthielt (Artikelnummer, Platz, Datum),
+    // schlug der Test ohne Fehler im Code an.
+    const zeile = page
+      .locator('tbody tr')
+      .filter({ hasText: `${PREFIX}4711` })
+      .filter({ hasText: '42' })
+      .first()
+    await expect(zeile).toBeVisible({ timeout: 10_000 })
+    // Die Menge steht als Abzeichen in der Zeile (mit Einheit dahinter), deshalb
+    // wird der Wert an der Sache geprüft: in der Datenbank steht 42.
+    const antwort = await request.get(
+      `/api/spare-parts/?search=${encodeURIComponent(`${PREFIX}4711`)}&limit=20`,
+      { headers: authHeaders() },
+    )
+    const seite = (await antwort.json()) as {
+      items: { article_number: string; quantity: number }[]
+    }
+    const posten = seite.items.filter((teil) => teil.article_number === `${PREFIX}4711`)
+    expect(posten.length).toBeGreaterThan(0)
+    expect(posten.map((teil) => teil.quantity)).toContain(42)
   })
 
   test('Favorit setzen und darauf filtern', async ({ page, request }) => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Tooltip from './ui/Tooltip'
 
 interface SessionTimerProps {
   /** Absoluter Ablaufzeitpunkt (ms seit Epoche) oder null, wenn unbekannt. */
@@ -48,8 +49,10 @@ export default function SessionTimer({ expiresAt, onExpire, short = false }: Ses
         : 'ui-badge ui-badge-neutral'
 
   return (
-    <span className={cls} title={`Sitzung läuft in ${minutes} Min ab`}>
-      {short ? `Sitzung ${minutes} Min` : `Sitzung läuft in ${minutes} Min ab`}
-    </span>
+    <Tooltip text={`Sitzung läuft in ${minutes} Min ab`}>
+      <span className={cls}>
+        {short ? `Sitzung ${minutes} Min` : `Sitzung läuft in ${minutes} Min ab`}
+      </span>
+    </Tooltip>
   )
 }

@@ -14,6 +14,7 @@ import { getPlants } from '../api/admin'
 import type { Plant } from '../api/types'
 import { currentPlantId } from '../lib/activePlant'
 import { choosePlant } from '../lib/plantContext'
+import Tooltip from './ui/Tooltip'
 
 interface PlantSwitchProps {
   /** Angemeldeter Benutzer – für den Merkzettel pro Person. */
@@ -66,26 +67,30 @@ export default function PlantSwitch({
           const istAktiv = plant.id === aktiv
           const farbe = plant.color || '#0f766e'
           return (
-            <button
+            <Tooltip
               key={plant.id}
-              type="button"
-              onClick={() => wechseln(plant.id)}
-              aria-pressed={istAktiv}
-              title={istAktiv ? `${plant.name} (Arbeitswerk)` : `Zu ${plant.name} wechseln`}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs font-semibold transition-colors"
-              style={{
-                color: istAktiv ? farbe : '#334155',
-                background: istAktiv ? `${farbe}1a` : 'transparent',
-                boxShadow: istAktiv ? `inset 2px 0 0 ${farbe}` : undefined,
-              }}
+              text={istAktiv ? `${plant.name} (Arbeitswerk)` : `Zu ${plant.name} wechseln`}
+              className="w-full"
             >
-              <span
-                aria-hidden="true"
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ background: farbe }}
-              />
-              <span className="truncate">{plant.name}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => wechseln(plant.id)}
+                aria-pressed={istAktiv}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs font-semibold transition-colors"
+                style={{
+                  color: istAktiv ? farbe : '#334155',
+                  background: istAktiv ? `${farbe}1a` : 'transparent',
+                  boxShadow: istAktiv ? `inset 2px 0 0 ${farbe}` : undefined,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: farbe }}
+                />
+                <span className="truncate">{plant.name}</span>
+              </button>
+            </Tooltip>
           )
         })}
       </div>

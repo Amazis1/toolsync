@@ -194,8 +194,30 @@ das genau der bisherige Textwert `#115e59`, die Vorgabe bleibt also unverändert
 | `.ui-menu` | Dropdown, Shadow `0 18px 38px rgba(15,23,42,.12)` |
 | `.ui-breadcrumbs` | Links `#115e59`, Font-Weight `700` |
 | `.ui-avatar` | 32×32px, BG `#0f766e`, weiß, Font-Weight `800` |
-| `.modal-overlay` | `rgba(15,23,42,0.45)`, **kein** `backdrop-filter` |
-| `.modal-panel` | `rgba(255,255,255,.8)`, Radius `.85rem`, Blur `10px`, Shadow `0 20px 50px` |
+| `.modal-overlay` | `rgba(15,23,42,0.45)`, **kein** `backdrop-filter`; Einblenden 160 ms |
+| `.modal-panel` | `rgba(255,255,255,.8)`, Radius `.85rem`, Blur `10px`, Shadow `0 20px 50px`; Einfahrt von unten 220 ms |
+| `.auftrag-koerper` | Körper eines aufgeklappten Auftrags (DEC-084); Einblenden + 6 px von oben, 200 ms |
+| `.bereich-in` | Inhaltsfläche beim Wechsel der Logistik-Reiter; 8 px von unten, 240 ms |
+| `.tab-logistik` | Logistik-Knopf: **immer** `--werk-tinte` (18 %) + `--werk-line`-Rand, Schrift `--werk-text`; aktiv volle Werkfarbe (DEC-089) |
+| `.tab-zaehler` | Zähler im Logistik-Knopf (offene Aufträge): gefüllte Marke in der Werkfarbe, aktiv umgekehrt |
+| `.ui-status` + `.ui-status-<zustand>` | Zustandsmarke der Logistik: Verlauf (30 → 12 %), 1-px-Kante, dunkle Schrift, Zeichen je Zustand |
+| `.ui-alter` / `.ui-alter-lang` | „seit 3 Tagen"; `-lang` = amber und fett, sobald offen und ≥ 3 Tage |
+| `.app-stat-card[aria-pressed='true']` | Kennzahl-Karte als **Filter**: Ring in der Werkfarbe, wenn sie gedrückt ist (DEC-089). Die Gestalt selbst kommt aus `components/ui/KpiKarte.tsx` nach dem Styleguide-Kapitel „KPI- & Statistik-Karten“ |
+| `[class^="tooltip-"]` | Sprechblase (DEC-088): `bg-gray-800`, 12 px, `max-width: 18rem` mit Umbruch, Pfeil je Seite; Lage als Inline-Stil (Portal an `<body>`) |
+| `.tip-wirt` | Auslöser/Tooltip-Wirt: `position: relative`, `display: inline-flex`; **nicht** `tooltip-wirt` nennen (Regel `[class^="tooltip-"]` würde ihn zur Blase machen) |
+
+**Fenster (DEC-087).** Jedes Fenster lässt sich mit **Esc** schließen (gesperrt nur, solange
+ein Vorgang läuft) und trägt oben rechts ein ✕ mit `aria-label="Schließen"`. **Links davon**
+steht das Kürzel `<kbd>Esc</kbd>` (`components/ui/EscHinweis.tsx`, Tooltip „Mit der
+Esc-Taste schließen" als `<Tooltip>`, DEC-088; `rounded border border-blue-900/20
+bg-white/70 px-1 font-mono text-[11px] font-bold`) – in derselben Reihe, also **ohne**
+zusätzliche Höhe; dasselbe Zeichen trägt das Anlegeformular in der Kopfzeile. Ein
+Hinweisblock (`.ui-alert` mit einem Satz) ist in Fenstern **nicht** zulässig: Er kostete eine
+Zeile über dem Inhalt.
+Die Öffnungs-Übergänge (`.modal-overlay`, `.modal-panel`, `.auftrag-koerper`,
+`.bereich-in`) gelten nur bei `prefers-reduced-motion: no-preference`; wer Bewegung reduziert
+eingestellt hat, bekommt harte Schnitte. Beim Schließen gibt es **keine** Animation – der
+Abbruch soll sofort wirken.
 
 **Seitenraster der Hauptseite** (`App.tsx`, DEC-083): `main` hat **keinen
 `max-w`-Deckel** mehr und ist nicht zentriert; der Deckel erzeugte auf breiten
@@ -260,24 +282,31 @@ Name = Lucide-Name in PascalCase plus `Icon`: `check` → `CheckIcon`, `circle-x
 > für das Plugin keine Komponente, und die schnelle Aktualisierung im Entwicklungsmodus
 > fällt aus. Deshalb Funktionsdeklarationen plus Helfer in eigener Datei.
 
-**Eigenbauten** liegen in derselben Datei und tragen die Pflichtattribute selbst. Es sind
-**vier** Fachsymbole dieser Anwendung, für die es in Lucide kein Zeichen gibt:
-`ToolIcon` (Werkzeug), `SerialIcon` (Klemmbrett mit Zeilen), `WarehouseIcon` (Lagerhaus),
-`ArchiveIcon` (Archivkiste).
+**Eigenbauten** liegen in derselben Datei und tragen die Pflichtattribute selbst. Es gibt
+**keine** mehr: Die vier zuletzt handgezeichneten Fachsymbole sind durch Lucide-Zeichen
+ersetzt (DEC-087):
+
+| Name in der App | Lucide-Zeichen |
+|---|---|
+| `ToolIcon` | `Wrench` |
+| `WarehouseIcon` | `Warehouse` |
+| `ArchiveIcon` | `Archive` |
+| `SerialIcon` (entfallen) | `ClipboardList` – die Aufrufer nutzen jetzt `ClipboardListIcon` |
 
 > **Nachgezogen (Audit):** Die Datei enthielt 38 handgeschriebene SVG-Komponenten mit
 > `stroke-width="1.5"` und nachgebauten Pfaden (Zahnrad, Papierkorb, Stift, Maßarbeit bei
 > Haken und Kreuz); 13 davon waren Kopien aus dem Lucide-Repository und wären bei jedem
-> Update abgedriftet. Jetzt sind 33 Zeichen Wrapper um `lucide-react` und nur die vier
-> genannten Eigenbauten handgeschrieben.
+> Update abgedriftet. Danach waren noch vier Eigenbauten übrig; auf Wunsch des Inhabers
+> („SVGs werden offline Lucide-SVG benutzt") sind auch die ersetzt. Damit sind **alle**
+> Zeichen der App Wrapper um `lucide-react`.
 
 > **Werkzeug zum Nachprüfen:** `node scripts/verify-icons.mjs` (im Verzeichnis
 > `frontend/`, versioniert). Es rendert jedes Zeichen mit **genau den Props des Wrappers**
 > und prüft am erzeugten SVG die Pflichtattribute, `class`, `aria-hidden` und `focusable`;
 > zusätzlich, dass jeder Lucide-Import existiert, dass alle in der App importierten Namen
-> exportiert sind und dass die Eigenbauten die Pflichtattribute tragen. Braucht **kein**
-> Internet (liest `node_modules`). Stand: `33/33 Lucide-Zeichen gerendert`, `35 Namen
-> importiert, alle exportiert`, `4 Eigenbauten geprüft`.
+> exportiert sind und dass Eigenbauten die Pflichtattribute tragen. Braucht **kein**
+> Internet (liest `node_modules`). Stand: `38/38 Lucide-Zeichen gerendert`, `35 Namen
+> importiert, alle exportiert`, `0 Eigenbauten geprüft`.
 
 **Ausnahme:** Das AdminPanel (System B) führt seine Icons weiter lokal in den Seiten und
 nutzt `stroke-width` 1.75–2. Das ist der zweite, dunkle Systemstil; ein Umzug in die
@@ -450,24 +479,29 @@ ohne eigene Fläche, ohne Farbe, ohne Trennlinie.
 12. **Keine Hilfstexte im Formular:** Der Blockkopf trägt kein Zusatz-Badge („nur freie
    Plätze"), und unter einem Feld steht kein erklärender Hinweissatz. Die Abhängigkeit
    steckt im Optionstext des Feldes selbst (`Bitte zuerst Schrank wählen`) und in der
-   `disabled`-Darstellung. Tooltips (`title=`) sind im Formular nicht erlaubt – die
-   Beschriftung trägt die Information.
+   `disabled`-Darstellung. **Tooltips hängen an der Beschriftung, nie am Feld**
+   (`<Tooltip text="…"><FieldLabel …/></Tooltip>`, DEC-088) – das Feld selbst trägt keine.
 
     **Offene Abweichung:** Der Reiter „Werkzeug" (Hinweis zur Werkzeug-ID, Block
     „Kommt beim Speichern dazu") und der Reiter „Ersatzteil" („Der Platz gilt dann als
     belegt") verletzen diese Regel bewusst: dort erklärt der Satz eine **fachliche**
-    Folge, die kein Optionstext tragen kann. Ein Tooltip ist an keiner Stelle mehr im
-    Einsatz (im Ersatzteil- und Datenblatt-Formular entfernt); die `title=`-Attribute
-    an den Icon-Knöpfen der Dateizeilen sind Beschriftungen dieser Knöpfe und keine
-    Feld-Hilfen.
+    Folge, die kein Optionstext tragen kann.
 
-    **Wo `title=` ausdrücklich erlaubt ist (TASK-025b):** an **Knöpfen** und an
-    **Werten** einer Tabelle – nie an einem Eingabefeld. Beispiele aus der Logistik:
-    ✕-Knopf „Schließen (Esc)", „An Werk 1 zurück schicken (3)" (nennt die Folge),
-    Heimatplatz-Code („bleibt reserviert, bis das Werkzeug zurück ist"), Spalte
-    „Hier seit" (Auftrag, mit dem das Werkzeug kam). Der Grund: Ein Knopf sagt mit
-    seinem Wort nur *was* er tut, nicht *was danach passiert*; ein Feld trägt seine
-    Beschriftung und braucht keinen zweiten Text.
+    **Hinweise an Knöpfen und Werten** laufen seit DEC-088 über eine Komponente, nicht mehr
+    über `title=`:
+
+    ```tsx
+    <Tooltip text="Legt einen Rück-Auftrag an und meldet ihn sofort als unterwegs">
+      <button …>An Werk 1 zurück schicken (3)</button>
+    </Tooltip>
+    ```
+
+    Die Blase liegt per Portal an `<body>` (`position: fixed`, am Auslöser gemessen),
+    erscheint bei **Hover und Tastatur-Fokus** und wird in Tabellen und Fenstern nicht
+    abgeschnitten. Der Grund bleibt: Ein Knopf sagt mit seinem Wort nur *was* er tut, nicht
+    *was danach passiert*. `title=` als Hinweis gibt es **nicht mehr**; es lebt nur als Prop
+    (Fenstertitel), als `iframe`-Beschriftung und an der Admin-Matrix (mehrzeiliger Text,
+    den die einzeilige Admin-Blase nicht zeigen kann).
 
 13. **Gruppen gehören in `FormSection`.** Zusammengehörige Felder stehen in einer
     Glasfläche mit Kopfzeile (`frontend/src/components/Field.tsx`):

@@ -5,13 +5,21 @@
 // der Tabelle. Keine farbigen Kanten – die Werkfarbe steht auf Flächen, Knöpfen,
 // Namen und als ganze Zeile (Vorgabe des Projektinhabers, DEC-076).
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 import { plantColor, usePlants, withAlpha } from '../../lib/plantTheme'
 import type { Plant } from '../../api/types'
 import {
   TRANSPORT_STATUS_LABELS,
   type TransportStatus,
 } from '../../types/transport'
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  CircleXIcon,
+  ClipboardListIcon,
+  FileTextIcon,
+  TruckIcon,
+} from '../icons'
 
 /** Ersatzfarbe, wenn ein Werk keine Farbe gepflegt hat. */
 export const OHNE_WERKFARBE = '#475569'
@@ -70,26 +78,80 @@ export function WerkPunkt({ plant }: { plant: Plant | null }) {
   )
 }
 
-const STATUS_TON: Record<TransportStatus, string> = {
-  // Entwurf ist „geplant" (gefüllt), storniert ist „erledigt/verfallen"
-  // (nur Umriss). Vorher sahen beide gleich aus – zwei Zustände mit demselben
-  // Grau sind auf einen Blick nicht zu unterscheiden (DEC-082).
-  draft: 'bg-slate-500/15 text-slate-700',
-  sent: 'bg-sky-500/15 text-sky-800',
-  partly_received: 'bg-amber-500/18 text-amber-800',
-  received: 'bg-emerald-500/15 text-emerald-800',
-  cancelled: 'border border-slate-400/60 text-slate-500',
+/** Zeichen je Zustand – die Marke ist damit auch ohne Lesen zu unterscheiden. */
+const STATUS_BILD: Record<TransportStatus, (props: { className?: string }) => ReactElement> = {
+  draft: FileTextIcon,
+  sent: TruckIcon,
+  partly_received: ClipboardListIcon,
+  received: CheckIcon,
+  cancelled: CircleXIcon,
 }
 
-/** Zustand eines Auftrags als Marke. */
+/**
+ * Zustand eines Auftrags als **gefüllte** Marke mit Verlauf und Zeichen
+ * (DEC-089). Vorher war sie eine 15-%-Tinte: Der wichtigste Wert einer Zeile war
+ * damit der leiseste. Der Verlauf sitzt nur auf der Marke – die Karte bleibt
+ * ruhig (DEC-076: keine farbigen Kanten, keine getönten Karten).
+ */
 export function StatusMarke({ status }: { status: TransportStatus }) {
+  const Bild = STATUS_BILD[status] ?? FileTextIcon
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap ${
-        STATUS_TON[status] ?? STATUS_TON.draft
-      }`}
-    >
+    <span className={`ui-status ui-status-${status}`}>
+      <Bild className="h-3 w-3 shrink-0" />
       {TRANSPORT_STATUS_LABELS[status] ?? status}
+    </span>
+  )
+}
+
+/** Ab dieser Dauer gilt ein Auftrag als „liegt zu lange" (Tage). */
+export const LANGE_UNTERWEGS = 3
+
+/** Alter in Tagen (0 = heute) – `null`, wenn kein Zeitpunkt bekannt ist. */
+export function alterTage(iso: string | null | undefined): number | null {
+  if (!iso) return null
+  const zeit = new Date(iso).getTime()
+  if (Number.isNaN(zeit)) return null
+  return Math.floor((Date.now() - zeit) / 86_400_000)
+}
+
+/** „gerade eben", „seit 20 Min.", „seit 4 Std.", „seit 3 Tagen". */
+export function seitText(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const zeit = new Date(iso).getTime()
+  if (Number.isNaN(zeit)) return ''
+  const minuten = Math.floor((Date.now() - zeit) / 60_000)
+  if (minuten < 1) return 'gerade eben'
+  if (minuten < 60) return `seit ${minuten} Min.`
+  const stunden = Math.floor(minuten / 60)
+  if (stunden < 24) return `seit ${stunden} Std.`
+  const tage = Math.floor(stunden / 24)
+  return tage === 1 ? 'seit 1 Tag' : `seit ${tage} Tagen`
+}
+
+/**
+ * Wie lange ein Auftrag schon läuft: „seit 3 Tagen" – in Amber, sobald es
+ * länger als `LANGE_UNTERWEGS` dauert **und** der Auftrag noch offen ist.
+ *
+ * Der Zeitpunkt ist der Versand (sonst das Anlegen): Ein Entwurf, der drei
+ * Wochen liegt, ist ein anderes Problem als ein Paket, das drei Wochen unterwegs
+ * ist – deshalb entscheidet `offen` über die Farbe, nicht der Zustand allein.
+ */
+export function AlterMarke({
+  seit,
+  offen,
+}: {
+  seit: string | null | undefined
+  offen: boolean
+}) {
+  const tage = alterTage(seit)
+  if (tage === null) return null
+  const lang = offen && tage >= LANGE_UNTERWEGS
+  // Kein `title`: Der Text sagt selbst, wie lange es läuft – und Hinweise hängen
+  // an `<Tooltip>`, nicht am Attribut (DEC-088).
+  return (
+    <span className={`ui-alter ${lang ? 'ui-alter-lang' : 'text-slate-600'}`}>
+      {lang && <AlertCircleIcon className="h-3 w-3 shrink-0" />}
+      {seitText(seit)}
     </span>
   )
 }

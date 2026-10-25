@@ -13,6 +13,7 @@ import type { ToolQuery } from '../../lib/toolQuery'
 import { toolLabel } from '../../lib/toolLabel'
 import { useWerkFarben } from '../logistics/logistikTeile'
 import { formatMeasureMm } from './ToolForm'
+import Tooltip from '../ui/Tooltip'
 
 interface ToolTableProps {
   tools: Tool[]
@@ -97,32 +98,36 @@ function SortHeader({
       }
       className={`px-3 py-2.5 align-bottom ${className}`}
     >
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        aria-label={`Nach ${label} sortieren${
-          isActive ? ` (aktuell ${direction}, nächster Klick wechselt)` : ''
-        }`}
-        className="inline-flex items-center gap-1 text-left font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
-      >
-        <span>
-          {label}
-          {sublabel && (
-            <span className="block text-xs font-medium normal-case tracking-normal text-slate-600">
-              {sublabel}
-            </span>
-          )}
-        </span>
-        {isActive ? (
-          query.order === 'asc' ? (
-            <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+      {/* Derselbe Hinweis wie in den übrigen Listen (DEC-088): dort stand er
+          als `title`, hier fehlte er ganz. */}
+      <Tooltip text="Sortierung wechseln (auf → ab → Standard)" className="contents">
+        <button
+          type="button"
+          onClick={() => onSort(sortKey)}
+          aria-label={`Nach ${label} sortieren${
+            isActive ? ` (aktuell ${direction}, nächster Klick wechselt)` : ''
+          }`}
+          className="inline-flex items-center gap-1 text-left font-semibold uppercase tracking-wider text-slate-600 hover:text-teal-800"
+        >
+          <span>
+            {label}
+            {sublabel && (
+              <span className="block text-xs font-medium normal-case tracking-normal text-slate-600">
+                {sublabel}
+              </span>
+            )}
+          </span>
+          {isActive ? (
+            query.order === 'asc' ? (
+              <SortAscIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+            ) : (
+              <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
+            )
           ) : (
-            <SortDescIcon className="h-3.5 w-3.5 shrink-0 text-teal-800" />
-          )
-        ) : (
-          <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
-        )}
-      </button>
+            <SortableIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
+          )}
+        </button>
+      </Tooltip>
     </th>
   )
 }
@@ -311,19 +316,21 @@ export default function ToolTable({
                             {toolLabel(tool.tool_id)}
                           </span>
                         )}
-                        <span
-                          className="mt-1 block text-xs text-slate-600"
-                          title={tool.coating ? `Beschichtung: ${tool.coating.name}` : undefined}
+                        <Tooltip
+                          text={tool.coating ? `Beschichtung: ${tool.coating.name}` : undefined}
+                          className="contents"
                         >
-                          {TOOL_CATEGORY_LABELS[tool.category] ?? tool.category}
-                          {tool.is_storage ? ' · Lager/Ersatz' : ''}
-                          {/* Beschichtung mit vollem Namen („MultiDur TiCN", DEC-083).
-                              Eine eigene Zeile war zwischenzeitlich nötig, solange
-                              die Inhaltsspalte 9/12 breit war; mit 10/12 (mehr Platz
-                              rechts) paßt sie in die Kategorie-Zeile, ohne daß die
-                              Tabelle seitlich überläuft. */}
-                          {tool.coating ? ` · ${tool.coating.name}` : ''}
-                        </span>
+                          <span className="mt-1 block text-xs text-slate-600">
+                            {TOOL_CATEGORY_LABELS[tool.category] ?? tool.category}
+                            {tool.is_storage ? ' · Lager/Ersatz' : ''}
+                            {/* Beschichtung mit vollem Namen („MultiDur TiCN", DEC-083).
+                                Eine eigene Zeile war zwischenzeitlich nötig, solange
+                                die Inhaltsspalte 9/12 breit war; mit 10/12 (mehr Platz
+                                rechts) paßt sie in die Kategorie-Zeile, ohne daß die
+                                Tabelle seitlich überläuft. */}
+                            {tool.coating ? ` · ${tool.coating.name}` : ''}
+                          </span>
+                        </Tooltip>
                       </span>
                     </div>
                   </td>

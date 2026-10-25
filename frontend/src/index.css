@@ -523,24 +523,32 @@
   }
 
   /* ============================================ */
-  /* LOGISTIK-BUTTON DER TAB-LEISTE (DEC-086)     */
+  /* LOGISTIK-BUTTON DER TAB-LEISTE (DEC-086/089) */
   /* ============================================ */
   /* Der Bereich „Logistik" steht **neben** den Stammdaten-Reitern, nicht in
-     ihnen: eigene Pille, eigenes Zeichen, und im aktiven Zustand die Fläche in
-     der Werkfarbe. Damit findet man ihn, ohne die Reiter zu lesen. */
+     ihnen – und er ist **immer** in der Farbe des Arbeitswerks (DEC-089):
+     ruhend 18 % Tinte mit gleichfarbigem Rand, aktiv voll gefüllt mit weißer
+     Schrift. Damit ist er der einzige farbige Fleck in einer sonst hellen
+     Leiste; man findet ihn, ohne zu lesen. Der Zähler nennt die Zahl der
+     offenen Aufträge. */
   .tab-logistik {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     gap: 0.4rem;
     border-radius: 0.7rem;
-    padding: 0.4rem 0.75rem;
+    padding: 0.4rem 0.6rem 0.4rem 0.75rem;
     font-size: 0.72rem;
-    font-weight: 800;
+    /* **700 wie die übrigen Reiter** (`.ui-tabs button`). Vorher stand hier 800:
+       Der Knopf sollte auffallen, war damit aber schwerer als alles andere in der
+       Leiste – „wenn ich font-weight: 800 ausschalte, gefällt mir es sehr"
+       (Projektinhaber). Er hebt sich schon durch Pille, Zeichen und Trennstrich ab;
+       die Schrift muss nicht mitschreien (Nachtrag zu DEC-086). */
+    font-weight: 700;
     white-space: nowrap;
-    color: #475569;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.75);
+    color: var(--werk-text, #115e59);
+    background: var(--werk-tinte, rgba(15, 118, 110, 0.18));
+    border: 1px solid var(--werk-line, rgba(15, 118, 110, 0.3));
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     transition:
       background-color 0.18s ease,
@@ -549,8 +557,7 @@
     cursor: pointer;
   }
   .tab-logistik:hover {
-    color: #115e59;
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--werk-tinte-hover, rgba(15, 118, 110, 0.28));
   }
   .tab-logistik.is-active {
     color: #fff;
@@ -561,6 +568,99 @@
   .tab-logistik:focus-visible {
     outline: 2px solid var(--werk, #0f766e);
     outline-offset: 2px;
+  }
+
+  /* Zähler im Logistik-Knopf: Zahl der offenen Aufträge. Auf der getönten
+     Fläche liegt er als gefüllte Marke in der Werkfarbe, im aktiven Zustand
+     umgekehrt (weiß auf farbig). */
+  .tab-zaehler {
+    display: inline-flex;
+    min-width: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 0.25rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #fff;
+    background: var(--werk, #0f766e);
+  }
+  .tab-logistik.is-active .tab-zaehler {
+    color: var(--werk-text, #115e59);
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  /* ============================================ */
+  /* STATUS-MARKEN DER LOGISTIK (DEC-089)         */
+  /* ============================================ */
+  /* Gefüllte Marke mit Verlauf und Zeichen statt einer 15-%-Tinte: Der Zustand
+     ist die wichtigste Angabe einer Auftragszeile und war bisher die leiseste.
+     Der Verlauf bleibt **auf der Marke** – keine farbigen Kartenkanten, keine
+     getönten Karten (DEC-076). */
+  .ui-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid;
+    padding: 0.05rem 0.5rem;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .ui-status-draft {
+    border-color: rgba(100, 116, 139, 0.35);
+    color: #334155;
+    background: linear-gradient(180deg, rgba(100, 116, 139, 0.26), rgba(100, 116, 139, 0.1));
+  }
+  .ui-status-sent {
+    border-color: rgba(2, 132, 199, 0.35);
+    color: #075985;
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.3), rgba(14, 165, 233, 0.12));
+  }
+  .ui-status-partly_received {
+    border-color: rgba(217, 119, 6, 0.38);
+    color: #92400e;
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.36), rgba(245, 158, 11, 0.14));
+  }
+  .ui-status-received {
+    border-color: rgba(5, 150, 105, 0.35);
+    color: #065f46;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.32), rgba(16, 185, 129, 0.12));
+  }
+  .ui-status-cancelled {
+    border-color: rgba(100, 116, 139, 0.5);
+    color: #475569;
+    background: transparent;
+  }
+
+  /* „Seit 3 Tagen unterwegs" – Amber, sobald es lange liegt. */
+  .ui-alter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .ui-alter-lang {
+    color: #92400e;
+    font-weight: 700;
+  }
+
+  /* ============================================ */
+  /* KENNZAHL-KARTEN (DEC-089)                    */
+  /* ============================================ */
+  /* Die Gestalt selbst kommt aus `components/ui/KpiKarte.tsx` (Styleguide
+     „KPI- & Statistik-Karten": Zeichen-Kachel, große Zahl, Glow, Fußzeile).
+     Hier steht nur, was eine Karte als **Filter** zusätzlich braucht:
+     `aria-pressed` markiert die aktive Kachel mit dem Ring der Werkfarbe –
+     vorher sahen zwei aktive Kacheln wie zwei gesetzte Filter aus. */
+  .app-stat-card[aria-pressed='true'] {
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow:
+      0 0 0 2px var(--werk-line, rgba(15, 118, 110, 0.3)),
+      0 12px 24px rgba(15, 23, 42, 0.08);
   }
 
   /* Senkrechte Reiterleiste im Anlege-Formular (lg:flex-col).
@@ -1097,6 +1197,72 @@
     -webkit-backdrop-filter: blur(10px);
   }
 
+  /* ============================================ */
+  /* ANIMATIONEN BEIM ÖFFNEN (DEC-087)            */
+  /* ============================================ */
+  /* Fenster und aufgeklappte Aufträge erscheinen mit einem kurzen Übergang statt
+     „aufzuplatzen": Die Fläche blendet ein und kommt von unten, der Inhalt zieht
+     leicht nach. Nur bei `prefers-reduced-motion: no-preference` – wer Bewegung
+     reduziert eingestellt hat, bekommt harte Schnitte (Guide §9). */
+  @keyframes overlay-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      /* `translateZ(0)` bleibt: es hält die Ebene des Fensters stabil, sonst
+         springt nach dem Übergang der Schatten. */
+      transform: translateY(10px) scale(0.985) translateZ(0);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1) translateZ(0);
+    }
+  }
+  @keyframes koerper-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  /* Bereichswechsel (Reiter „Aufträge/Eingang/Wo ist was"): die neue Fläche
+     kommt weich von unten, statt beim Klick hart dazustehen. */
+  @keyframes bereich-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .modal-overlay {
+      animation: overlay-in 0.16s ease-out;
+    }
+    .modal-panel {
+      animation: panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: center;
+    }
+    .auftrag-koerper {
+      animation: koerper-in 0.2s ease-out;
+      transform-origin: top center;
+    }
+    .bereich-in {
+      animation: bereich-in 0.24s ease-out both;
+    }
+  }
+
   /* ==================== */
   /* KEYFRAMES (bestehend, unverändert) */
   /* ==================== */
@@ -1320,27 +1486,67 @@
   }
 
   /* ==================== */
-  /* TOOLTIPS            */
+  /* TOOLTIPS (DEC-088)   */
   /* ==================== */
+  /* Die Sprechblase, die früher an `title="…"` hing. Sie wird von
+     `components/ui/Tooltip.tsx` als **eigene Ebene an <body>** gesetzt
+     (Portal) – deshalb `position: fixed` und die Lage als Inline-Stil.
+     Vorher stand sie `absolute` im Textfluss und wurde in Tabellen
+     (`overflow-x-auto`) und Fenstern (`overflow-hidden`) abgeschnitten.
+     Ausgelöst wird sie vom Wirt (`.tip-wirt`), nicht mehr von jedem
+     `.group`-Vorfahren – sonst zeigte eine gehoverte Zeile alle Blasen
+     ihrer Knöpfe gleichzeitig. */
   [class^="tooltip-"] {
-    @apply absolute bg-gray-800 text-white px-3 py-2 rounded-lg text-sm
-           opacity-0 transition-all duration-200 pointer-events-none
-           shadow-lg z-[999] whitespace-nowrap
-           before:absolute before:w-2 before:h-2 before:bg-gray-800
-           before:rotate-45 before:-z-10;
+    @apply fixed bg-gray-800 text-white px-2.5 py-1.5 rounded-lg text-xs
+           shadow-lg z-[999] pointer-events-none;
+    max-width: 18rem;
+    line-height: 1.35;
+    /* Pfeil: vorher ohne Position (saß in der Ecke), jetzt je Seite mittig. */
   }
-  .tooltip-right {
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%);
+  [class^="tooltip-"]::before {
+    content: '';
+    position: absolute;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: inherit;
+    transform: rotate(45deg);
   }
-  .tooltip-top {
-    bottom: calc(100% + 12px);
+  .tooltip-top::before {
     left: 50%;
-    transform: translateX(-50%);
+    bottom: -0.2rem;
+    margin-left: -0.25rem;
   }
-  .group:hover [class^="tooltip-"] {
-    @apply opacity-100;
+  .tooltip-bottom::before {
+    left: 50%;
+    top: -0.2rem;
+    margin-left: -0.25rem;
+  }
+  .tooltip-right::before {
+    left: -0.2rem;
+    top: 50%;
+    margin-top: -0.25rem;
+  }
+  /* Der Wirt ist der Bezugsrahmen für die Messung – und der einzige Auslöser.
+     **Nicht** `tooltip-wirt` nennen: die Regel oben greift auf jedes Element
+     zu, dessen Klasse mit `tooltip-` **beginnt** – der Wirt wäre dann selbst zur
+     Blase geworden (weiß, `fixed`, `pointer-events: none`) und hätte seinen
+     eigenen Knopf unklickbar gemacht. */
+  .tip-wirt {
+    position: relative;
+    display: inline-flex;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [class^="tooltip-"] {
+      animation: tooltip-in 0.12s ease-out;
+    }
+  }
+  @keyframes tooltip-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   /* ==================== */
