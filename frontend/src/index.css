@@ -579,6 +579,18 @@
     font-weight: 700;
   }
 
+  /* Logistik-Karte als **Knopf** (DEC-096): Fläche in der Werkfarbe, weiße Schrift.
+     Die Karte bleibt in der Form der Kennzahlen („app-stat-card"), damit das Raster
+     stimmt – der Unterschied ist die Farbe: Sie ist der Einstieg in einen Bereich,
+     keine Zahl zum Lesen. */
+  .kpi-als-knopf {
+    background: var(--werk, #0f766e) !important;
+    border-color: transparent !important;
+  }
+  .kpi-als-knopf:hover {
+    background: color-mix(in srgb, var(--werk, #0f766e) 88%, white) !important;
+  }
+
   /* Kennzahl-Karte als **Filter**: `aria-pressed` markiert die aktive Karte mit
      dem Ring der Werkfarbe (DEC-089) – vorher sahen zwei aktive Kacheln wie zwei
      gesetzte Filter aus. */

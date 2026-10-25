@@ -112,6 +112,8 @@ function StatisticsSidebar({
           trotzdem von jedem Bildschirm aus einen Klick entfernt. */}
       <KpiKarte
         mini
+        alsKnopf
+        cta="öffnen"
         farbe="teal"
         zahl={zahlen?.orders_open ?? null}
         name="Logistik"

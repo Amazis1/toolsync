@@ -82,12 +82,42 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
     // Überfällige (DEC-092): Amber-Marke mit `orders_old`, sonst keine.
     if (kennzahlen.orders_old > 0) {
       await expect(karte).toContainText(String(kennzahlen.orders_old))
+      // Zeichen: Truck, Warndreieck und der Pfeil des Knopfes.
+      await expect(karte.locator('svg')).toHaveCount(3)
+    } else {
+      // Ohne Überfällige bleiben Truck und Pfeil.
       await expect(karte.locator('svg')).toHaveCount(2)
     }
     // Ein Klick öffnet den Bereich und markiert die Karte.
     await karte.click()
     await expect(page.getByRole('group', { name: 'Logistik' })).toBeVisible()
     await expect(karte).toHaveAttribute('aria-pressed', 'true')
+
+    // Sie **sieht aus wie ein Knopf** (DEC-096): Fläche in der Werkfarbe, weiße
+    // Schrift, CTA „öffnen". Das unterscheidet sie von den Kennzahl-Karten, die
+    // nur etwas anzeigen. (Die Fläche wird als `oklab(...)` ausgegeben, sobald
+    // `color-mix` im Spiel ist – verglichen wird deshalb mit der Kennzahl-Karte
+    // daneben, nicht mit einem Hex-Wert.)
+    const farben = await page.evaluate(() => {
+      const karten = [...document.querySelectorAll('aside .app-stat-card')]
+      const logistik = karten.find((el) => (el.textContent ?? '').includes('Logistik'))
+      const kennzahl = karten.find((el) => (el.textContent ?? '').includes('Aktive Ausleihen'))
+      if (!logistik || !kennzahl) return null
+      return {
+        knopf: getComputedStyle(logistik).backgroundColor,
+        knopfSchrift: getComputedStyle(logistik).color,
+        kennzahl: getComputedStyle(kennzahl).backgroundColor,
+      }
+    })
+    expect(farben, 'Karten sind messbar').not.toBeNull()
+    expect(farben!.knopf, 'Logistik-Karte hat eine eigene (farbige) Fläche').not.toBe(
+      farben!.kennzahl,
+    )
+    expect(farben!.knopfSchrift, 'weiße Schrift auf der Knopf-Fläche').toBe(
+      'rgb(255, 255, 255)',
+    )
+    await expect(karte).toHaveClass(/kpi-als-knopf/)
+    await expect(karte).toContainText(/öffnen/i)
 
     await page.screenshot({ path: `${SHOTS}/logistik-01-knopf.png` })
   })

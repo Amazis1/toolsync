@@ -3438,3 +3438,24 @@ trägt `aria-pressed` · die Gruppe „Logistik" hat die vier Unterreiter · „
 übrigen Logistik-Specs öffnen den Bereich jetzt über die Karte (`getByRole('complementary')`).
 Browser 129 Tests grün.
 
+## Nachtrag (DEC-096) – die Logistik-Karte sieht aus wie ein Knopf
+
+**Auftrag des Inhabers:** „bevor du weitermachst, mach bitte KPI Logistik so, dass er auch wie
+ein Button aussieht."
+
+Die Karte stand nach DEC-095 in der rechten Spalte, sah aber aus wie die Kennzahlen daneben –
+also wie etwas zum Lesen. Jetzt ist sie erkennbar ein **Einstieg**:
+
+- **Fläche in der Werkfarbe** (`var(--werk)`, wie `.ui-btn-werk`) statt Glas, **weiße Schrift**;
+  beim Überfahren eine Spur heller (`color-mix` mit Weiß, 88 %).
+- **Pfeil nach rechts** (`ChevronRightIcon`, wandert beim Überfahren leicht mit) und ein
+  **CTA** in der Beschriftung: „Logistik · öffnen".
+- Zeichen in einer weißen Kachel (`bg-white/20`), Überfällig-Marke als Amber-Plakette.
+- Die **Form bleibt die einer Karte** (`app-stat-card`, gleiche Ränder und Abstände wie die
+  Kennzahlen) – der Unterschied ist die Farbe, nicht das Raster.
+
+Damit gilt in der rechten Spalte: **farbige Karte = Aktion**, helle Karte = Kennzahl.
+Geprüft in `frontend/tests/logistik-kacheln.spec.ts`: Die Fläche unterscheidet sich von der
+Kennzahl-Karte daneben, die Schrift ist weiß, die Klasse `kpi-als-knopf` ist gesetzt und der
+Text enthält „öffnen". Alle Browser-Tests grün (129).
+
