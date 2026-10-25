@@ -3076,3 +3076,72 @@ Tooltip.
 Personen (Vor-/Nachname, drei Rollen), kein doppelter Treffer bei zwei Werkzeugen, `mine`.
 `backend/tests/test_stats.py` prüft die vier neuen `orders_out_*`-Zahlen.
 
+---
+
+# DEC-091 – Nachweis-Fenster: der Ablauf als Zeitstrahl
+
+**Status:** Verbindlich
+**Bezug:** DEC-072 (Vorgang), DEC-074 (Empfang), DEC-090 (Personenkette),
+`components/logistics/Zeitstrahl.tsx`, `docs/21-werkzeug-logistik.md` §8
+
+## Ausgangslage
+
+Der Verlauf eines Auftrags stand im Fenster „Auftrag öffnen" als **drei Sätze**
+untereinander: „Angelegt 12.03.2026, 09:12 von Anna Ausleiherin · Arbeitswerk Werk 1",
+„Unterwegs seit …", „abgeschlossen …". Wer wissen wollte, wer wann was getan hat, musste
+diese Sätze lesen und im Kopf zu einer Kette sortieren – obwohl der Vorgang genau eine
+Kette ist. Zusätzlich fehlte die **Zwischenstufe**: „teilweise angekommen" (DEC-074) war im
+Kopfblock nicht zu erkennen; es stand nur im Zustandschip und in der Werkzeugtabelle.
+
+## Regel
+
+1. **Der Ablauf ist ein Zeitstrahl** (`Zeitstrahl`, Abschnitt „Ablauf"): angelegt →
+   verschickt → (teilweise angekommen) → angekommen. Jeder Schritt zeigt **Zeichen,
+   Zeitpunkt, Person und Werk**; was noch aussteht, bleibt sichtbar, aber leise
+   (gestrichelter Ring, grauer Text).
+2. **Die Personen stehen als Initialen-Plaketten** mit Vollname im Tooltip – dieselbe
+   Sprache wie die Personenkette in der Auftragsliste (DEC-090), damit dieselbe Angabe
+   nicht zweimal anders aussieht.
+3. **Zusatzzeilen erklären die Menge:** „mit 3 Werkzeug(en)" (angelegt), „Heimatplätze
+   bleiben reserviert" (verschickt), „2 von 3 Werkzeugen bestätigt" (teilweise), „alle 3
+   Werkzeuge bestätigt" (angekommen), „1 von 3 Werkzeugen warten" (Empfang offen).
+4. **Keine neuen Daten, keine neue Abfrage:** Der Zeitstrahl lebt von dem, was der Auftrag
+   ohnehin mitführt (`created_at/created_by/created_plant`, `sent_at/sent_by/from_plant`,
+   `items[].received_at/received_by/received_plant`, `closed_at`). Die drei alten Textzeilen
+   im Kopfblock sind entfallen – sie sagten dasselbe.
+5. **Storno zeigt keinen Zeitpunkt.** Für das Stornieren gibt es in der Datenbank keinen
+   eigenen Zeitstempel (`closed_at` bleibt beim Storno leer) – der Schritt steht deshalb
+   ohne Datum. Einen zu erfinden wäre eine falsche Angabe; ein `cancelled_at` wäre eine
+   eigene Entscheidung (offene Frage 1).
+
+## Zahlen
+
+| Punkt | vorher | jetzt |
+|---|---|---|
+| Darstellung | 3 Sätze untereinander | Kette mit 3–5 Schritten |
+| „teilweise angekommen" | nur im Zustandschip/Werkzeugtabelle | eigener Schritt mit Zeit, Person, „x von y" |
+| Wer gehandelt hat | Text („von …") | Initialen-Plakette + Werk, Vollname im Tooltip |
+| Ausstehender Schritt | „Noch nicht verschickt" als Satz | leiser Schritt „Noch nicht verschickt" / „Empfang offen" |
+
+## Begründung
+
+Ein Nachweis wird gelesen, um eine Frage zu beantworten: „wo ist es hängen geblieben?" Die
+Antwort ist eine Kette mit Zeitpunkten – als Fließtext muss man sie erst rekonstruieren.
+Dass der letzte erreichte Schritt farbig ist und die folgenden grau, beantwortet die Frage
+außerdem ohne Lesen: Man sieht auf einen Blick, wie weit der Vorgang ist.
+
+## Was ausdrücklich NICHT gilt
+
+- **Kein** eigener Reiter „Verlauf" und keine Zeitleiste auf der Seite – der Ablauf gehört
+  in das Fenster, das den Auftrag ohnehin zeigt (DEC-075 Punkt 2).
+- **Keine** Bewegungs-Historie je Werkzeug in diesem Fenster (das ist TASK-029, der
+  Historie-Reiter).
+- **Keine** neuen Endpunkte: Der Nachweis kommt weiterhin aus `GET /api/transport/orders/{id}`.
+
+## Prüfung
+
+`frontend/tests/logistik-nachweis.spec.ts` (2 Tests, eigener Auftrag über die API): Nach dem
+Verschicken zeigt der Ablauf **Angelegt → Verschickt → Empfang offen** (mit Zielwerk), der
+Anleger steht als Plakette mit Vollname im Tooltip; nach dem bestätigten Empfang endet der
+Ablauf mit **Angekommen · „alle 1 Werkzeuge bestätigt"** und „Empfang offen" ist verschwunden.
+

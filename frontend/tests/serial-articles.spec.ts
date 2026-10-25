@@ -484,18 +484,23 @@ test.describe('Serienartikel', () => {
     await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}001`) })).toBeVisible(ZEIT)
 
     // Werk-Filter (Segmente wie in der Werkzeugliste): nur Pläne des zweiten Werks.
-    await page.getByLabel('Serienartikel durchsuchen').fill('')
-    // Erst warten, bis die Suche wirklich leer ist (die Liste sucht 350 ms nach
-    // dem Tippen): sonst wirkt der Werk-Filter noch auf das alte Suchergebnis.
+    //
+    // Der Suchbegriff bleibt der Nummernkreis (`PREFIX`), statt das Feld zu leeren:
+    // Ein leeres Feld zeigt wieder alle Artikel – und ob `…-001` dann auf der
+    // ersten Seite steht, hängt am Bestand (die Liste ist seitenweise). Genau
+    // daran war dieser Test unter Last unzuverlässig: die Zeile war nicht weg,
+    // sondern auf einer anderen Seite.
+    await page.getByLabel('Serienartikel durchsuchen').fill(PREFIX)
     await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}001`) })).toBeVisible(ZEIT)
+
     await page.getByRole('radio', { name: otherPlantName }).check()
     await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}002`) })).toBeVisible(ZEIT)
-    await expect(page.locator('tbody')).not.toContainText(plantName)
+    await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}001`) })).toHaveCount(0)
 
     // Und dasselbe für das erste Werk.
     await page.getByRole('radio', { name: plantName }).check()
     await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}001`) })).toBeVisible(ZEIT)
-    await expect(page.locator('tbody')).not.toContainText(otherPlantName)
+    await expect(page.getByRole('row', { name: new RegExp(`${PREFIX}002`) })).toHaveCount(0)
   })
 
   test('markiert Favoriten und filtert darauf', async ({ page }) => {

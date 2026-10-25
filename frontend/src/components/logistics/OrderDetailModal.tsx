@@ -20,6 +20,7 @@ import {
   werkZeile,
 } from './logistikTeile'
 import EscHinweis from '../ui/EscHinweis'
+import Zeitstrahl from './Zeitstrahl'
 
 interface OrderDetailModalProps {
   orderId: number
@@ -113,19 +114,6 @@ export default function OrderDetailModal({
                 <span className="text-slate-500">→</span>
                 <WerkName plant={order.to_plant} />
               </div>
-              <p className="mt-1">
-                Angelegt {formatZeitpunkt(order.created_at)}
-                {order.created_by_name ? ` von ${order.created_by_name}` : ''}
-                {order.created_plant ? ` · Arbeitswerk ${order.created_plant.name}` : ''}
-              </p>
-              <p>
-                {order.sent_at
-                  ? `Unterwegs seit ${formatZeitpunkt(order.sent_at)}${
-                      order.sent_by_name ? ` (${order.sent_by_name})` : ''
-                    }`
-                  : 'Noch nicht verschickt'}
-                {order.closed_at ? ` · abgeschlossen ${formatZeitpunkt(order.closed_at)}` : ''}
-              </p>
               {order.reference && (
                 <p>
                   Referenz: <span className="font-mono">{order.reference}</span>
@@ -133,6 +121,10 @@ export default function OrderDetailModal({
               )}
               {order.info && <p>Info: {order.info}</p>}
             </div>
+
+            {/* Der Ablauf als Kette (DEC-091): wer wann was getan hat, in einer
+                Leserichtung. Vorher standen dafür drei Sätze untereinander. */}
+            <Zeitstrahl order={order} />
 
             <div className="overflow-x-auto rounded-xl border border-white/60 bg-white/30">
               <table className="w-full min-w-[640px] text-left text-xs">
