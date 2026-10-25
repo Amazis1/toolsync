@@ -90,6 +90,25 @@ test.describe('Logistik-Übersicht (DEC-089)', () => {
       expect(Number(zahl)).toBe(kennzahlen.orders_open)
     }
 
+    // Überfällige Aufträge (DEC-092): Die Amber-Marke steht genau dann am Knopf,
+    // wenn die Kennzahlen welche melden – mit derselben Zahl.
+    const kennzahlen = await page.evaluate(async () => {
+      const antwort = await fetch('/api/stats/overview', {
+        headers: {
+          Authorization: `Bearer ${window.localStorage.getItem('token')}`,
+          'X-Plant-Id': String(document.documentElement.dataset.werk),
+        },
+      })
+      return antwort.json()
+    })
+    const marke = knopf.locator('.tab-ueberfaellig')
+    if (kennzahlen.orders_old > 0) {
+      await expect(marke).toBeVisible()
+      await expect(marke).toContainText(String(kennzahlen.orders_old))
+    } else {
+      await expect(marke).toHaveCount(0)
+    }
+
     await page.screenshot({ path: `${SHOTS}/logistik-01-knopf.png` })
   })
 

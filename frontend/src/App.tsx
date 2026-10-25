@@ -234,6 +234,9 @@ const MainApp: React.FC = () => {
   // Der Zähler am Logistik-Knopf ist `orders_open` aus derselben Antwort – eine
   // Quelle für Knopf und rechte Spalte (DEC-089).
   const offeneAuftraege = statistik?.orders_open ?? 0;
+  // „Läuft zu lange“ (DEC-092): offene Aufträge ab 7 Tagen. Sie bekommen am
+  // Logistik-Knopf eine Amber-Marke und beim Anmelden **einen** Hinweis.
+  const ueberfaellig = statistik?.orders_old ?? 0;
   /** Sprung in den Eingang der Logistik (aus der rechten Spalte). */
   const [eingangWunsch, setEingangWunsch] = useState(0);
   const dataSheetToken = useRef(0);
@@ -604,7 +607,11 @@ const MainApp: React.FC = () => {
                 <Tooltip
                   text={
                     offeneAuftraege > 0
-                      ? `${offeneAuftraege} offene Aufträge – Werkzeuge zwischen den Werken transportieren`
+                      ? `${offeneAuftraege} offene Aufträge${
+                          ueberfaellig > 0
+                            ? ` – davon ${ueberfaellig} seit über 7 Tagen`
+                            : ''
+                        }`
                       : 'Werkzeuge zwischen den Werken transportieren'
                   }
                 >
@@ -617,6 +624,17 @@ const MainApp: React.FC = () => {
                     Logistik
                     {offeneAuftraege > 0 && (
                       <span className="tab-zaehler">{offeneAuftraege}</span>
+                    )}
+                    {ueberfaellig > 0 && (
+                      <span
+                        className="tab-ueberfaellig"
+                        aria-label={`${ueberfaellig} ${
+                          ueberfaellig === 1 ? 'Auftrag läuft' : 'Aufträge laufen'
+                        } seit über 7 Tagen`}
+                      >
+                        <AlertCircleIcon className="h-3 w-3" />
+                        {ueberfaellig}
+                      </span>
                     )}
                   </button>
                 </Tooltip>

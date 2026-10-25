@@ -3145,3 +3145,51 @@ Verschicken zeigt der Ablauf **Angelegt → Verschickt → Empfang offen** (mit 
 Anleger steht als Plakette mit Vollname im Tooltip; nach dem bestätigten Empfang endet der
 Ablauf mit **Angekommen · „alle 1 Werkzeuge bestätigt"** und „Empfang offen" ist verschwunden.
 
+---
+
+# DEC-092 – Überfällige Aufträge sichtbar machen (Amber-Marke am Logistik-Knopf)
+
+**Status:** Verbindlich
+**Bezug:** DEC-089 (Kennzahlen, Karten), DEC-091 (Zeitstrahl), `docs/21-werkzeug-logistik.md`
+**Auftrag des Projektinhabers:** „mach als erstes, was für richtig hältst" – aus dem Vorschlag
+„Überfällig-Hinweis (P5): Liegenbleibendes fällt auf, ohne dass man sucht."
+
+## Ausgangslage
+
+Seit DEC-089 gibt es die Karte „älter als 7 Tage" und die Spalte „seit 3 Tagen" im Zeitstrahl –
+beides hilft nur, **wenn man in die Logistik schaut**. Ein Auftrag, der drei Wochen als Entwurf
+liegt, wurde bis dahin nur zufällig gefunden. Im Produktivbestand sind es aktuell **6** offene
+Aufträge älter als 7 Tage (gemessen am 2026-10-18 angelegten Datenbestand).
+
+## Regel
+
+1. **Am Logistik-Knopf steht neben dem Zähler eine Amber-Marke** (`tab-ueberfaellig`: Zeichen
+   + Zahl), sobald es offene Aufträge ab 7 Tagen gibt. Der Zähler bleibt daneben stehen – die
+   Gesamtzahl verschwindet nicht. Der Tooltip nennt beides: „8 offene Aufträge – davon 6 seit
+   über 7 Tagen".
+2. **Kein Toast beim Anmelden.** Ein solcher Hinweis wurde gebaut und wieder entfernt: Er
+   liegt unten rechts über dem Inhalt und **blockiert Klicks** – im Browser-Test fiel damit
+   das Farbfeld der Stammdaten aus (`plant-bar`), und der Toast-Test der Werkzeugliste fand
+   plötzlich nicht mehr genau einen Hinweis. Ein Hinweis, der die Bedienung stört, ist kein
+   Hinweis. Die Amber-Marke am Knopf steht auf **jedem** Bildschirm und stört nichts; die Zahl
+   steht zusätzlich in der Karte „älter als 7 Tage" und in der rechten Spalte („N alt").
+3. **Die Zahl kommt aus den Kennzahlen** (`orders_old`, seit DEC-089 im Endpunkt): dieselbe
+   Quelle wie Karte und Sidebar. Kein zweiter Zählweg.
+4. **„Überfällig" heißt: offen (Entwurf, verschickt, teilweise) und seit mindestens 7 Tagen**,
+   gerechnet ab Versand, ohne Versand ab Anlage. Ein Entwurf, der drei Wochen liegt, ist
+   genauso ein Fall wie ein Paket, das drei Wochen unterwegs ist.
+
+## Was ausdrücklich NICHT gilt
+
+- **Keine** Frist je Auftrag oder je Werk („Werk 2 hat 10 Tage") – die 7 Tage sind eine feste
+  Zahl im Code (`LANGE_OFFEN` im Bereich, `LANGE_TAGE` im Service), keine Einstellung.
+- **Keine** E-Mail, kein Badge in der Seitenleiste, keine Push-Benachrichtigung.
+- **Kein** Toast beim Anmelden oder beim Nachführen der Zahlen (siehe Regel 2).
+
+## Prüfung
+
+`frontend/tests/logistik-kacheln.spec.ts` prüft am Knopf: Die Amber-Marke steht **genau dann**,
+wenn die Kennzahlen `orders_old > 0` melden, und trägt **deren Zahl** (sonst ist sie nicht da).
+Die Rechnung selbst deckt `backend/tests/test_stats.py` ab (`orders_old`, `orders_out_old`,
+inklusive „Versand zählt, sonst Anlage").
+
